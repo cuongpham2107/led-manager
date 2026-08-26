@@ -1,0 +1,350 @@
+/* ==========================================================================
+   Filament Sidebar & Layout Custom Styling (LED OS Theme)
+   ========================================================================== */
+
+/* Layout & Content Container */
+.fi-layout {
+    display: flex;
+    min-height: 100dvh;
+    width: 100%;
+}
+
+.fi-main-ctn {
+    flex: 1 1 0%;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 100dvh;
+    background-color: #f8fafc;
+}
+
+html.dark .fi-main-ctn {
+    background-color: #0b1120;
+}
+
+/* Topbar inside Content Area */
+.fi-topbar-ctn {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    width: 100%;
+}
+
+.fi-topbar {
+    display: flex;
+    min-height: 4rem;
+    height: 4rem;
+    align-items: center;
+    padding-inline: 1.5rem;
+    background-color: #ffffff;
+    border-bottom: 1px solid var(--sidebar-border, #e2e8f0);
+    box-shadow: none !important;
+}
+
+html.dark .fi-topbar {
+    background-color: #0f172a;
+    border-bottom: 1px solid #1e293b;
+}
+
+.fi-sidebar {
+    background-color: var(--sidebar-bg);
+    border-inline-end: 1px solid var(--sidebar-border);
+    transition:
+        width 200ms ease,
+        transform 200ms ease;
+    z-index: 30;
+}
+
+/* Sidebar Header & Brand */
+.fi-sidebar-header {
+    height: 4.5rem;
+    padding-inline: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.fi-sidebar-header-logo-ctn {
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.fi-logo-custom {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    text-decoration: none;
+}
+
+/* Sidebar Navigation */
+.fi-sidebar-nav {
+    padding-inline: 0.75rem;
+    padding-block: 0.75rem;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
+}
+
+.fi-sidebar-nav-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+/* Sidebar Groups */
+.fi-sidebar-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.fi-sidebar-group-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-inline: 0.75rem;
+    padding-block: 0.35rem;
+    cursor: default;
+}
+
+.fi-sidebar-group.fi-collapsible > .fi-sidebar-group-btn {
+    cursor: pointer;
+}
+
+.fi-sidebar-group-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--sidebar-group-label);
+    line-height: 1.2;
+}
+
+.fi-sidebar-group-collapse-btn {
+    color: var(--sidebar-group-label);
+    opacity: 0.7;
+    transition: transform 150ms ease;
+}
+
+.fi-sidebar-group-items {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+/* Sidebar Item */
+.fi-sidebar-item {
+    margin: 0;
+}
+
+.fi-sidebar-item-btn {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 0.75rem;
+    border-radius: 0.625rem;
+    padding-inline: 0.75rem;
+    padding-block: 0.55rem;
+    min-height: 2.375rem;
+    color: var(--sidebar-item-text);
+    background-color: transparent;
+    transition-property: color, background-color, box-shadow, transform;
+    transition-duration: 150ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.fi-sidebar-item-btn:hover {
+    background-color: var(--sidebar-item-hover);
+    color: #0f172a;
+}
+
+html.dark .fi-sidebar-item-btn:hover {
+    color: #f8fafc;
+}
+
+.fi-sidebar-item-btn > .fi-sidebar-item-label {
+    flex: 1 1 0%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: left;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: inherit;
+    letter-spacing: -0.01em;
+}
+
+.fi-sidebar-item-btn > .fi-sidebar-item-icon,
+.fi-sidebar-item-btn > .fi-icon,
+.fi-sidebar-item-btn > svg {
+    flex-shrink: 0;
+    width: 1.25rem;
+    height: 1.25rem;
+    font-size: 1.25rem;
+    color: #64748b;
+    stroke-width: 1.85;
+    transition: color 150ms ease;
+}
+
+.fi-sidebar-item-btn:hover > .fi-sidebar-item-icon,
+.fi-sidebar-item-btn:hover > .fi-icon,
+.fi-sidebar-item-btn:hover > svg {
+    color: #334155;
+}
+
+html.dark .fi-sidebar-item-btn > .fi-sidebar-item-icon,
+html.dark .fi-sidebar-item-btn > .fi-icon,
+html.dark .fi-sidebar-item-btn > svg {
+    color: #94a3b8;
+}
+
+html.dark .fi-sidebar-item-btn:hover > .fi-sidebar-item-icon,
+html.dark .fi-sidebar-item-btn:hover > .fi-icon,
+html.dark .fi-sidebar-item-btn:hover > svg {
+    color: #f1f5f9;
+}
+
+/* Active Sidebar Item */
+.fi-sidebar-item.fi-active > .fi-sidebar-item-btn {
+    background-color: var(--sidebar-item-active) !important;
+    color: var(--sidebar-item-text-active) !important;
+    box-shadow: 0 2px 8px rgba(0, 136, 232, 0.28);
+}
+
+.fi-sidebar-item.fi-active > .fi-sidebar-item-btn > .fi-sidebar-item-label {
+    color: #ffffff !important;
+    font-weight: 600;
+}
+
+.fi-sidebar-item.fi-active > .fi-sidebar-item-btn > .fi-sidebar-item-icon,
+.fi-sidebar-item.fi-active > .fi-sidebar-item-btn > .fi-icon,
+.fi-sidebar-item.fi-active > .fi-sidebar-item-btn > svg {
+    color: #ffffff !important;
+}
+
+.fi-sidebar-item.fi-active > .fi-sidebar-item-btn:hover {
+    background-color: var(--sidebar-item-active) !important;
+    color: #ffffff !important;
+}
+
+/* Sidebar Badges */
+.fi-sidebar-item-btn > .fi-sidebar-item-badge-ctn {
+    flex-shrink: 0;
+}
+
+.fi-sidebar-item.fi-active
+    > .fi-sidebar-item-btn
+    > .fi-sidebar-item-badge-ctn
+    .fi-badge {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+}
+
+/* Sidebar Footer */
+.fi-sidebar-footer {
+    margin: 0;
+    padding-inline: 0.75rem;
+    padding-block: 0.875rem 1rem;
+    border-top: 1px solid var(--sidebar-border);
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+    background-color: var(--sidebar-bg);
+}
+
+/* User Menu Trigger in Sidebar */
+.fi-user-menu {
+    width: 100%;
+}
+
+.fi-user-menu-trigger {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.375rem 0.5rem;
+    border-radius: 0.625rem;
+    background-color: transparent;
+    transition: background-color 150ms ease;
+    cursor: pointer;
+    border: none;
+    outline: none;
+}
+
+.fi-user-menu-trigger:hover {
+    background-color: var(--sidebar-item-hover);
+}
+
+.fi-user-avatar-custom {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* PDA Scan Mode Action Button */
+.fi-sidebar-pda-action-ctn {
+    width: 100%;
+}
+
+.fi-sidebar-pda-btn {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    padding-inline: 0.875rem;
+    padding-block: 0.65rem;
+    border-radius: 0.625rem;
+    background-color: var(--sidebar-pda-bg);
+    color: var(--sidebar-pda-text);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.fi-sidebar-pda-btn:hover {
+    background-color: var(--sidebar-pda-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+.fi-sidebar-pda-btn:active {
+    transform: translateY(0);
+}
+
+.fi-sidebar-pda-icon {
+    width: 1.125rem;
+    height: 1.125rem;
+    flex-shrink: 0;
+}
+
+.fi-sidebar-pda-label {
+    letter-spacing: -0.01em;
+}
+
+/* Dropdown styling */
+.fi-sidebar-group-dropdown-trigger-btn {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 0.75rem;
+    border-radius: 0.625rem;
+    padding: 0.55rem 0.75rem;
+    color: var(--sidebar-item-text);
+    transition: background-color 150ms ease;
+    cursor: pointer;
+}
+
+.fi-sidebar-group-dropdown-trigger-btn:hover {
+    background-color: var(--sidebar-item-hover);
+    color: #0f172a;
+}

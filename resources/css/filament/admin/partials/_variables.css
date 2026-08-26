@@ -1,0 +1,44 @@
+:root {
+    --font-size-base: 14px;
+    --sidebar-bg: #ffffff;
+    --sidebar-border: #f1f5f9;
+    --sidebar-item-hover: #f1f5f9;
+    --sidebar-item-active: #0088e8;
+    --sidebar-item-text: #334155;
+    --sidebar-item-text-active: #ffffff;
+    --sidebar-group-label: #94a3b8;
+    --sidebar-pda-bg: #f1f5f9;
+    --sidebar-pda-hover: #e2e8f0;
+    --sidebar-pda-text: #0f172a;
+}
+
+html.dark {
+    --sidebar-bg: #0f172a;
+    --sidebar-border: #1e293b;
+    --sidebar-item-hover: rgba(255, 255, 255, 0.06);
+    --sidebar-item-active: #0088e8;
+    --sidebar-item-text: #cbd5e1;
+    --sidebar-item-text-active: #ffffff;
+    --sidebar-group-label: #64748b;
+    --sidebar-pda-bg: #1e293b;
+    --sidebar-pda-hover: #334155;
+    --sidebar-pda-text: #f8fafc;
+}
+
+[style] {
+    --cols-default: repeat(1, minmax(0, 1fr));
+}
+
+@layer components {
+    .fi-grid:not(.fi-grid-direction-col) {
+        grid-template-columns: var(--cols-default);
+        display: grid;
+    }
+    .fi-sc.fi-sc-has-gap {
+        gap: calc(var(--spacing) * 2);
+    }
+    .fi-sc {
+        font-size: var(--text-sm);
+        line-height: var(--tw-leading, var(--text-sm--line-height));
+    }
+}
