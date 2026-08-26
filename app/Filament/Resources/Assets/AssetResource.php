@@ -2,12 +2,8 @@
 
 namespace App\Filament\Resources\Assets;
 
-use App\Filament\Resources\Assets\Pages\CreateAsset;
-use App\Filament\Resources\Assets\Pages\EditAsset;
 use App\Filament\Resources\Assets\Pages\ListAssets;
-use App\Filament\Resources\Assets\Pages\ViewAsset;
 use App\Filament\Resources\Assets\Schemas\AssetForm;
-use App\Filament\Resources\Assets\Schemas\AssetInfolist;
 use App\Filament\Resources\Assets\Tables\AssetsTable;
 use App\Models\Asset;
 use BackedEnum;
@@ -23,9 +19,13 @@ class AssetResource extends Resource
 {
     protected static ?string $model = Asset::class;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Inventory';
+    protected static string|UnitEnum|null $navigationGroup = 'Quản lý kho';
 
-    protected static ?string $navigationLabel = 'Stock & Locations';
+    protected static ?string $navigationLabel = 'Tồn kho & Thiết bị';
+
+    protected static ?string $modelLabel = 'Thiết bị';
+
+    protected static ?string $pluralModelLabel = 'Danh sách thiết bị';
 
     protected static ?int $navigationSort = 1;
 
@@ -34,11 +34,6 @@ class AssetResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return AssetForm::configure($schema);
-    }
-
-    public static function infolist(Schema $schema): Schema
-    {
-        return AssetInfolist::configure($schema);
     }
 
     public static function table(Table $table): Table
@@ -57,9 +52,6 @@ class AssetResource extends Resource
     {
         return [
             'index' => ListAssets::route('/'),
-            'create' => CreateAsset::route('/create'),
-            'view' => ViewAsset::route('/{record}'),
-            'edit' => EditAsset::route('/{record}/edit'),
         ];
     }
 

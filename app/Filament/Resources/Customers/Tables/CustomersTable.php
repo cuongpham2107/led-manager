@@ -2,14 +2,16 @@
 
 namespace App\Filament\Resources\Customers\Tables;
 
+use App\Enums\CustomerType;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
-use Filament\Actions\ViewAction;
+use Filament\Support\Enums\Width;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 
@@ -19,42 +21,48 @@ class CustomersTable
     {
         return $table
             ->columns([
-                TextColumn::make('name')
-                    ->searchable(),
                 TextColumn::make('code')
-                    ->searchable(),
+                    ->label('Mã KH')
+                    ->searchable()
+                    ->sortable()
+                    ->weight('bold'),
+                TextColumn::make('name')
+                    ->label('Tên khách hàng / Doanh nghiệp')
+                    ->searchable()
+                    ->sortable()
+                    ->weight('bold')
+                    ->wrap(),
                 TextColumn::make('type')
-                    ->searchable(),
+                    ->label('Phân loại')
+                    ->badge()
+                    ->sortable(),
                 TextColumn::make('phone')
-                    ->searchable(),
+                    ->label('Số điện thoại')
+                    ->searchable()
+                    ->copyable(),
                 TextColumn::make('email')
-                    ->label('Email address')
-                    ->searchable(),
-                TextColumn::make('tax_code')
-                    ->searchable(),
+                    ->label('Email')
+                    ->searchable()
+                    ->copyable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('contact_person')
+                    ->label('Người liên hệ')
                     ->searchable(),
                 IconColumn::make('is_active')
+                    ->label('Hoạt động')
                     ->boolean(),
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('deleted_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                SelectFilter::make('type')
+                    ->label('Phân loại khách hàng')
+                    ->options(CustomerType::class),
                 TrashedFilter::make(),
             ])
             ->recordActions([
-                ViewAction::make(),
-                EditAction::make(),
+                EditAction::make()
+                    ->modalHeading('Cập nhật thông tin khách hàng')
+                    ->modalDescription('Chỉnh sửa thông tin liên hệ, công ty và nhóm khách hàng.')
+                    ->modalWidth(Width::FourExtraLarge),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

@@ -12,13 +12,11 @@ class QuotationItem extends Model
 
     protected $fillable = [
         'quotation_id',
-        'category',
         'device_type_id',
-        'description',
         'quantity',
-        'unit',
         'unit_cost',
         'line_total',
+        'description',
     ];
 
     /**

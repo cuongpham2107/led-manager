@@ -17,6 +17,7 @@ class WarehouseForm
             ->components([
                 Section::make('Thông tin kho hàng')
                     ->description('Quản lý chi nhánh kho lưu trữ thiết bị LED')
+                    ->columnSpanFull()
                     ->schema([
                         Grid::make(3)->schema([
                             TextInput::make('name')

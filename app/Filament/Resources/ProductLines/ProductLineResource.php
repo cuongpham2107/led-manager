@@ -2,12 +2,8 @@
 
 namespace App\Filament\Resources\ProductLines;
 
-use App\Filament\Resources\ProductLines\Pages\CreateProductLine;
-use App\Filament\Resources\ProductLines\Pages\EditProductLine;
 use App\Filament\Resources\ProductLines\Pages\ListProductLines;
-use App\Filament\Resources\ProductLines\Pages\ViewProductLine;
 use App\Filament\Resources\ProductLines\Schemas\ProductLineForm;
-use App\Filament\Resources\ProductLines\Schemas\ProductLineInfolist;
 use App\Filament\Resources\ProductLines\Tables\ProductLinesTable;
 use App\Models\ProductLine;
 use BackedEnum;
@@ -21,9 +17,13 @@ class ProductLineResource extends Resource
 {
     protected static ?string $model = ProductLine::class;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Master Data';
+    protected static string|UnitEnum|null $navigationGroup = 'Dữ liệu gốc';
 
-    protected static ?string $navigationLabel = 'Asset catalog';
+    protected static ?string $navigationLabel = 'Dòng sản phẩm LED';
+
+    protected static ?string $modelLabel = 'Dòng sản phẩm';
+
+    protected static ?string $pluralModelLabel = 'Dòng sản phẩm LED';
 
     protected static ?int $navigationSort = 3;
 
@@ -32,11 +32,6 @@ class ProductLineResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return ProductLineForm::configure($schema);
-    }
-
-    public static function infolist(Schema $schema): Schema
-    {
-        return ProductLineInfolist::configure($schema);
     }
 
     public static function table(Table $table): Table
@@ -55,9 +50,6 @@ class ProductLineResource extends Resource
     {
         return [
             'index' => ListProductLines::route('/'),
-            'create' => CreateProductLine::route('/create'),
-            'view' => ViewProductLine::route('/{record}'),
-            'edit' => EditProductLine::route('/{record}/edit'),
         ];
     }
 }

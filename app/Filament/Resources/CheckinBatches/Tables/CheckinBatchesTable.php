@@ -2,11 +2,12 @@
 
 namespace App\Filament\Resources\CheckinBatches\Tables;
 
+use App\Enums\BatchStatus;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
 class CheckinBatchesTable
@@ -16,34 +17,40 @@ class CheckinBatchesTable
         return $table
             ->columns([
                 TextColumn::make('code')
-                    ->searchable(),
+                    ->label('Mã đợt nhập')
+                    ->searchable()
+                    ->sortable()
+                    ->weight('bold'),
                 TextColumn::make('warehouse.name')
-                    ->searchable(),
+                    ->label('Kho nhận')
+                    ->searchable()
+                    ->sortable(),
                 TextColumn::make('expected_date')
-                    ->date()
+                    ->label('Ngày dự kiến')
+                    ->date('d/m/Y')
                     ->sortable(),
                 TextColumn::make('status')
-                    ->searchable(),
-                TextColumn::make('created_by')
-                    ->numeric()
+                    ->label('Trạng thái')
+                    ->badge()
+                    ->sortable(),
+                TextColumn::make('creator.name')
+                    ->label('Người tạo')
+                    ->searchable()
                     ->sortable(),
                 TextColumn::make('completed_at')
-                    ->dateTime()
+                    ->label('Hoàn thành')
+                    ->dateTime('d/m/Y H:i')
                     ->sortable(),
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                SelectFilter::make('status')
+                    ->label('Trạng thái')
+                    ->options(BatchStatus::class),
+                SelectFilter::make('warehouse_id')
+                    ->label('Kho hàng')
+                    ->relationship('warehouse', 'name'),
             ])
             ->recordActions([
-                ViewAction::make(),
                 EditAction::make(),
             ])
             ->toolbarActions([

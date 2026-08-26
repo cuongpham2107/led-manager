@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\BatchStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -35,6 +36,7 @@ class CheckoutBatch extends Model
             'required_area_m2' => 'decimal:2',
             'expected_return_date' => 'date',
             'dispatched_at' => 'datetime',
+            'status' => BatchStatus::class,
         ];
     }
 

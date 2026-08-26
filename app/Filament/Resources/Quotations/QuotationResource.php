@@ -5,9 +5,7 @@ namespace App\Filament\Resources\Quotations;
 use App\Filament\Resources\Quotations\Pages\CreateQuotation;
 use App\Filament\Resources\Quotations\Pages\EditQuotation;
 use App\Filament\Resources\Quotations\Pages\ListQuotations;
-use App\Filament\Resources\Quotations\Pages\ViewQuotation;
 use App\Filament\Resources\Quotations\Schemas\QuotationForm;
-use App\Filament\Resources\Quotations\Schemas\QuotationInfolist;
 use App\Filament\Resources\Quotations\Tables\QuotationsTable;
 use App\Models\Quotation;
 use BackedEnum;
@@ -23,9 +21,13 @@ class QuotationResource extends Resource
 {
     protected static ?string $model = Quotation::class;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Sales';
+    protected static string|UnitEnum|null $navigationGroup = 'Bán hàng & Dự án';
 
-    protected static ?string $navigationLabel = 'Quotations';
+    protected static ?string $navigationLabel = 'Báo giá & Dự toán';
+
+    protected static ?string $modelLabel = 'Báo giá';
+
+    protected static ?string $pluralModelLabel = 'Danh sách báo giá';
 
     protected static ?int $navigationSort = 1;
 
@@ -34,11 +36,6 @@ class QuotationResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return QuotationForm::configure($schema);
-    }
-
-    public static function infolist(Schema $schema): Schema
-    {
-        return QuotationInfolist::configure($schema);
     }
 
     public static function table(Table $table): Table
@@ -58,7 +55,6 @@ class QuotationResource extends Resource
         return [
             'index' => ListQuotations::route('/'),
             'create' => CreateQuotation::route('/create'),
-            'view' => ViewQuotation::route('/{record}'),
             'edit' => EditQuotation::route('/{record}/edit'),
         ];
     }

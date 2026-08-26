@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\ReturnBatchItems\Pages;
 
 use App\Filament\Resources\ReturnBatchItems\ReturnBatchItemResource;
-use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
 
 class ListReturnBatchItems extends ListRecords
@@ -12,8 +11,6 @@ class ListReturnBatchItems extends ListRecords
 
     protected function getHeaderActions(): array
     {
-        return [
-            CreateAction::make(),
-        ];
+        return [];
     }
 }

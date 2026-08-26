@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\AssetStatusLogs\Pages;
 
 use App\Filament\Resources\AssetStatusLogs\AssetStatusLogResource;
-use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
 
 class ListAssetStatusLogs extends ListRecords
@@ -12,8 +11,6 @@ class ListAssetStatusLogs extends ListRecords
 
     protected function getHeaderActions(): array
     {
-        return [
-            CreateAction::make(),
-        ];
+        return [];
     }
 }

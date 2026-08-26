@@ -5,7 +5,6 @@ namespace App\Filament\Resources\QuotationItems\Tables;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -15,25 +14,35 @@ class QuotationItemsTable
     {
         return $table
             ->columns([
-                TextColumn::make('quotation.id')
-                    ->searchable(),
-                TextColumn::make('category')
-                    ->searchable(),
+                TextColumn::make('quotation.code')
+                    ->label('Mã báo giá')
+                    ->searchable()
+                    ->sortable(),
                 TextColumn::make('deviceType.name')
-                    ->searchable(),
-                TextColumn::make('description')
-                    ->searchable(),
+                    ->label('Thiết bị / Vật tư')
+                    ->searchable()
+                    ->sortable()
+                    ->weight('bold'),
                 TextColumn::make('quantity')
+                    ->label('Số lượng')
                     ->numeric()
                     ->sortable(),
-                TextColumn::make('unit')
-                    ->searchable(),
+                TextColumn::make('deviceType.unit')
+                    ->label('ĐVT')
+                    ->badge(),
                 TextColumn::make('unit_cost')
-                    ->money()
+                    ->label('Đơn giá')
+                    ->money('VND')
                     ->sortable(),
                 TextColumn::make('line_total')
-                    ->numeric()
-                    ->sortable(),
+                    ->label('Thành tiền')
+                    ->money('VND')
+                    ->sortable()
+                    ->weight('bold'),
+                TextColumn::make('description')
+                    ->label('Ghi chú quy cách')
+                    ->placeholder('—')
+                    ->searchable(),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -47,7 +56,6 @@ class QuotationItemsTable
                 //
             ])
             ->recordActions([
-                ViewAction::make(),
                 EditAction::make(),
             ])
             ->toolbarActions([

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ReturnGrade;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -27,6 +28,7 @@ class ReturnBatchItem extends Model
     protected function casts(): array
     {
         return [
+            'grade' => ReturnGrade::class,
             'is_received' => 'boolean',
             'received_at' => 'datetime',
         ];

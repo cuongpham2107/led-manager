@@ -5,9 +5,7 @@ namespace App\Filament\Resources\OrderItems;
 use App\Filament\Resources\OrderItems\Pages\CreateOrderItem;
 use App\Filament\Resources\OrderItems\Pages\EditOrderItem;
 use App\Filament\Resources\OrderItems\Pages\ListOrderItems;
-use App\Filament\Resources\OrderItems\Pages\ViewOrderItem;
 use App\Filament\Resources\OrderItems\Schemas\OrderItemForm;
-use App\Filament\Resources\OrderItems\Schemas\OrderItemInfolist;
 use App\Filament\Resources\OrderItems\Tables\OrderItemsTable;
 use App\Models\OrderItem;
 use Filament\Resources\Resource;
@@ -20,14 +18,13 @@ class OrderItemResource extends Resource
 
     protected static bool $shouldRegisterNavigation = false;
 
+    protected static ?string $modelLabel = 'Mục đơn hàng';
+
+    protected static ?string $pluralModelLabel = 'Chi tiết đơn hàng';
+
     public static function form(Schema $schema): Schema
     {
         return OrderItemForm::configure($schema);
-    }
-
-    public static function infolist(Schema $schema): Schema
-    {
-        return OrderItemInfolist::configure($schema);
     }
 
     public static function table(Table $table): Table
@@ -47,7 +44,6 @@ class OrderItemResource extends Resource
         return [
             'index' => ListOrderItems::route('/'),
             'create' => CreateOrderItem::route('/create'),
-            'view' => ViewOrderItem::route('/{record}'),
             'edit' => EditOrderItem::route('/{record}/edit'),
         ];
     }

@@ -18,6 +18,7 @@ class CustomerForm
             ->components([
                 Section::make('Thông tin khách hàng')
                     ->description('Thông tin định danh và phân loại khách hàng')
+                    ->columnSpanFull()
                     ->schema([
                         Grid::make(3)->schema([
                             TextInput::make('name')
@@ -50,6 +51,7 @@ class CustomerForm
 
                 Section::make('Liên hệ & Địa chỉ')
                     ->description('Thông tin đầu mối liên hệ và địa chỉ giao dịch')
+                    ->columnSpanFull()
                     ->schema([
                         Grid::make(3)->schema([
                             TextInput::make('contact_person')

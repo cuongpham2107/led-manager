@@ -18,6 +18,7 @@ class UserForm
             ->components([
                 Section::make('Thông tin tài khoản người dùng')
                     ->description('Quản lý thông tin đăng nhập, phân quyền và kho làm việc')
+                    ->columnSpanFull()
                     ->schema([
                         Grid::make(2)->schema([
                             TextInput::make('name')

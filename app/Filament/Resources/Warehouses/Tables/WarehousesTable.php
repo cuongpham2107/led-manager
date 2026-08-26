@@ -5,7 +5,7 @@ namespace App\Filament\Resources\Warehouses\Tables;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Actions\ViewAction;
+use Filament\Support\Enums\Width;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -16,31 +16,41 @@ class WarehousesTable
     {
         return $table
             ->columns([
-                TextColumn::make('name')
-                    ->searchable(),
                 TextColumn::make('code')
-                    ->searchable(),
+                    ->label('Mã kho')
+                    ->searchable()
+                    ->sortable()
+                    ->weight('bold'),
+                TextColumn::make('name')
+                    ->label('Tên kho hàng')
+                    ->searchable()
+                    ->sortable()
+                    ->weight('bold'),
                 TextColumn::make('address')
-                    ->searchable(),
+                    ->label('Địa chỉ kho')
+                    ->searchable()
+                    ->wrap(),
                 TextColumn::make('phone')
+                    ->label('Số điện thoại')
                     ->searchable(),
+                TextColumn::make('assets_count')
+                    ->label('Tổng thiết bị')
+                    ->counts('assets')
+                    ->badge()
+                    ->color('primary')
+                    ->sortable(),
                 IconColumn::make('is_active')
+                    ->label('Hoạt động')
                     ->boolean(),
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 //
             ])
             ->recordActions([
-                ViewAction::make(),
-                EditAction::make(),
+                EditAction::make()
+                    ->modalHeading('Cập nhật thông tin kho hàng')
+                    ->modalDescription('Chỉnh sửa tên, địa chỉ, người quản lý và số điện thoại liên hệ của kho.')
+                    ->modalWidth(Width::FourExtraLarge),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

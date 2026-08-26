@@ -2,14 +2,19 @@
 
 namespace App\Filament\Resources\Assets\Tables;
 
+use App\Enums\AssetStatus;
+use App\Models\Asset;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
-use Filament\Actions\ViewAction;
+use Filament\Support\Enums\Width;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
+use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
 
 class AssetsTable
@@ -17,71 +22,80 @@ class AssetsTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->defaultGroup('currentWarehouse.name')
+            ->groups([
+                Group::make('currentWarehouse.name')
+                    ->label('Kho lưu trữ (Warehouse)')
+                    ->collapsible(),
+                Group::make('productLine.name')
+                    ->label('Dòng sản phẩm LED')
+                    ->collapsible(),
+                Group::make('current_status')
+                    ->label('Trạng thái thiết bị')
+                    ->collapsible(),
+            ])
             ->columns([
                 TextColumn::make('serial_no')
-                    ->label('Serial No')
+                    ->label('SERIAL')
                     ->searchable()
                     ->sortable()
                     ->weight('bold'),
-                TextColumn::make('deviceType.name')
-                    ->label('Loại thiết bị')
-                    ->searchable()
-                    ->sortable(),
                 TextColumn::make('productLine.name')
-                    ->label('Dòng sản phẩm')
+                    ->label('PRODUCT LINE')
                     ->placeholder('N/A')
-                    ->searchable(),
-                TextColumn::make('current_status')
-                    ->label('Trạng thái')
-                    ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        'ready' => 'success',
-                        'in_event' => 'info',
-                        'in_transit' => 'warning',
-                        'repairing' => 'danger',
-                        default => 'gray',
-                    })
-                    ->formatStateUsing(fn (string $state): string => match ($state) {
-                        'ready' => 'Sẵn sàng',
-                        'in_event' => 'Đang sự kiện',
-                        'in_transit' => 'Vận chuyển',
-                        'repairing' => 'Bảo dưỡng',
-                        'disposed' => 'Thanh lý',
-                        default => $state,
-                    })
-                    ->sortable(),
-                TextColumn::make('currentWarehouse.name')
-                    ->label('Kho hiện tại')
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('size')
-                    ->label('Quy cách')
+                    ->label('SIZE')
+                    ->placeholder('0.5×0.5 m')
+                    ->searchable()
+                    ->sortable(),
+                TextColumn::make('manufactured_date')
+                    ->label('MANUFACTURED')
+                    ->date('d/m/Y')
+                    ->sortable(),
+                TextColumn::make('current_status')
+                    ->label('STATUS')
+                    ->badge()
+                    ->sortable(),
+                TextColumn::make('currentWarehouse.name')
+                    ->label('WAREHOUSE')
+                    ->searchable()
+                    ->sortable(),
+                TextColumn::make('deviceType.name')
+                    ->label('TYPE')
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('purchase_cost')
-                    ->label('Nguyên giá')
-                    ->numeric(decimalPlaces: 0)
-                    ->suffix(' đ')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('deleted_at')
-                    ->dateTime()
+                    ->label('COST')
+                    ->money('VND')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                SelectFilter::make('current_status')
+                    ->label('Status')
+                    ->options(AssetStatus::class),
+                SelectFilter::make('product_line_id')
+                    ->label('Product Line')
+                    ->relationship('productLine', 'name'),
+                SelectFilter::make('current_warehouse_id')
+                    ->label('Warehouse')
+                    ->relationship('currentWarehouse', 'name'),
                 TrashedFilter::make(),
             ])
             ->recordActions([
-                ViewAction::make(),
-                EditAction::make(),
+                Action::make('qr_code')
+                    ->label('Mã QR')
+                    ->icon('heroicon-o-qr-code')
+                    ->color('info')
+                    ->modalHeading(fn (Asset $record): string => "Mã QR Thiết bị: {$record->serial_no}")
+                    ->modalContent(fn (Asset $record) => view('filament.components.asset-qr-modal', ['record' => $record]))
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Đóng'),
+                EditAction::make()
+                    ->modalHeading('Cập nhật thông tin thiết bị')
+                    ->modalDescription('Chỉnh sửa thông số, vị trí kho và trạng thái vận hành của thiết bị.')
+                    ->modalWidth(Width::FourExtraLarge),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

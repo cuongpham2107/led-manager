@@ -5,9 +5,7 @@ namespace App\Filament\Resources\CheckinBatches;
 use App\Filament\Resources\CheckinBatches\Pages\CreateCheckinBatch;
 use App\Filament\Resources\CheckinBatches\Pages\EditCheckinBatch;
 use App\Filament\Resources\CheckinBatches\Pages\ListCheckinBatches;
-use App\Filament\Resources\CheckinBatches\Pages\ViewCheckinBatch;
 use App\Filament\Resources\CheckinBatches\Schemas\CheckinBatchForm;
-use App\Filament\Resources\CheckinBatches\Schemas\CheckinBatchInfolist;
 use App\Filament\Resources\CheckinBatches\Tables\CheckinBatchesTable;
 use App\Models\CheckinBatch;
 use BackedEnum;
@@ -21,9 +19,13 @@ class CheckinBatchResource extends Resource
 {
     protected static ?string $model = CheckinBatch::class;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Inventory';
+    protected static string|UnitEnum|null $navigationGroup = 'Quản lý kho';
 
-    protected static ?string $navigationLabel = 'Check-in';
+    protected static ?string $navigationLabel = 'Nhập kho (Check-in)';
+
+    protected static ?string $modelLabel = 'Đợt nhập kho';
+
+    protected static ?string $pluralModelLabel = 'Danh sách nhập kho';
 
     protected static ?int $navigationSort = 2;
 
@@ -32,11 +34,6 @@ class CheckinBatchResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return CheckinBatchForm::configure($schema);
-    }
-
-    public static function infolist(Schema $schema): Schema
-    {
-        return CheckinBatchInfolist::configure($schema);
     }
 
     public static function table(Table $table): Table
@@ -56,7 +53,6 @@ class CheckinBatchResource extends Resource
         return [
             'index' => ListCheckinBatches::route('/'),
             'create' => CreateCheckinBatch::route('/create'),
-            'view' => ViewCheckinBatch::route('/{record}'),
             'edit' => EditCheckinBatch::route('/{record}/edit'),
         ];
     }

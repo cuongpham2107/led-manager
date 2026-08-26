@@ -17,6 +17,7 @@ class ProductLineForm
             ->components([
                 Section::make('Thông tin dòng sản phẩm')
                     ->description('Phân loại dòng module LED và nhà sản xuất')
+                    ->columnSpanFull()
                     ->schema([
                         Grid::make(3)->schema([
                             TextInput::make('name')
@@ -37,6 +38,7 @@ class ProductLineForm
                                 ->options([
                                     'indoor' => 'Trong nhà (Indoor)',
                                     'outdoor' => 'Ngoài trời (Outdoor - Chống nước)',
+                                    'semi_outdoor' => 'Bán ngoài trời (Semi-outdoor)',
                                 ])
                                 ->required()
                                 ->default('indoor'),
@@ -49,6 +51,7 @@ class ProductLineForm
 
                 Section::make('Thông số kỹ thuật Cabinet')
                     ->description('Kích thước module, công suất và trọng lượng phục vụ tính toán tự động')
+                    ->columnSpanFull()
                     ->schema([
                         Grid::make(3)->schema([
                             TextInput::make('pixel_pitch')

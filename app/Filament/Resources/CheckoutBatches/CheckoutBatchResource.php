@@ -5,9 +5,7 @@ namespace App\Filament\Resources\CheckoutBatches;
 use App\Filament\Resources\CheckoutBatches\Pages\CreateCheckoutBatch;
 use App\Filament\Resources\CheckoutBatches\Pages\EditCheckoutBatch;
 use App\Filament\Resources\CheckoutBatches\Pages\ListCheckoutBatches;
-use App\Filament\Resources\CheckoutBatches\Pages\ViewCheckoutBatch;
 use App\Filament\Resources\CheckoutBatches\Schemas\CheckoutBatchForm;
-use App\Filament\Resources\CheckoutBatches\Schemas\CheckoutBatchInfolist;
 use App\Filament\Resources\CheckoutBatches\Tables\CheckoutBatchesTable;
 use App\Models\CheckoutBatch;
 use BackedEnum;
@@ -21,9 +19,13 @@ class CheckoutBatchResource extends Resource
 {
     protected static ?string $model = CheckoutBatch::class;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Inventory';
+    protected static string|UnitEnum|null $navigationGroup = 'Quản lý kho';
 
-    protected static ?string $navigationLabel = 'Check-out';
+    protected static ?string $navigationLabel = 'Xuất kho (Check-out)';
+
+    protected static ?string $modelLabel = 'Đợt xuất kho';
+
+    protected static ?string $pluralModelLabel = 'Danh sách xuất kho';
 
     protected static ?int $navigationSort = 3;
 
@@ -32,11 +34,6 @@ class CheckoutBatchResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return CheckoutBatchForm::configure($schema);
-    }
-
-    public static function infolist(Schema $schema): Schema
-    {
-        return CheckoutBatchInfolist::configure($schema);
     }
 
     public static function table(Table $table): Table
@@ -56,7 +53,6 @@ class CheckoutBatchResource extends Resource
         return [
             'index' => ListCheckoutBatches::route('/'),
             'create' => CreateCheckoutBatch::route('/create'),
-            'view' => ViewCheckoutBatch::route('/{record}'),
             'edit' => EditCheckoutBatch::route('/{record}/edit'),
         ];
     }

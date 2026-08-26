@@ -17,6 +17,7 @@ class DeviceTypeForm
             ->components([
                 Section::make('Phân loại danh mục thiết bị')
                     ->description('Cấu hình loại thiết bị, đơn vị tính và quy tắc quản lý Serial')
+                    ->columnSpanFull()
                     ->schema([
                         Grid::make(3)->schema([
                             TextInput::make('name')

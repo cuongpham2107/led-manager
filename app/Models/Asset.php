@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AssetStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -35,6 +36,7 @@ class Asset extends Model
             'manufactured_date' => 'date',
             'purchase_date' => 'date',
             'purchase_cost' => 'decimal:2',
+            'current_status' => AssetStatus::class,
         ];
     }
 

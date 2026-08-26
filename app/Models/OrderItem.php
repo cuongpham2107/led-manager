@@ -12,7 +12,6 @@ class OrderItem extends Model
 
     protected $fillable = [
         'order_id',
-        'product_line_id',
         'device_type_id',
         'quantity_required',
         'unit_price',
@@ -36,14 +35,6 @@ class OrderItem extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
-    }
-
-    /**
-     * @return BelongsTo<ProductLine, $this>
-     */
-    public function productLine(): BelongsTo
-    {
-        return $this->belongsTo(ProductLine::class);
     }
 
     /**

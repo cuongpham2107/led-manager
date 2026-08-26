@@ -13,11 +13,16 @@ return new class extends Migration
             $table->foreignId('checkout_batch_id')->constrained()->cascadeOnDelete();
             $table->foreignId('asset_id')->constrained()->restrictOnDelete();
 
-            // "a serial already committed to another open batch cannot be picked twice"
-            // enforced at application level (check open batches before insert) + this flag
             $table->boolean('is_dispatched')->default(false);
             $table->foreignId('dispatched_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('dispatched_at')->nullable();
+
+            // Quality Handover Checklist
+            $table->boolean('checked_brightness')->default(true);  // Độ sáng đồng đều
+            $table->boolean('checked_dead_pixels')->default(true); // Không chết điểm LED
+            $table->boolean('checked_color')->default(true);       // Cân bằng màu sắc
+            $table->boolean('checked_power')->default(true);       // Nguồn & cáp an toàn
+            $table->text('checklist_note')->nullable();
 
             $table->timestamps();
 

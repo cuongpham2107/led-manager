@@ -2,11 +2,12 @@
 
 namespace App\Filament\Resources\ReturnBatches\Tables;
 
+use App\Enums\ReturnBatchStatus;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
 class ReturnBatchesTable
@@ -16,34 +17,37 @@ class ReturnBatchesTable
         return $table
             ->columns([
                 TextColumn::make('code')
-                    ->searchable(),
-                TextColumn::make('checkoutBatch.id')
-                    ->searchable(),
+                    ->label('Mã đợt trả')
+                    ->searchable()
+                    ->sortable()
+                    ->weight('bold'),
+                TextColumn::make('checkoutBatch.code')
+                    ->label('Phiếu xuất kho')
+                    ->searchable()
+                    ->sortable(),
                 TextColumn::make('return_date')
-                    ->date()
+                    ->label('Ngày trả')
+                    ->date('d/m/Y')
                     ->sortable(),
                 TextColumn::make('status')
-                    ->searchable(),
-                TextColumn::make('created_by')
-                    ->numeric()
+                    ->label('Trạng thái')
+                    ->badge()
+                    ->sortable(),
+                TextColumn::make('creator.name')
+                    ->label('Người tạo')
+                    ->searchable()
                     ->sortable(),
                 TextColumn::make('completed_at')
-                    ->dateTime()
+                    ->label('Hoàn thành')
+                    ->dateTime('d/m/Y H:i')
                     ->sortable(),
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                SelectFilter::make('status')
+                    ->label('Trạng thái')
+                    ->options(ReturnBatchStatus::class),
             ])
             ->recordActions([
-                ViewAction::make(),
                 EditAction::make(),
             ])
             ->toolbarActions([

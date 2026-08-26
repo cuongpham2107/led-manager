@@ -2,13 +2,15 @@
 
 namespace App\Filament\Resources\RepairLogs\Tables;
 
+use App\Enums\RepairResultStatus;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
-use Filament\Actions\ViewAction;
+use Filament\Support\Enums\Width;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 
@@ -18,41 +20,52 @@ class RepairLogsTable
     {
         return $table
             ->columns([
-                TextColumn::make('asset.id')
-                    ->searchable(),
+                TextColumn::make('asset.serial_no')
+                    ->label('Mã Serial Thiết bị')
+                    ->searchable()
+                    ->sortable()
+                    ->weight('bold'),
+                TextColumn::make('asset.productLine.name')
+                    ->label('Dòng LED')
+                    ->placeholder('—'),
                 TextColumn::make('start_date')
-                    ->date()
+                    ->label('Ngày nhận sửa')
+                    ->date('d/m/Y')
                     ->sortable(),
                 TextColumn::make('end_date')
-                    ->date()
-                    ->sortable(),
-                TextColumn::make('result_status')
-                    ->searchable(),
+                    ->label('Ngày hoàn thành')
+                    ->date('d/m/Y')
+                    ->sortable()
+                    ->placeholder('Đang sửa chữa...'),
+                TextColumn::make('repair_note')
+                    ->label('Mô tả hỏng hóc & linh kiện thay')
+                    ->limit(35)
+                    ->wrap(),
                 TextColumn::make('repair_cost')
-                    ->money()
+                    ->label('Chi phí sửa')
+                    ->money('VND')
+                    ->sortable()
+                    ->weight('bold'),
+                TextColumn::make('result_status')
+                    ->label('Kết quả')
+                    ->badge()
                     ->sortable(),
-                TextColumn::make('created_by')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('deleted_at')
-                    ->dateTime()
-                    ->sortable()
+                TextColumn::make('creator.name')
+                    ->label('Kỹ thuật viên')
+                    ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                SelectFilter::make('result_status')
+                    ->label('Kết quả xử lý')
+                    ->options(RepairResultStatus::class),
                 TrashedFilter::make(),
             ])
             ->recordActions([
-                ViewAction::make(),
-                EditAction::make(),
+                EditAction::make()
+                    ->modalHeading('Cập nhật phiếu sửa chữa')
+                    ->modalDescription('Cập nhật tình trạng khắc phục, kỹ thuật viên phụ trách và chi phí thực tế.')
+                    ->modalWidth(Width::FourExtraLarge),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

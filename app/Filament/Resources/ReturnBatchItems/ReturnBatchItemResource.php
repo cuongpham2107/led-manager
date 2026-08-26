@@ -5,9 +5,7 @@ namespace App\Filament\Resources\ReturnBatchItems;
 use App\Filament\Resources\ReturnBatchItems\Pages\CreateReturnBatchItem;
 use App\Filament\Resources\ReturnBatchItems\Pages\EditReturnBatchItem;
 use App\Filament\Resources\ReturnBatchItems\Pages\ListReturnBatchItems;
-use App\Filament\Resources\ReturnBatchItems\Pages\ViewReturnBatchItem;
 use App\Filament\Resources\ReturnBatchItems\Schemas\ReturnBatchItemForm;
-use App\Filament\Resources\ReturnBatchItems\Schemas\ReturnBatchItemInfolist;
 use App\Filament\Resources\ReturnBatchItems\Tables\ReturnBatchItemsTable;
 use App\Models\ReturnBatchItem;
 use Filament\Resources\Resource;
@@ -20,14 +18,13 @@ class ReturnBatchItemResource extends Resource
 
     protected static bool $shouldRegisterNavigation = false;
 
+    protected static ?string $modelLabel = 'Chi tiết đợt trả hàng';
+
+    protected static ?string $pluralModelLabel = 'Chi tiết đợt trả hàng';
+
     public static function form(Schema $schema): Schema
     {
         return ReturnBatchItemForm::configure($schema);
-    }
-
-    public static function infolist(Schema $schema): Schema
-    {
-        return ReturnBatchItemInfolist::configure($schema);
     }
 
     public static function table(Table $table): Table
@@ -47,7 +44,6 @@ class ReturnBatchItemResource extends Resource
         return [
             'index' => ListReturnBatchItems::route('/'),
             'create' => CreateReturnBatchItem::route('/create'),
-            'view' => ViewReturnBatchItem::route('/{record}'),
             'edit' => EditReturnBatchItem::route('/{record}/edit'),
         ];
     }

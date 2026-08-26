@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\QuotationStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -67,6 +68,7 @@ class Quotation extends Model
             'discount_amount' => 'decimal:2',
             'total_price' => 'decimal:2',
             'margin_percent' => 'decimal:2',
+            'status' => QuotationStatus::class,
         ];
     }
 

@@ -13,7 +13,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('code')->unique();
-            $table->enum('unit', ['piece', 'set', 'meter', 'roll'])->default('piece');
+            $table->enum('unit', ['piece', 'set', 'box', 'bar', 'cable', 'meter', 'roll'])->default('piece');
             $table->boolean('requires_serial')->default(true); // false for bulk items like cable
             $table->timestamps();
         });

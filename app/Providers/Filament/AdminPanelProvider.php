@@ -3,6 +3,7 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Pages\Dashboard;
+use App\Models\User;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use Filament\Enums\ThemeMode;
 use Filament\Enums\UserMenuPosition;
@@ -15,14 +16,16 @@ use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\Support\Enums\Width;
-use Filament\Widgets\AccountWidget;
-use Filament\Widgets\FilamentInfoWidget;
+use Guava\Calendar\CalendarPlugin;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use JohnRivera7\FilamentWidgetGrid\FilamentWidgetGridPlugin;
+use Saade\FilamentFullCalendar\FilamentFullCalendarPlugin;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -54,19 +57,16 @@ class AdminPanelProvider extends PanelProvider
                 Dashboard::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
-            ->widgets([
-                AccountWidget::class,
-                FilamentInfoWidget::class,
-            ])
+            ->widgets([])
             ->maxContentWidth(Width::Full)
             ->subNavigationPosition(SubNavigationPosition::Top)
             ->navigationGroups([
-                'Overview',
-                'Master Data',
-                'Inventory',
-                'Sales',
-                'Reports',
-                'System',
+                'Tổng quan',
+                'Bán hàng & Dự án',
+                'Quản lý kho',
+                'Dữ liệu gốc',
+                'Báo cáo & Thống kê',
+                'Hệ thống',
             ])
             ->userMenu(position: UserMenuPosition::Sidebar)
             ->middleware([
@@ -81,7 +81,24 @@ class AdminPanelProvider extends PanelProvider
                 DispatchServingFilamentEvent::class,
             ])
             ->plugins([
+                CalendarPlugin::make(),
+                FilamentFullCalendarPlugin::make()
+                    ->selectable(true)
+                    ->editable(false)
+                    ->timezone(config('app.timezone', 'Asia/Ho_Chi_Minh'))
+                    ->locale('vi'),
+                FilamentWidgetGridPlugin::make()
+                    ->canCustomize(fn (): bool => Auth::check())
+                    ->canManageDefaults(function (): bool {
+                        /** @var User|null $user */
+                        $user = Auth::user();
+
+                        return (bool) $user?->hasRole(['super_admin', 'admin']);
+                    }),
                 FilamentShieldPlugin::make()
+                    ->navigationGroup('Hệ thống')
+                    ->navigationLabel('Vai trò & Phân quyền')
+                    ->navigationSort(2)
                     ->gridColumns([
                         'default' => 1,
                         'sm' => 2,

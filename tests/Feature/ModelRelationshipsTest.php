@@ -86,7 +86,6 @@ test('models and basic relationships can be instantiated', function () {
 
     $orderItem = OrderItem::create([
         'order_id' => $order->id,
-        'product_line_id' => $productLine->id,
         'device_type_id' => $deviceType->id,
         'quantity_required' => 10,
     ]);

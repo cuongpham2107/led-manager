@@ -2,12 +2,8 @@
 
 namespace App\Filament\Resources\DeviceTypes;
 
-use App\Filament\Resources\DeviceTypes\Pages\CreateDeviceType;
-use App\Filament\Resources\DeviceTypes\Pages\EditDeviceType;
 use App\Filament\Resources\DeviceTypes\Pages\ListDeviceTypes;
-use App\Filament\Resources\DeviceTypes\Pages\ViewDeviceType;
 use App\Filament\Resources\DeviceTypes\Schemas\DeviceTypeForm;
-use App\Filament\Resources\DeviceTypes\Schemas\DeviceTypeInfolist;
 use App\Filament\Resources\DeviceTypes\Tables\DeviceTypesTable;
 use App\Models\DeviceType;
 use BackedEnum;
@@ -21,9 +17,13 @@ class DeviceTypeResource extends Resource
 {
     protected static ?string $model = DeviceType::class;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Master Data';
+    protected static string|UnitEnum|null $navigationGroup = 'Dữ liệu gốc';
 
-    protected static ?string $navigationLabel = 'Device types';
+    protected static ?string $navigationLabel = 'Loại thiết bị';
+
+    protected static ?string $modelLabel = 'Loại thiết bị';
+
+    protected static ?string $pluralModelLabel = 'Danh mục loại thiết bị';
 
     protected static ?int $navigationSort = 4;
 
@@ -32,11 +32,6 @@ class DeviceTypeResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return DeviceTypeForm::configure($schema);
-    }
-
-    public static function infolist(Schema $schema): Schema
-    {
-        return DeviceTypeInfolist::configure($schema);
     }
 
     public static function table(Table $table): Table
@@ -55,9 +50,6 @@ class DeviceTypeResource extends Resource
     {
         return [
             'index' => ListDeviceTypes::route('/'),
-            'create' => CreateDeviceType::route('/create'),
-            'view' => ViewDeviceType::route('/{record}'),
-            'edit' => EditDeviceType::route('/{record}/edit'),
         ];
     }
 }

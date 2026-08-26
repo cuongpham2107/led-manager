@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\QuotationItems\Pages;
 
 use App\Filament\Resources\QuotationItems\QuotationItemResource;
-use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
 
 class ListQuotationItems extends ListRecords
@@ -12,8 +11,6 @@ class ListQuotationItems extends ListRecords
 
     protected function getHeaderActions(): array
     {
-        return [
-            CreateAction::make(),
-        ];
+        return [];
     }
 }

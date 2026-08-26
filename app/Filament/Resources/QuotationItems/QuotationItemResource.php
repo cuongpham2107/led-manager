@@ -5,9 +5,7 @@ namespace App\Filament\Resources\QuotationItems;
 use App\Filament\Resources\QuotationItems\Pages\CreateQuotationItem;
 use App\Filament\Resources\QuotationItems\Pages\EditQuotationItem;
 use App\Filament\Resources\QuotationItems\Pages\ListQuotationItems;
-use App\Filament\Resources\QuotationItems\Pages\ViewQuotationItem;
 use App\Filament\Resources\QuotationItems\Schemas\QuotationItemForm;
-use App\Filament\Resources\QuotationItems\Schemas\QuotationItemInfolist;
 use App\Filament\Resources\QuotationItems\Tables\QuotationItemsTable;
 use App\Models\QuotationItem;
 use Filament\Resources\Resource;
@@ -20,14 +18,13 @@ class QuotationItemResource extends Resource
 
     protected static bool $shouldRegisterNavigation = false;
 
+    protected static ?string $modelLabel = 'Mục báo giá';
+
+    protected static ?string $pluralModelLabel = 'Chi tiết báo giá';
+
     public static function form(Schema $schema): Schema
     {
         return QuotationItemForm::configure($schema);
-    }
-
-    public static function infolist(Schema $schema): Schema
-    {
-        return QuotationItemInfolist::configure($schema);
     }
 
     public static function table(Table $table): Table
@@ -47,7 +44,6 @@ class QuotationItemResource extends Resource
         return [
             'index' => ListQuotationItems::route('/'),
             'create' => CreateQuotationItem::route('/create'),
-            'view' => ViewQuotationItem::route('/{record}'),
             'edit' => EditQuotationItem::route('/{record}/edit'),
         ];
     }

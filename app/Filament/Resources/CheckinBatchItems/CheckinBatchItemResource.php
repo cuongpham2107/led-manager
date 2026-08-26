@@ -5,9 +5,7 @@ namespace App\Filament\Resources\CheckinBatchItems;
 use App\Filament\Resources\CheckinBatchItems\Pages\CreateCheckinBatchItem;
 use App\Filament\Resources\CheckinBatchItems\Pages\EditCheckinBatchItem;
 use App\Filament\Resources\CheckinBatchItems\Pages\ListCheckinBatchItems;
-use App\Filament\Resources\CheckinBatchItems\Pages\ViewCheckinBatchItem;
 use App\Filament\Resources\CheckinBatchItems\Schemas\CheckinBatchItemForm;
-use App\Filament\Resources\CheckinBatchItems\Schemas\CheckinBatchItemInfolist;
 use App\Filament\Resources\CheckinBatchItems\Tables\CheckinBatchItemsTable;
 use App\Models\CheckinBatchItem;
 use Filament\Resources\Resource;
@@ -20,14 +18,13 @@ class CheckinBatchItemResource extends Resource
 
     protected static bool $shouldRegisterNavigation = false;
 
+    protected static ?string $modelLabel = 'Chi tiết đợt nhập kho';
+
+    protected static ?string $pluralModelLabel = 'Chi tiết đợt nhập kho';
+
     public static function form(Schema $schema): Schema
     {
         return CheckinBatchItemForm::configure($schema);
-    }
-
-    public static function infolist(Schema $schema): Schema
-    {
-        return CheckinBatchItemInfolist::configure($schema);
     }
 
     public static function table(Table $table): Table
@@ -47,7 +44,6 @@ class CheckinBatchItemResource extends Resource
         return [
             'index' => ListCheckinBatchItems::route('/'),
             'create' => CreateCheckinBatchItem::route('/create'),
-            'view' => ViewCheckinBatchItem::route('/{record}'),
             'edit' => EditCheckinBatchItem::route('/{record}/edit'),
         ];
     }

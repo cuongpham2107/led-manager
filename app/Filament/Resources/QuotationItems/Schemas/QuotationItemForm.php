@@ -5,6 +5,7 @@ namespace App\Filament\Resources\QuotationItems\Schemas;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
+use Filament\Support\RawJs;
 
 class QuotationItemForm
 {
@@ -13,29 +14,39 @@ class QuotationItemForm
         return $schema
             ->components([
                 Select::make('quotation_id')
-                    ->relationship('quotation', 'id')
+                    ->label('Báo giá')
+                    ->relationship('quotation', 'code')
+                    ->searchable()
+                    ->preload()
                     ->required(),
-                TextInput::make('category')
-                    ->required()
-                    ->default('equipment'),
                 Select::make('device_type_id')
-                    ->relationship('deviceType', 'name'),
-                TextInput::make('description')
+                    ->label('Thiết bị / Vật tư')
+                    ->relationship('deviceType', 'name')
+                    ->searchable()
+                    ->preload()
                     ->required(),
                 TextInput::make('quantity')
+                    ->label('Số lượng')
                     ->required()
                     ->numeric()
                     ->default(1),
-                TextInput::make('unit'),
                 TextInput::make('unit_cost')
-                    ->required()
+                    ->label('Đơn giá')
+                    ->mask(RawJs::make('$money($input)'))
+                    ->stripCharacters(',')
                     ->numeric()
-                    ->default(0)
-                    ->prefix('$'),
-                TextInput::make('line_total')
-                    ->required()
-                    ->numeric()
+                    ->suffix(' đ')
                     ->default(0),
+                TextInput::make('line_total')
+                    ->label('Thành tiền')
+                    ->mask(RawJs::make('$money($input)'))
+                    ->stripCharacters(',')
+                    ->numeric()
+                    ->suffix(' đ')
+                    ->default(0),
+                TextInput::make('description')
+                    ->label('Ghi chú quy cách')
+                    ->placeholder('Ghi chú quy cách...'),
             ]);
     }
 }

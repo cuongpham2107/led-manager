@@ -2,12 +2,8 @@
 
 namespace App\Filament\Resources\RepairLogs;
 
-use App\Filament\Resources\RepairLogs\Pages\CreateRepairLog;
-use App\Filament\Resources\RepairLogs\Pages\EditRepairLog;
 use App\Filament\Resources\RepairLogs\Pages\ListRepairLogs;
-use App\Filament\Resources\RepairLogs\Pages\ViewRepairLog;
 use App\Filament\Resources\RepairLogs\Schemas\RepairLogForm;
-use App\Filament\Resources\RepairLogs\Schemas\RepairLogInfolist;
 use App\Filament\Resources\RepairLogs\Tables\RepairLogsTable;
 use App\Models\RepairLog;
 use BackedEnum;
@@ -23,9 +19,13 @@ class RepairLogResource extends Resource
 {
     protected static ?string $model = RepairLog::class;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Inventory';
+    protected static string|UnitEnum|null $navigationGroup = 'Quản lý kho';
 
-    protected static ?string $navigationLabel = 'Maintenance';
+    protected static ?string $navigationLabel = 'Bảo trì & Sửa chữa';
+
+    protected static ?string $modelLabel = 'Nhật ký sửa chữa';
+
+    protected static ?string $pluralModelLabel = 'Bảo trì & Sửa chữa';
 
     protected static ?int $navigationSort = 5;
 
@@ -34,11 +34,6 @@ class RepairLogResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return RepairLogForm::configure($schema);
-    }
-
-    public static function infolist(Schema $schema): Schema
-    {
-        return RepairLogInfolist::configure($schema);
     }
 
     public static function table(Table $table): Table
@@ -57,9 +52,6 @@ class RepairLogResource extends Resource
     {
         return [
             'index' => ListRepairLogs::route('/'),
-            'create' => CreateRepairLog::route('/create'),
-            'view' => ViewRepairLog::route('/{record}'),
-            'edit' => EditRepairLog::route('/{record}/edit'),
         ];
     }
 

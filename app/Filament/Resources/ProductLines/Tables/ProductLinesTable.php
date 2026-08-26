@@ -2,12 +2,15 @@
 
 namespace App\Filament\Resources\ProductLines\Tables;
 
+use App\Enums\ProductEnvironment;
+use App\Models\ProductLine;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Actions\ViewAction;
+use Filament\Support\Enums\Width;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
 class ProductLinesTable
@@ -17,49 +20,51 @@ class ProductLinesTable
         return $table
             ->columns([
                 TextColumn::make('name')
-                    ->searchable(),
+                    ->label('Dòng LED')
+                    ->searchable()
+                    ->sortable()
+                    ->weight('bold'),
                 TextColumn::make('code')
-                    ->searchable(),
-                TextColumn::make('pixel_pitch_unit')
-                    ->searchable(),
+                    ->label('Mã dòng')
+                    ->searchable()
+                    ->sortable(),
                 TextColumn::make('pixel_pitch')
-                    ->numeric()
+                    ->label('Pixel Pitch')
+                    ->formatStateUsing(fn ($state) => "P{$state} mm")
                     ->sortable(),
                 TextColumn::make('environment')
-                    ->searchable(),
-                TextColumn::make('module_width_mm')
-                    ->numeric()
+                    ->label('Môi trường')
+                    ->badge()
                     ->sortable(),
-                TextColumn::make('module_height_mm')
-                    ->numeric()
-                    ->sortable(),
+                TextColumn::make('size_display')
+                    ->label('Kích thước Cabinet')
+                    ->state(fn (ProductLine $record): string => ($record->module_width_mm / 1000).'×'.($record->module_height_mm / 1000).' m ('.(int) $record->module_width_mm.'×'.(int) $record->module_height_mm.'mm)'),
                 TextColumn::make('weight_kg')
-                    ->numeric()
+                    ->label('Trọng lượng')
+                    ->suffix(' kg/tấm')
                     ->sortable(),
                 TextColumn::make('power_watt')
-                    ->numeric()
+                    ->label('Công suất')
+                    ->suffix(' W/tấm')
                     ->sortable(),
                 TextColumn::make('brand')
-                    ->searchable(),
-                TextColumn::make('cabinet_material')
-                    ->searchable(),
+                    ->label('Thương hiệu')
+                    ->searchable()
+                    ->placeholder('—'),
                 IconColumn::make('is_active')
+                    ->label('Hoạt động')
                     ->boolean(),
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                SelectFilter::make('environment')
+                    ->label('Môi trường sử dụng')
+                    ->options(ProductEnvironment::class),
             ])
             ->recordActions([
-                ViewAction::make(),
-                EditAction::make(),
+                EditAction::make()
+                    ->modalHeading('Cập nhật dòng sản phẩm LED')
+                    ->modalDescription('Chỉnh sửa thông số kỹ thuật và cấu hình module của dòng LED.')
+                    ->modalWidth(Width::FiveExtraLarge),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

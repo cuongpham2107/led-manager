@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ReturnBatchStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -31,6 +32,7 @@ class ReturnBatch extends Model
         return [
             'return_date' => 'date',
             'completed_at' => 'datetime',
+            'status' => ReturnBatchStatus::class,
         ];
     }
 

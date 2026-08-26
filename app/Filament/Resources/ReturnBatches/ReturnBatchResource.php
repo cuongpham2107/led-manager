@@ -5,9 +5,7 @@ namespace App\Filament\Resources\ReturnBatches;
 use App\Filament\Resources\ReturnBatches\Pages\CreateReturnBatch;
 use App\Filament\Resources\ReturnBatches\Pages\EditReturnBatch;
 use App\Filament\Resources\ReturnBatches\Pages\ListReturnBatches;
-use App\Filament\Resources\ReturnBatches\Pages\ViewReturnBatch;
 use App\Filament\Resources\ReturnBatches\Schemas\ReturnBatchForm;
-use App\Filament\Resources\ReturnBatches\Schemas\ReturnBatchInfolist;
 use App\Filament\Resources\ReturnBatches\Tables\ReturnBatchesTable;
 use App\Models\ReturnBatch;
 use BackedEnum;
@@ -21,9 +19,13 @@ class ReturnBatchResource extends Resource
 {
     protected static ?string $model = ReturnBatch::class;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Inventory';
+    protected static string|UnitEnum|null $navigationGroup = 'Quản lý kho';
 
-    protected static ?string $navigationLabel = 'Return check-in';
+    protected static ?string $navigationLabel = 'Thu hồi & Trả kho';
+
+    protected static ?string $modelLabel = 'Đợt trả hàng';
+
+    protected static ?string $pluralModelLabel = 'Danh sách trả kho';
 
     protected static ?int $navigationSort = 4;
 
@@ -32,11 +34,6 @@ class ReturnBatchResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return ReturnBatchForm::configure($schema);
-    }
-
-    public static function infolist(Schema $schema): Schema
-    {
-        return ReturnBatchInfolist::configure($schema);
     }
 
     public static function table(Table $table): Table
@@ -56,7 +53,6 @@ class ReturnBatchResource extends Resource
         return [
             'index' => ListReturnBatches::route('/'),
             'create' => CreateReturnBatch::route('/create'),
-            'view' => ViewReturnBatch::route('/{record}'),
             'edit' => EditReturnBatch::route('/{record}/edit'),
         ];
     }

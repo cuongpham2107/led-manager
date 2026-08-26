@@ -4,7 +4,6 @@ namespace App\Filament\Resources\ProductLines\Pages;
 
 use App\Filament\Resources\ProductLines\ProductLineResource;
 use Filament\Actions\DeleteAction;
-use Filament\Actions\ViewAction;
 use Filament\Resources\Pages\EditRecord;
 
 class EditProductLine extends EditRecord
@@ -14,7 +13,6 @@ class EditProductLine extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            ViewAction::make(),
             DeleteAction::make(),
         ];
     }

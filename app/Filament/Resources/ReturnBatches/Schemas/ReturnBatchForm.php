@@ -2,14 +2,20 @@
 
 namespace App\Filament\Resources\ReturnBatches\Schemas;
 
+use App\Enums\ReturnBatchStatus;
+use App\Enums\ReturnGrade;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Repeater\TableColumn;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Facades\Auth;
 
 class ReturnBatchForm
 {
@@ -33,21 +39,19 @@ class ReturnBatchForm
                                 ->required(),
                             Select::make('status')
                                 ->label('Trạng thái thu hồi')
-                                ->options([
-                                    'pending' => 'Chờ nhận hàng (Pending)',
-                                    'in_progress' => 'Đang phân loại kiểm tra (In Progress)',
-                                    'completed' => 'Đã hoàn tất nhập kho (Completed)',
-                                ])
+                                ->options(ReturnBatchStatus::class)
                                 ->required()
-                                ->default('pending'),
+                                ->default(ReturnBatchStatus::Pending),
                         ]),
                         Grid::make(3)->schema([
                             DatePicker::make('return_date')
                                 ->label('Ngày trả thực tế')
+                                ->default(now()->toDateString())
                                 ->native(false),
                             Select::make('created_by')
                                 ->label('Người tiếp nhận')
                                 ->relationship('creator', 'name')
+                                ->default(fn () => Auth::id())
                                 ->searchable()
                                 ->preload(),
                             DateTimePicker::make('completed_at')
@@ -58,6 +62,42 @@ class ReturnBatchForm
                             ->label('Ghi chú tình trạng lô hàng trả về')
                             ->rows(2)
                             ->columnSpanFull(),
+                    ]),
+
+                Section::make('Danh sách thiết bị kiểm đếm hoàn trả (Grading & Quality Check)')
+                    ->description('Quét mã QR và chấm điểm phân loại tình trạng vật lý từng thiết bị')
+                    ->schema([
+                        Repeater::make('items')
+                            ->relationship('items')
+                            ->label('Thiết bị hoàn trả')
+                            ->table([
+                                TableColumn::make('Mã Serial / Thiết bị'),
+                                TableColumn::make('Phân loại chất lượng (Grade)'),
+                                TableColumn::make('Hoạt động tốt'),
+                                TableColumn::make('Ghi chú lỗi hỏng'),
+                            ])
+                            ->schema([
+                                Select::make('asset_id')
+                                    ->label('Thiết bị')
+                                    ->relationship('asset', 'serial_no')
+                                    ->searchable()
+                                    ->preload()
+                                    ->required(),
+                                Select::make('grade')
+                                    ->label('Phân loại')
+                                    ->options(ReturnGrade::class)
+                                    ->default(ReturnGrade::Normal)
+                                    ->required(),
+                                Toggle::make('is_received')
+                                    ->label('Đã nhận kho')
+                                    ->default(true),
+                                TextInput::make('grade_note')
+                                    ->label('Ghi chú')
+                                    ->placeholder('Mô tả hỏng hóc nếu có...'),
+                            ])
+                            ->addActionLabel('+ Quét / Thêm thiết bị trả về')
+                            ->collapsible(false)
+                            ->reorderable(false),
                     ]),
             ]);
     }

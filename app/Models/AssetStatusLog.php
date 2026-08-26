@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AssetStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -32,6 +33,8 @@ class AssetStatusLog extends Model
     protected function casts(): array
     {
         return [
+            'from_status' => AssetStatus::class,
+            'to_status' => AssetStatus::class,
             'created_at' => 'datetime',
         ];
     }

@@ -2,11 +2,12 @@
 
 namespace App\Filament\Resources\CheckoutBatches\Tables;
 
+use App\Enums\BatchStatus;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
 class CheckoutBatchesTable
@@ -16,43 +17,49 @@ class CheckoutBatchesTable
         return $table
             ->columns([
                 TextColumn::make('code')
-                    ->searchable(),
-                TextColumn::make('order.id')
-                    ->searchable(),
-                TextColumn::make('customer.name')
-                    ->searchable(),
-                TextColumn::make('warehouse.name')
-                    ->searchable(),
-                TextColumn::make('required_area_m2')
-                    ->numeric()
+                    ->label('Mã đợt xuất')
+                    ->searchable()
+                    ->sortable()
+                    ->weight('bold'),
+                TextColumn::make('order.order_no')
+                    ->label('Đơn hàng')
+                    ->searchable()
                     ->sortable(),
-                TextColumn::make('deviceType.name')
-                    ->searchable(),
+                TextColumn::make('customer.name')
+                    ->label('Khách hàng')
+                    ->searchable()
+                    ->sortable(),
+                TextColumn::make('warehouse.name')
+                    ->label('Kho xuất')
+                    ->searchable()
+                    ->sortable(),
+                TextColumn::make('required_area_m2')
+                    ->label('Diện tích')
+                    ->suffix(' m²')
+                    ->sortable(),
                 TextColumn::make('expected_return_date')
-                    ->date()
+                    ->label('Dự kiến trả')
+                    ->date('d/m/Y')
                     ->sortable(),
                 TextColumn::make('status')
-                    ->searchable(),
-                TextColumn::make('created_by')
-                    ->numeric()
+                    ->label('Trạng thái')
+                    ->badge()
                     ->sortable(),
                 TextColumn::make('dispatched_at')
-                    ->dateTime()
-                    ->sortable(),
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
+                    ->label('Thời gian xuất')
+                    ->dateTime('d/m/Y H:i')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                SelectFilter::make('status')
+                    ->label('Trạng thái')
+                    ->options(BatchStatus::class),
+                SelectFilter::make('warehouse_id')
+                    ->label('Kho hàng')
+                    ->relationship('warehouse', 'name'),
             ])
             ->recordActions([
-                ViewAction::make(),
                 EditAction::make(),
             ])
             ->toolbarActions([

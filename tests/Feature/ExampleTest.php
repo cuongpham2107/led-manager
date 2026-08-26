@@ -2,8 +2,11 @@
 
 use App\Models\User;
 
+use function Pest\Laravel\actingAs;
+use function Pest\Laravel\get;
+
 test('unauthenticated users are redirected to login', function () {
-    $response = $this->get('/');
+    $response = get('/');
 
     $response->assertRedirect('/login');
 });
@@ -11,7 +14,7 @@ test('unauthenticated users are redirected to login', function () {
 test('authenticated users can access the dashboard', function () {
     $user = User::factory()->create();
 
-    $response = $this->actingAs($user)->get('/');
+    $response = actingAs($user)->get('/');
 
     $response->assertSuccessful();
 });

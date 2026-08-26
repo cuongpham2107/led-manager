@@ -4,7 +4,6 @@ namespace App\Filament\Resources\AssetStatusLogs\Pages;
 
 use App\Filament\Resources\AssetStatusLogs\AssetStatusLogResource;
 use Filament\Actions\DeleteAction;
-use Filament\Actions\ViewAction;
 use Filament\Resources\Pages\EditRecord;
 
 class EditAssetStatusLog extends EditRecord
@@ -14,7 +13,6 @@ class EditAssetStatusLog extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            ViewAction::make(),
             DeleteAction::make(),
         ];
     }

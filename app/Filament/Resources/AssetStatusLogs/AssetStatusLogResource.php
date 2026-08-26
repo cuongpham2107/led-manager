@@ -5,9 +5,7 @@ namespace App\Filament\Resources\AssetStatusLogs;
 use App\Filament\Resources\AssetStatusLogs\Pages\CreateAssetStatusLog;
 use App\Filament\Resources\AssetStatusLogs\Pages\EditAssetStatusLog;
 use App\Filament\Resources\AssetStatusLogs\Pages\ListAssetStatusLogs;
-use App\Filament\Resources\AssetStatusLogs\Pages\ViewAssetStatusLog;
 use App\Filament\Resources\AssetStatusLogs\Schemas\AssetStatusLogForm;
-use App\Filament\Resources\AssetStatusLogs\Schemas\AssetStatusLogInfolist;
 use App\Filament\Resources\AssetStatusLogs\Tables\AssetStatusLogsTable;
 use App\Models\AssetStatusLog;
 use BackedEnum;
@@ -21,9 +19,13 @@ class AssetStatusLogResource extends Resource
 {
     protected static ?string $model = AssetStatusLog::class;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Reports';
+    protected static string|UnitEnum|null $navigationGroup = 'Báo cáo & Thống kê';
 
-    protected static ?string $navigationLabel = 'Movement history';
+    protected static ?string $navigationLabel = 'Lịch sử điều chuyển';
+
+    protected static ?string $modelLabel = 'Lịch sử điều chuyển';
+
+    protected static ?string $pluralModelLabel = 'Lịch sử điều chuyển';
 
     protected static ?int $navigationSort = 1;
 
@@ -32,11 +34,6 @@ class AssetStatusLogResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return AssetStatusLogForm::configure($schema);
-    }
-
-    public static function infolist(Schema $schema): Schema
-    {
-        return AssetStatusLogInfolist::configure($schema);
     }
 
     public static function table(Table $table): Table
@@ -56,7 +53,6 @@ class AssetStatusLogResource extends Resource
         return [
             'index' => ListAssetStatusLogs::route('/'),
             'create' => CreateAssetStatusLog::route('/create'),
-            'view' => ViewAssetStatusLog::route('/{record}'),
             'edit' => EditAssetStatusLog::route('/{record}/edit'),
         ];
     }

@@ -17,6 +17,11 @@ class CheckoutBatchItem extends Model
         'is_dispatched',
         'dispatched_by',
         'dispatched_at',
+        'checked_brightness',
+        'checked_dead_pixels',
+        'checked_color',
+        'checked_power',
+        'checklist_note',
     ];
 
     /**
@@ -27,6 +32,10 @@ class CheckoutBatchItem extends Model
         return [
             'is_dispatched' => 'boolean',
             'dispatched_at' => 'datetime',
+            'checked_brightness' => 'boolean',
+            'checked_dead_pixels' => 'boolean',
+            'checked_color' => 'boolean',
+            'checked_power' => 'boolean',
         ];
     }
 

@@ -9,6 +9,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Filament\Support\RawJs;
 
 class RepairLogForm
 {
@@ -18,6 +19,7 @@ class RepairLogForm
             ->components([
                 Section::make('Nhật ký sửa chữa & bảo dưỡng thiết bị')
                     ->description('Theo dõi lỗi kỹ thuật, chi phí thay thế linh kiện và trạng thái xử lý')
+                    ->columnSpanFull()
                     ->schema([
                         Grid::make(3)->schema([
                             Select::make('asset_id')
@@ -36,9 +38,11 @@ class RepairLogForm
                                 ->default('pending'),
                             TextInput::make('repair_cost')
                                 ->label('Chi phí sửa chữa linh kiện')
+                                ->mask(RawJs::make('$money($input)'))
+                                ->stripCharacters(',')
                                 ->numeric()
-                                ->suffix('VNĐ')
-                                ->placeholder('VD: 500,000'),
+                                ->suffix(' đ')
+                                ->placeholder('0'),
                         ]),
                         Grid::make(3)->schema([
                             DatePicker::make('start_date')
