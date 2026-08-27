@@ -7,6 +7,7 @@ use App\Models\ProductLine;
 use App\Models\Quotation;
 use App\Services\LedCalculationService;
 use Filament\Resources\Pages\CreateRecord;
+use Filament\Support\Enums\Alignment;
 use Filament\Support\Enums\Width;
 use Illuminate\Support\Facades\Auth;
 
@@ -15,6 +16,10 @@ class CreateQuotation extends CreateRecord
     protected static string $resource = QuotationResource::class;
 
     protected static ?string $title = 'Tạo Mới Báo Giá & Dự Toán Màn Hình LED';
+
+    public static bool $formActionsAreSticky = true;
+
+    public static string|Alignment $formActionsAlignment = Alignment::End;
 
     public function getMaxContentWidth(): Width|string|null
     {
@@ -49,8 +54,15 @@ class CreateQuotation extends CreateRecord
             ];
         }
 
+        $count = Quotation::count() + 1;
+        $code = 'QUO-'.date('ym').'-'.str_pad((string) $count, 2, '0', STR_PAD_LEFT);
+        while (Quotation::where('code', $code)->exists()) {
+            $count++;
+            $code = 'QUO-'.date('ym').'-'.str_pad((string) $count, 2, '0', STR_PAD_LEFT);
+        }
+
         $this->form->fill([
-            'code' => 'QUO-'.date('ym').'-'.str_pad((string) (Quotation::count() + 1), 2, '0', STR_PAD_LEFT),
+            'code' => $code,
             'screen_width_m' => 6.0,
             'screen_height_m' => 3.5,
             'product_line_id' => $defaultPl?->id,

@@ -3,6 +3,7 @@
 use App\Enums\CustomerType;
 use App\Enums\QuotationStatus;
 use App\Filament\Resources\Quotations\Pages\CreateQuotation;
+use App\Filament\Resources\Quotations\Pages\EditQuotation;
 use App\Models\Customer;
 use App\Models\ProductLine;
 use App\Models\Quotation;
@@ -82,4 +83,33 @@ test('quotation form dynamically recalculates pricing and discounts when paramet
         ->assertSet('data.crew_rate', 2000000)
         ->set('data.transport_rate', 30000)
         ->assertSet('data.transport_rate', 30000);
+});
+
+test('edit quotation page fills and saves crew_size and transport_distance_km properly', function () {
+    (new LedOsDataSeeder)->run();
+
+    $user = User::where('email', 'admin@ledmanager.com')->first();
+    actingAs($user);
+
+    $customer = Customer::first();
+    $quotation = Quotation::create([
+        'code' => 'QUO-EDIT-TEST',
+        'customer_id' => $customer->id,
+        'rental_days' => 2,
+        'crew_size' => 6,
+        'transport_distance_km' => 65.5,
+        'crew_rate' => 1800000,
+        'transport_rate' => 32000,
+        'labour_cost' => 21600000,
+        'transport_cost' => 4192000,
+        'total_price' => 50000000,
+        'status' => QuotationStatus::Draft,
+    ]);
+
+    Livewire::test(EditQuotation::class, ['record' => $quotation->id])
+        ->assertSuccessful()
+        ->assertSchemaStateSet([
+            'crew_size' => 6,
+            'transport_distance_km' => 65.5,
+        ]);
 });

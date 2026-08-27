@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Pages\Auth\Login;
 use App\Filament\Pages\Dashboard;
 use App\Models\User;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
@@ -36,7 +37,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('')
             ->viteTheme('resources/css/filament/admin/theme.css')
-            ->login()
+            ->login(Login::class)
             ->brandName('LED OS')
             ->brandLogo(fn () => view('filament.admin.logo'))
             ->brandLogoHeight('auto')

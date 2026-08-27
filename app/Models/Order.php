@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\OrderStatus;
+use App\Enums\PaymentType;
 use Guava\Calendar\Contracts\Eventable;
 use Guava\Calendar\ValueObjects\CalendarEvent;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -10,7 +11,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
 /**
@@ -39,7 +39,7 @@ use Illuminate\Support\Carbon;
  */
 class Order extends Model implements Eventable
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory;
 
     protected $fillable = [
         'order_no',
@@ -165,6 +165,28 @@ class Order extends Model implements Eventable
     public function milestones(): HasMany
     {
         return $this->hasMany(EventMilestone::class);
+    }
+
+    /**
+     * Get deposit amount paid so far
+     */
+    public function getDepositPaidAttribute(): float
+    {
+        $orderDeposit = (float) $this->payments->where('type', PaymentType::Deposit)->sum('amount');
+        $contractDeposit = (float) $this->contracts->flatMap->payments->where('type', PaymentType::Deposit)->sum('amount');
+
+        return max($orderDeposit, $contractDeposit);
+    }
+
+    /**
+     * Get total amount paid so far
+     */
+    public function getTotalPaidAttribute(): float
+    {
+        $orderPaid = (float) $this->payments->where('type', '!=', PaymentType::Refund)->sum('amount');
+        $contractPaid = (float) $this->contracts->flatMap->payments->where('type', '!=', PaymentType::Refund)->sum('amount');
+
+        return max($orderPaid, $contractPaid);
     }
 
     public function toCalendarEvent(): CalendarEvent

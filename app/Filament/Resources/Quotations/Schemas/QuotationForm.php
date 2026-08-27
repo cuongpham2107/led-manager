@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Quotations\Schemas;
 
 use App\Enums\QuotationStatus;
+use App\Filament\Resources\Customers\Schemas\CustomerForm;
 use App\Models\Customer;
 use App\Models\ProductLine;
 use App\Models\Quotation;
@@ -45,7 +46,16 @@ class QuotationForm
                                     ->schema([
                                         TextInput::make('code')
                                             ->label('Mã báo giá')
-                                            ->default(fn () => 'QUO-'.date('ym').'-'.str_pad((string) (Quotation::count() + 1), 2, '0', STR_PAD_LEFT))
+                                            ->default(function () {
+                                                $count = Quotation::count() + 1;
+                                                $code = 'QUO-'.date('ym').'-'.str_pad((string) $count, 2, '0', STR_PAD_LEFT);
+                                                while (Quotation::where('code', $code)->exists()) {
+                                                    $count++;
+                                                    $code = 'QUO-'.date('ym').'-'.str_pad((string) $count, 2, '0', STR_PAD_LEFT);
+                                                }
+
+                                                return $code;
+                                            })
                                             ->required(),
                                         Select::make('customer_id')
                                             ->label('Khách hàng')
@@ -53,6 +63,8 @@ class QuotationForm
                                             ->searchable()
                                             ->preload()
                                             ->required()
+                                            ->createOptionForm(fn (Schema $schema) => CustomerForm::configure($schema))
+                                            ->createOptionModalHeading('Thêm khách hàng mới')
                                             ->live()
                                             ->afterStateUpdated(fn (Get $get, Set $set) => self::recalculateBomAndPricing($get, $set)),
                                         TextInput::make('event_name')
@@ -251,10 +263,10 @@ class QuotationForm
                                                     ->width('6%')
                                                     ->markAsRequired()
                                                     ->alignment(Alignment::Center),
-                                                TableColumn::make('Đơn giá đợt thuê (VND)')
+                                                TableColumn::make('Đơn giá đợt thuê')
                                                     ->width('15%')
                                                     ->alignment(Alignment::Center),
-                                                TableColumn::make('Thành tiền (VND)')
+                                                TableColumn::make('Thành tiền')
                                                     ->width('15%')
                                                     ->alignment(Alignment::Center),
                                                 TableColumn::make('Ghi chú quy cách')
@@ -280,7 +292,6 @@ class QuotationForm
                                                     ->mask(RawJs::make('$money($input)'))
                                                     ->stripCharacters(',')
                                                     ->numeric()
-                                                    ->suffix(' đ')
                                                     ->default(0)
                                                     ->extraInputAttributes(['class' => 'text-center font-mono'])
                                                     ->live(debounce: 300)
@@ -290,7 +301,6 @@ class QuotationForm
                                                     ->mask(RawJs::make('$money($input)'))
                                                     ->stripCharacters(',')
                                                     ->numeric()
-                                                    ->suffix(' đ')
                                                     ->disabled()
                                                     ->dehydrated()
                                                     ->extraInputAttributes(['class' => 'text-center font-mono font-semibold text-primary-600']),
@@ -299,8 +309,6 @@ class QuotationForm
                                                     ->placeholder('Ghi chú thêm nếu có...'),
                                             ])
                                             ->addActionLabel('+ Thêm thiết bị / phụ kiện vào đơn')
-                                            ->reorderable()
-                                            ->cloneable()
                                             ->collapsible(false),
                                     ]),
 

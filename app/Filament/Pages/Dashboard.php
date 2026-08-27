@@ -2,7 +2,6 @@
 
 namespace App\Filament\Pages;
 
-use App\Filament\Widgets\EventCalendarWidget;
 use App\Filament\Widgets\LatestOrdersWidget;
 use App\Filament\Widgets\MonthlyRevenueChartWidget;
 use App\Filament\Widgets\StatsOverviewWidget;
@@ -32,7 +31,6 @@ class Dashboard extends BaseDashboard
             WarehouseStatusChartWidget::class,
             MonthlyRevenueChartWidget::class,
             LatestOrdersWidget::class,
-            EventCalendarWidget::class,
         ];
     }
 }

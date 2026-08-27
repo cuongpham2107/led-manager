@@ -42,3 +42,7 @@ html.dark {
         line-height: var(--tw-leading, var(--text-sm--line-height));
     }
 }
+
+html {
+    font-size: 14px !important;
+}

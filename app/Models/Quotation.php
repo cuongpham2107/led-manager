@@ -7,11 +7,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Quotation extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory;
 
     protected $fillable = [
         'code',
@@ -22,6 +21,8 @@ class Quotation extends Model
         'screen_area_m2',
         'product_line_id',
         'rental_days',
+        'crew_size',
+        'transport_distance_km',
         'event_start_date',
         'event_end_date',
         'event_name',
@@ -31,7 +32,9 @@ class Quotation extends Model
         'estimated_load_kg',
         'estimated_power_kw',
         'equipment_cost',
+        'crew_rate',
         'labour_cost',
+        'transport_rate',
         'transport_cost',
         'accessory_cost',
         'total_cost',
@@ -54,6 +57,10 @@ class Quotation extends Model
             'screen_height_m' => 'decimal:2',
             'screen_area_m2' => 'decimal:2',
             'rental_days' => 'integer',
+            'crew_size' => 'integer',
+            'transport_distance_km' => 'decimal:2',
+            'crew_rate' => 'decimal:2',
+            'transport_rate' => 'decimal:2',
             'event_start_date' => 'date',
             'event_end_date' => 'date',
             'estimated_cabinet_qty' => 'integer',

@@ -4,3 +4,9 @@
 
 @source '../../../../app/Filament/**/*';
 @source '../../../../resources/views/**/*';
+@source '../../../../vendor/filament/**/*.blade.php';
+@source '../../../../vendor/guava/calendar/**/*.blade.php';
+@source '../../../../vendor/saade/filament-fullcalendar/**/*.blade.php';
+@source '../../../../vendor/bezhansalleh/filament-shield/**/*.blade.php';
+@source '../../../../vendor/jeffersongoncalves/filament-qrcode-field/**/*.blade.php';
+@source '../../../../vendor/johnrivera7/filament-custom-dashboard-widgets/**/*.blade.php';

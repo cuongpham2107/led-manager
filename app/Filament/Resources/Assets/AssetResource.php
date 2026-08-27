@@ -5,14 +5,13 @@ namespace App\Filament\Resources\Assets;
 use App\Filament\Resources\Assets\Pages\ListAssets;
 use App\Filament\Resources\Assets\Schemas\AssetForm;
 use App\Filament\Resources\Assets\Tables\AssetsTable;
+use App\Filament\Resources\Assets\Widgets\AssetStatsOverviewWidget;
 use App\Models\Asset;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 use UnitEnum;
 
 class AssetResource extends Resource
@@ -48,18 +47,17 @@ class AssetResource extends Resource
         ];
     }
 
+    public static function getWidgets(): array
+    {
+        return [
+            AssetStatsOverviewWidget::class,
+        ];
+    }
+
     public static function getPages(): array
     {
         return [
             'index' => ListAssets::route('/'),
         ];
-    }
-
-    public static function getRecordRouteBindingEloquentQuery(): Builder
-    {
-        return parent::getRecordRouteBindingEloquentQuery()
-            ->withoutGlobalScopes([
-                SoftDeletingScope::class,
-            ]);
     }
 }

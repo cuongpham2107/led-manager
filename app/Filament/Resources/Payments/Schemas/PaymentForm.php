@@ -30,7 +30,16 @@ class PaymentForm
                             ->schema([
                                 TextInput::make('code')
                                     ->label('Mã phiếu thu')
-                                    ->default(fn () => 'PAY-'.date('ym').'-'.str_pad((string) (Payment::count() + 1), 2, '0', STR_PAD_LEFT))
+                                    ->default(function () {
+                                        $count = Payment::count() + 1;
+                                        $code = 'PAY-'.date('ym').'-'.str_pad((string) $count, 2, '0', STR_PAD_LEFT);
+                                        while (Payment::where('code', $code)->exists()) {
+                                            $count++;
+                                            $code = 'PAY-'.date('ym').'-'.str_pad((string) $count, 2, '0', STR_PAD_LEFT);
+                                        }
+
+                                        return $code;
+                                    })
                                     ->required(),
                                 Select::make('contract_id')
                                     ->label('Hợp đồng thanh toán')

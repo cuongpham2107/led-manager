@@ -14,14 +14,11 @@ use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Actions\ForceDeleteBulkAction;
-use Filament\Actions\RestoreBulkAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
-use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 
 class QuotationsTable
@@ -88,7 +85,6 @@ class QuotationsTable
                 SelectFilter::make('product_line_id')
                     ->label('Dòng sản phẩm')
                     ->relationship('productLine', 'name'),
-                TrashedFilter::make(),
             ])
             ->recordActions([
                 ActionGroup::make([
@@ -118,7 +114,13 @@ class QuotationsTable
                                 ->required(),
                         ])
                         ->action(function (Quotation $record, array $data): void {
-                            $orderNo = 'ORD-'.date('ym').'-'.str_pad((string) (Order::count() + 1), 2, '0', STR_PAD_LEFT);
+                            $orderCount = Order::count() + 1;
+                            $orderNo = 'ORD-'.date('ym').'-'.str_pad((string) $orderCount, 2, '0', STR_PAD_LEFT);
+                            while (Order::where('order_no', $orderNo)->exists()) {
+                                $orderCount++;
+                                $orderNo = 'ORD-'.date('ym').'-'.str_pad((string) $orderCount, 2, '0', STR_PAD_LEFT);
+                            }
+
                             $warehouseId = $data['warehouse_id'] ?? Warehouse::first()?->id ?? 1;
 
                             $order = Order::create([
@@ -155,46 +157,38 @@ class QuotationsTable
                             ]);
 
                             Notification::make()
-                                ->title('Đã tạo đơn hàng thành công!')
-                                ->body("Đơn hàng {$orderNo} đã được khởi tạo từ báo giá {$record->code} kèm toàn bộ danh mục vật tư BOM.")
+                                ->title('Chuyển đổi đơn hàng thành công!')
+                                ->body("Đơn hàng {$orderNo} đã được tạo với đầy đủ danh mục thiết bị BOM.")
                                 ->success()
                                 ->send();
                         }),
 
                     Action::make('download_pdf')
-                        ->label('Xuất PDF')
+                        ->label('Tải Báo giá PDF')
                         ->icon('heroicon-o-arrow-down-tray')
-                        ->color('info')
-                        ->visible(fn (Quotation $record): bool => in_array($record->status, [
-                            QuotationStatus::Draft,
-                            QuotationStatus::Sent,
-                            QuotationStatus::Approved,
-                            QuotationStatus::Converted,
-                        ]))
-                        ->action(function (Quotation $record) {
-                            return app(QuotationPdfService::class)->downloadPdf($record);
-                        }),
+                        ->color('gray')
+                        ->action(fn (Quotation $record) => app(QuotationPdfService::class)->downloadPdf($record)),
 
-                    Action::make('reject_quotation')
-                        ->label('Từ chối')
+                    Action::make('mark_rejected')
+                        ->label('Đánh dấu Bị từ chối')
                         ->icon('heroicon-o-x-circle')
                         ->color('danger')
-                        ->modalHeading('Ghi nhận lý do từ chối báo giá')
-                        ->modalDescription('Cập nhật trạng thái báo giá sang "Bị từ chối" và lưu lại nguyên nhân để phân tích hiệu quả bán hàng.')
                         ->visible(fn (Quotation $record): bool => in_array($record->status, [
                             QuotationStatus::Draft,
                             QuotationStatus::Sent,
-                            QuotationStatus::Approved,
                         ]))
+                        ->modalHeading('Ghi nhận Báo giá không chốt được')
+                        ->modalDescription('Vui lòng chọn lý do khách hàng từ chối để tối ưu tỷ lệ chốt sales.')
                         ->form([
                             Select::make('lost_reason_select')
-                                ->label('Lý do chính')
+                                ->label('Lý do thất thoát chính')
                                 ->options([
-                                    'Giá cao hơn đối thủ' => 'Giá cao hơn đối thủ',
-                                    'Không đủ số lượng thiết bị trong kho' => 'Không đủ số lượng thiết bị trong kho',
-                                    'Khách dời / hủy lịch sự kiện' => 'Khách dời / hủy lịch sự kiện',
-                                    'Thời gian phản hồi chậm' => 'Thời gian phản hồi chậm',
-                                    'Lý do khác' => 'Lý do khác (nhập chi tiết bên dưới)',
+                                    'Giá quá cao so với ngân sách' => 'Giá quá cao so với ngân sách',
+                                    'Thiếu số lượng cabinet trong kho' => 'Thiếu số lượng cabinet trong kho',
+                                    'Đối thủ cung cấp gói dịch vụ rẻ hơn' => 'Đối thủ cung cấp gói dịch vụ rẻ hơn',
+                                    'Khách dời lịch / hủy sự kiện' => 'Khách dời lịch / hủy sự kiện',
+                                    'Không đạt yêu cầu kỹ thuật đặc thù' => 'Không đạt yêu cầu kỹ thuật đặc thù',
+                                    'Khác' => 'Khác',
                                 ])
                                 ->required(),
                             Textarea::make('lost_reason_note')
@@ -223,8 +217,6 @@ class QuotationsTable
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
-                    ForceDeleteBulkAction::make(),
-                    RestoreBulkAction::make(),
                 ]),
             ]);
     }

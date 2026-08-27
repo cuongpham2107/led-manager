@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\Customers\Schemas;
 
+use App\Enums\CustomerType;
+use App\Models\Customer;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -27,16 +29,22 @@ class CustomerForm
                                 ->placeholder('VD: Tập đoàn Vingroup'),
                             TextInput::make('code')
                                 ->label('Mã khách hàng')
+                                ->default(function () {
+                                    $count = Customer::count() + 1;
+                                    $code = 'CUS-'.str_pad((string) $count, 3, '0', STR_PAD_LEFT);
+                                    while (Customer::where('code', $code)->exists()) {
+                                        $count++;
+                                        $code = 'CUS-'.str_pad((string) $count, 3, '0', STR_PAD_LEFT);
+                                    }
+
+                                    return $code;
+                                })
                                 ->placeholder('VD: CUS-001'),
                             Select::make('type')
                                 ->label('Loại khách hàng')
-                                ->options([
-                                    'corporate' => 'Doanh nghiệp (Corporate)',
-                                    'agency' => 'Agency sự kiện (Event Agency)',
-                                    'individual' => 'Cá nhân (Individual)',
-                                ])
+                                ->options(CustomerType::class)
                                 ->required()
-                                ->default('corporate'),
+                                ->default(CustomerType::Corporate),
                         ]),
                         Grid::make(2)->schema([
                             TextInput::make('tax_code')

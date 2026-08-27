@@ -8,7 +8,6 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
-use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 
 class ContractsTable
@@ -71,7 +70,6 @@ class ContractsTable
                 SelectFilter::make('customer_id')
                     ->label('Khách hàng')
                     ->relationship('customer', 'name'),
-                TrashedFilter::make(),
             ])
             ->recordActions([
                 EditAction::make(),
