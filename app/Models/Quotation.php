@@ -126,4 +126,12 @@ class Quotation extends Model
     {
         return $this->hasMany(Order::class);
     }
+
+    /**
+     * @return HasMany<InventoryReservation, $this>
+     */
+    public function reservations(): HasMany
+    {
+        return $this->hasMany(InventoryReservation::class);
+    }
 }

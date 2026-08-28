@@ -24,6 +24,7 @@ return new class extends Migration
                 'pending',      // created, no serials picked yet
                 'in_progress',  // some serials picked/dispatched
                 'dispatched',   // all lines dispatched
+                'completed',    // returned and completed
                 'cancelled',
             ])->default('pending');
 

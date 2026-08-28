@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Models\Order;
 use BackedEnum;
+use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
@@ -14,6 +15,7 @@ use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use UnitEnum;
 
 class RevenueReport extends Page implements HasTable
@@ -97,6 +99,60 @@ class RevenueReport extends Page implements HasTable
                                 fn (Builder $query, $date): Builder => $query->whereDate('request_date', '<=', $date),
                             );
                     }),
+            ])
+            ->headerActions([
+                Action::make('export_csv')
+                    ->label('Xuất CSV')
+                    ->icon(Heroicon::OutlinedArrowDownTray)
+                    ->color('success')
+                    ->action(fn () => $this->exportCsv()),
             ]);
+    }
+
+    public function exportCsv(): StreamedResponse
+    {
+        $headers = [
+            'Content-Type' => 'text/csv; charset=utf-8',
+            'Content-Disposition' => 'attachment; filename="revenue_pnl_report_'.date('Ymd_His').'.csv"',
+        ];
+
+        return response()->stream(function () {
+            $handle = fopen('php://output', 'w');
+            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
+
+            fputcsv($handle, [
+                'Mã đơn hàng',
+                'Tên sự kiện',
+                'Khách hàng',
+                'Ngày bắt đầu',
+                'Doanh thu (VND)',
+                'Giá vốn COGS (VND)',
+                'Lợi nhuận gộp (VND)',
+                'Biên lợi nhuận (%)',
+                'Sales phụ trách',
+            ]);
+
+            $orders = Order::with(['customer', 'quotation', 'salesUser'])->get();
+            foreach ($orders as $order) {
+                $cogs = (float) ($order->quotation?->total_cost ?? 0);
+                $rev = (float) $order->value;
+                $profit = $rev - $cogs;
+                $margin = $order->quotation?->margin_percent ?? ($rev > 0 ? round(($profit / $rev) * 100, 2) : 0);
+
+                fputcsv($handle, [
+                    $order->order_no,
+                    $order->event,
+                    $order->customer?->name,
+                    $order->request_date?->format('d/m/Y'),
+                    $rev,
+                    $cogs,
+                    $profit,
+                    $margin.'%',
+                    $order->salesUser?->name,
+                ]);
+            }
+
+            fclose($handle);
+        }, 200, $headers);
     }
 }

@@ -20,6 +20,10 @@ class Asset extends Model
         'size',
         'manufactured_date',
         'purchase_cost',
+        'accumulated_depreciation',
+        'useful_life_months',
+        'depreciation_method',
+        'salvage_value',
         'purchase_date',
         'current_status',
         'current_warehouse_id',
@@ -35,8 +39,38 @@ class Asset extends Model
             'manufactured_date' => 'date',
             'purchase_date' => 'date',
             'purchase_cost' => 'decimal:2',
+            'accumulated_depreciation' => 'decimal:2',
+            'useful_life_months' => 'integer',
+            'salvage_value' => 'decimal:2',
             'current_status' => AssetStatus::class,
         ];
+    }
+
+    /**
+     * Get current book value (Giá trị còn lại sổ sách)
+     */
+    public function getCurrentBookValueAttribute(): float
+    {
+        $cost = (float) ($this->purchase_cost ?? 0);
+        $dep = (float) ($this->accumulated_depreciation ?? 0);
+
+        return max(0, $cost - $dep);
+    }
+
+    /**
+     * Calculate monthly depreciation rate (Mức khấu hao 1 tháng)
+     */
+    public function getMonthlyDepreciationAttribute(): float
+    {
+        $cost = (float) ($this->purchase_cost ?? 0);
+        $salvage = (float) ($this->salvage_value ?? 0);
+        $months = (int) ($this->useful_life_months ?: 36);
+
+        if ($months <= 0 || $cost <= $salvage) {
+            return 0;
+        }
+
+        return round(($cost - $salvage) / $months, 2);
     }
 
     /**

@@ -2,32 +2,37 @@
 
 namespace App\Filament\Resources\Orders\Tables;
 
-use App\Enums\BatchStatus;
-use App\Enums\ContractStatus;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentType;
-use App\Filament\Resources\CheckoutBatches\CheckoutBatchResource;
 use App\Filament\Resources\Contracts\ContractResource;
-use App\Models\CheckoutBatch;
-use App\Models\Contract;
+use App\Filament\Resources\Orders\Actions\AssignCrewAction;
+use App\Filament\Resources\Orders\Actions\ChangeOrderAction;
+use App\Filament\Resources\Orders\Actions\CompleteOrderAction;
+use App\Filament\Resources\Orders\Actions\CreateCheckoutBatchAction;
+use App\Filament\Resources\Orders\Actions\CreateContractAction;
+use App\Filament\Resources\Orders\Actions\DispatchOrderAction;
+use App\Filament\Resources\Orders\Actions\ManageTimelineAction;
+use App\Filament\Resources\Orders\Actions\ReturnOrderAction;
+use App\Filament\Resources\Orders\Actions\ViewCheckoutBatchAction;
+use App\Filament\Resources\Orders\Actions\ViewContractAction;
+use App\Filament\Resources\Orders\Actions\ViewReturnBatchAction;
 use App\Models\Order;
-use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Notifications\Notification;
+use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Enums\RecordActionsPosition;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
-use Illuminate\Support\Facades\Auth;
 
 class OrdersTable
 {
     public static function configure(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn ($query) => $query->with(['contracts.payments', 'payments', 'customer', 'warehouse', 'quotation', 'salesUser', 'checkoutBatches']))
+            ->modifyQueryUsing(fn ($query) => $query->with(['contracts.payments', 'payments', 'customer', 'warehouse', 'quotation', 'salesUser', 'checkoutBatches.items.asset.productLine', 'checkoutBatches.returnBatches']))
             ->columns([
                 TextColumn::make('order_no')
                     ->label('Số đơn hàng')
@@ -36,12 +41,9 @@ class OrdersTable
                     ->weight('bold'),
                 TextColumn::make('customer.name')
                     ->label('Khách hàng')
-                    ->searchable()
+                    ->description(fn (Order $record): ?string => $record->event)
+                    ->searchable(['name', 'event'])
                     ->sortable(),
-                TextColumn::make('event')
-                    ->label('Sự kiện')
-                    ->searchable()
-                    ->limit(25),
                 TextColumn::make('contract_status')
                     ->label('Hợp đồng')
                     ->badge()
@@ -185,12 +187,23 @@ class OrdersTable
                     ->label('Diện tích')
                     ->suffix(' m²')
                     ->numeric(2)
-                    ->sortable(),
+                    ->sortable()
+                    ->summarize(
+                        Sum::make()
+                            ->label('Tổng diện tích')
+                            ->suffix(' m²')
+                            ->numeric(2),
+                    ),
                 TextColumn::make('value')
                     ->label('Tổng tiền')
                     ->money('VND')
                     ->sortable()
-                    ->weight('bold'),
+                    ->weight('bold')
+                    ->summarize(
+                        Sum::make()
+                            ->label('Tổng doanh thu')
+                            ->money('VND'),
+                    ),
                 TextColumn::make('status')
                     ->label('Trạng thái')
                     ->badge()
@@ -246,98 +259,21 @@ class OrdersTable
                     ->relationship('customer', 'name'),
             ])
             ->recordActions([
+                EditAction::make(),
                 ActionGroup::make([
-                    EditAction::make(),
-
-                    Action::make('create_contract')
-                        ->label('Tạo Hợp đồng')
-                        ->icon('heroicon-o-document-plus')
-                        ->color('primary')
-                        ->visible(fn (Order $record): bool => ! in_array($record->status, [OrderStatus::Cancelled]) && $record->contracts->isEmpty())
-                        ->action(function (Order $record): void {
-                            $contractCount = Contract::count() + 1;
-                            $contractCode = 'HD-'.date('ym').'-'.str_pad((string) $contractCount, 2, '0', STR_PAD_LEFT);
-                            while (Contract::where('code', $contractCode)->exists()) {
-                                $contractCount++;
-                                $contractCode = 'HD-'.date('ym').'-'.str_pad((string) $contractCount, 2, '0', STR_PAD_LEFT);
-                            }
-
-                            $contract = Contract::create([
-                                'code' => $contractCode,
-                                'quotation_id' => $record->quotation_id,
-                                'customer_id' => $record->customer_id,
-                                'order_id' => $record->id,
-                                'title' => 'Hợp đồng cho thuê màn hình LED: '.($record->event ?: $record->order_no),
-                                'signed_date' => now()->toDateString(),
-                                'start_date' => $record->request_date,
-                                'end_date' => $record->expected_return_date,
-                                'contract_value' => $record->value,
-                                'deposit_percent' => 50,
-                                'deposit_amount' => round((float) $record->value * 0.5),
-                                'status' => ContractStatus::Draft,
-                                'sales_user_id' => $record->sales_user_id,
-                                'created_by' => Auth::id(),
-                            ]);
-
-                            Notification::make()
-                                ->title('Đã tạo hợp đồng thành công!')
-                                ->body("Hợp đồng {$contractCode} đã được tạo tự động cho đơn hàng {$record->order_no}.")
-                                ->success()
-                                ->send();
-                        }),
-
-                    Action::make('view_contract')
-                        ->label('Xem Hợp đồng')
-                        ->icon('heroicon-o-document-check')
-                        ->color('info')
-                        ->visible(fn (Order $record): bool => $record->contracts->isNotEmpty())
-                        ->url(fn (Order $record): ?string => ($contract = $record->contracts->first()) ? ContractResource::getUrl('edit', ['record' => $contract]) : null),
-
-                    Action::make('create_checkout_batch')
-                        ->label('Tạo Đợt Xuất Kho')
-                        ->icon('heroicon-o-arrow-up-tray')
-                        ->color('warning')
-                        ->requiresConfirmation()
-                        ->visible(fn (Order $record): bool => $record->status === OrderStatus::Draft && $record->checkoutBatches->isEmpty())
-                        ->action(function (Order $record): void {
-                            $batchCount = CheckoutBatch::count() + 1;
-                            $code = 'OUT-'.date('ym').'-'.str_pad((string) $batchCount, 2, '0', STR_PAD_LEFT);
-                            while (CheckoutBatch::where('code', $code)->exists()) {
-                                $batchCount++;
-                                $code = 'OUT-'.date('ym').'-'.str_pad((string) $batchCount, 2, '0', STR_PAD_LEFT);
-                            }
-
-                            $batch = CheckoutBatch::create([
-                                'code' => $code,
-                                'order_id' => $record->id,
-                                'customer_id' => $record->customer_id,
-                                'warehouse_id' => $record->warehouse_id,
-                                'required_area_m2' => $record->area_m2,
-                                'device_type_id' => $record->device_type_id,
-                                'expected_return_date' => $record->expected_return_date,
-                                'status' => BatchStatus::Pending,
-                                'created_by' => Auth::id(),
-                            ]);
-
-                            $record->update([
-                                'status' => OrderStatus::OutboundCreated,
-                            ]);
-
-                            Notification::make()
-                                ->title('Đã tạo phiếu xuất kho!')
-                                ->body("Phiếu xuất kho {$code} cho đơn hàng {$record->order_no} đã được tạo thành công.")
-                                ->success()
-                                ->send();
-                        }),
-
-                    Action::make('view_checkout_batch')
-                        ->label('Xem Đợt Xuất Kho')
-                        ->icon('heroicon-o-arrow-top-right-on-square')
-                        ->color('warning')
-                        ->visible(fn (Order $record): bool => $record->checkoutBatches->isNotEmpty())
-                        ->url(fn (Order $record): ?string => ($batch = $record->checkoutBatches->first()) ? CheckoutBatchResource::getUrl('edit', ['record' => $batch]) : null),
+                    CreateContractAction::make(),
+                    ViewContractAction::make(),
+                    CreateCheckoutBatchAction::make(),
+                    ViewCheckoutBatchAction::make(),
+                    DispatchOrderAction::make(),
+                    ReturnOrderAction::make(),
+                    ViewReturnBatchAction::make(),
+                    ChangeOrderAction::make(),
+                    AssignCrewAction::make(),
+                    ManageTimelineAction::make(),
+                    CompleteOrderAction::make(),
                 ]),
-            ])
+            ], position: RecordActionsPosition::BeforeColumns)
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),

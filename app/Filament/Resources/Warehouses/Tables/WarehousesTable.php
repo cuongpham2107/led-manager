@@ -7,7 +7,9 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Support\Enums\Width;
 use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\Summarizers\Count;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Enums\RecordActionsPosition;
 use Filament\Tables\Table;
 
 class WarehousesTable
@@ -25,7 +27,11 @@ class WarehousesTable
                     ->label('Tên kho hàng')
                     ->searchable()
                     ->sortable()
-                    ->weight('bold'),
+                    ->weight('bold')
+                    ->summarize(
+                        Count::make()
+                            ->label('Tổng số kho'),
+                    ),
                 TextColumn::make('address')
                     ->label('Địa chỉ kho')
                     ->searchable()
@@ -51,7 +57,7 @@ class WarehousesTable
                     ->modalHeading('Cập nhật thông tin kho hàng')
                     ->modalDescription('Chỉnh sửa tên, địa chỉ, người quản lý và số điện thoại liên hệ của kho.')
                     ->modalWidth(Width::FourExtraLarge),
-            ])
+            ], position: RecordActionsPosition::BeforeCells)
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),

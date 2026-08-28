@@ -25,6 +25,7 @@ use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Support\RawJs;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 
 class OrderForm
 {
@@ -324,5 +325,60 @@ class OrderForm
                             ]),
                     ]),
             ]);
+    }
+
+    /**
+     * Validate that enough assets are available for the requested BOM in the
+     * given date window. Throws ValidationException (with a readable conflict
+     * list) when stock is insufficient — this is the booking/overbooking guard
+     * required by the business docs (Khóa giữ kho / Cảnh báo xung đột lịch).
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public static function validateAvailability(array $data, ?int $excludeOrderId = null): void
+    {
+        $items = $data['items'] ?? [];
+        $from = $data['request_date'] ?? null;
+        $to = $data['expected_return_date'] ?? $from;
+        $warehouseId = $data['warehouse_id'] ?? null;
+
+        if (! $from || empty($items)) {
+            return;
+        }
+
+        $bom = [];
+
+        foreach ($items as $item) {
+            if (empty($item['device_type_id']) || empty($item['quantity_required'])) {
+                continue;
+            }
+
+            $bom[] = [
+                'device_type_id' => (int) $item['device_type_id'],
+                'quantity' => (int) $item['quantity_required'],
+            ];
+        }
+
+        if (empty($bom)) {
+            return;
+        }
+
+        $result = app(AvailabilityService::class)->checkBomAvailability(
+            $bom,
+            $from,
+            $to,
+            $warehouseId ? (int) $warehouseId : null,
+            $excludeOrderId,
+        );
+
+        if ($result['has_conflicts']) {
+            $messages = collect($result['conflicts'])
+                ->map(fn (array $c): string => "• {$c['device_type_name']}: cần {$c['requested']}, chỉ còn {$c['available']} (thiếu {$c['shortage']})")
+                ->implode("\n");
+
+            throw ValidationException::withMessages([
+                'items' => "Thiếu thiết bị khả dụng trong khoảng ngày đã chọn:\n{$messages}",
+            ]);
+        }
     }
 }

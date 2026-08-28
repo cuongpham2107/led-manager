@@ -3,13 +3,15 @@
 namespace App\Filament\Resources\Assets\Tables;
 
 use App\Enums\AssetStatus;
-use App\Models\Asset;
-use Filament\Actions\Action;
+use App\Filament\Resources\Assets\Actions\ViewQrCodeAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Support\Enums\Width;
+use Filament\Tables\Columns\Summarizers\Count;
+use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Enums\RecordActionsPosition;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Grouping\Group;
 use Filament\Tables\Table;
@@ -36,7 +38,11 @@ class AssetsTable
                     ->label('Số Serial')
                     ->searchable()
                     ->sortable()
-                    ->weight('bold'),
+                    ->weight('bold')
+                    ->summarize(
+                        Count::make()
+                            ->label('Tổng thiết bị'),
+                    ),
                 TextColumn::make('productLine.name')
                     ->label('Dòng sản phẩm')
                     ->placeholder('N/A')
@@ -66,7 +72,12 @@ class AssetsTable
                     ->label('Nguyên giá')
                     ->money('VND')
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->summarize(
+                        Sum::make()
+                            ->label('Tổng nguyên giá')
+                            ->money('VND'),
+                    ),
             ])
             ->filters([
                 SelectFilter::make('current_status')
@@ -80,20 +91,12 @@ class AssetsTable
                     ->relationship('currentWarehouse', 'name'),
             ])
             ->recordActions([
-                Action::make('qr_code')
-                    ->label('Mã QR')
-                    ->icon('heroicon-o-qr-code')
-                    ->color('gray')
-                    ->button()
-                    ->modalHeading(fn (Asset $record): string => "Mã QR Thiết bị: {$record->serial_no}")
-                    ->modalContent(fn (Asset $record) => view('filament.components.asset-qr-modal', ['record' => $record]))
-                    ->modalSubmitAction(false)
-                    ->modalCancelActionLabel('Đóng'),
+                ViewQrCodeAction::make(),
                 EditAction::make()
                     ->modalHeading('Cập nhật thông tin thiết bị')
                     ->modalDescription('Chỉnh sửa thông số, vị trí kho và trạng thái vận hành của thiết bị.')
                     ->modalWidth(Width::FourExtraLarge),
-            ])
+            ], position: RecordActionsPosition::BeforeCells)
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),

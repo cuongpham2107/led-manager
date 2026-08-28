@@ -248,18 +248,6 @@ html.dark .fi-sidebar-item-btn:hover > svg {
     color: #ffffff;
 }
 
-/* Sidebar Footer */
-.fi-sidebar-footer {
-    margin: 0;
-    padding-inline: 0.75rem;
-    padding-block: 0.875rem 1rem;
-    border-top: 1px solid var(--sidebar-border);
-    display: flex;
-    flex-direction: column;
-    gap: 0.625rem;
-    background-color: var(--sidebar-bg);
-}
-
 /* User Menu Trigger in Sidebar */
 .fi-user-menu {
     width: 100%;

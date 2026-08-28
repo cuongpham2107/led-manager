@@ -6,6 +6,7 @@ use App\Enums\AssetStatus;
 use App\Enums\OrderStatus;
 use App\Models\Asset;
 use App\Models\DeviceType;
+use App\Models\InventoryReservation;
 use App\Models\Order;
 use App\Models\OrderItem;
 use Carbon\Carbon;
@@ -58,7 +59,21 @@ class AvailabilityService
 
         $bookedQuantity = (int) $bookedQuery->sum('quantity_required');
 
-        return max(0, $totalStock - $bookedQuantity);
+        // 3. Active unexpired soft/hard reservations (for quotations not yet converted to orders)
+        $reservationQuery = InventoryReservation::active()
+            ->overlapping($from, $to)
+            ->where('device_type_id', $deviceTypeId)
+            ->whereNull('order_id');
+
+        if ($warehouseId) {
+            $reservationQuery->where(function ($wQ) use ($warehouseId) {
+                $wQ->whereNull('warehouse_id')->orWhere('warehouse_id', $warehouseId);
+            });
+        }
+
+        $reservedQuantity = (int) $reservationQuery->sum('quantity');
+
+        return max(0, $totalStock - $bookedQuantity - $reservedQuantity);
     }
 
     /**

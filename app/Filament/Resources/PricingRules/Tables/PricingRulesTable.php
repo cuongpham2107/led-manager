@@ -9,6 +9,7 @@ use Filament\Actions\EditAction;
 use Filament\Support\Enums\Width;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Enums\RecordActionsPosition;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
@@ -74,7 +75,7 @@ class PricingRulesTable
                     ->modalHeading('Cập nhật bảng giá thuê')
                     ->modalDescription('Chỉnh sửa đơn giá, chiết khấu và chi phí nhân công/vận chuyển.')
                     ->modalWidth(Width::FiveExtraLarge),
-            ])
+            ], position: RecordActionsPosition::BeforeCells)
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),

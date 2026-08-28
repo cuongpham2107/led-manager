@@ -8,7 +8,9 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Support\Enums\Width;
 use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\Summarizers\Count;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Enums\RecordActionsPosition;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
@@ -27,7 +29,11 @@ class DeviceTypesTable
                     ->label('Tên chủng loại thiết bị')
                     ->searchable()
                     ->sortable()
-                    ->weight('bold'),
+                    ->weight('bold')
+                    ->summarize(
+                        Count::make()
+                            ->label('Tổng loại thiết bị'),
+                    ),
                 TextColumn::make('unit')
                     ->label('Đơn vị tính')
                     ->badge()
@@ -53,7 +59,7 @@ class DeviceTypesTable
                     ->modalHeading('Cập nhật loại thiết bị')
                     ->modalDescription('Chỉnh sửa tên, mã danh mục và quy cách loại thiết bị.')
                     ->modalWidth(Width::ThreeExtraLarge),
-            ])
+            ], position: RecordActionsPosition::BeforeCells)
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),

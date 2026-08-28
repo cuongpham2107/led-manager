@@ -3,10 +3,15 @@
 namespace App\Filament\Resources\CheckoutBatches\Tables;
 
 use App\Enums\BatchStatus;
+use App\Filament\Resources\CheckoutBatches\Actions\CreateReturnBatchAction;
+use App\Filament\Resources\CheckoutBatches\Actions\ViewReturnBatchAction;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Enums\RecordActionsPosition;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
@@ -15,6 +20,7 @@ class CheckoutBatchesTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn ($query) => $query->with(['order', 'customer', 'warehouse', 'returnBatches']))
             ->columns([
                 TextColumn::make('code')
                     ->label('Mã đợt xuất')
@@ -36,7 +42,14 @@ class CheckoutBatchesTable
                 TextColumn::make('required_area_m2')
                     ->label('Diện tích')
                     ->suffix(' m²')
-                    ->sortable(),
+                    ->numeric(2)
+                    ->sortable()
+                    ->summarize(
+                        Sum::make()
+                            ->label('Tổng diện tích')
+                            ->suffix(' m²')
+                            ->numeric(2),
+                    ),
                 TextColumn::make('expected_return_date')
                     ->label('Dự kiến trả')
                     ->date('d/m/Y')
@@ -60,8 +73,12 @@ class CheckoutBatchesTable
                     ->relationship('warehouse', 'name'),
             ])
             ->recordActions([
-                EditAction::make(),
-            ])
+                ActionGroup::make([
+                    EditAction::make(),
+                    CreateReturnBatchAction::make(),
+                    ViewReturnBatchAction::make(),
+                ]),
+            ], position: RecordActionsPosition::BeforeCells)
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),

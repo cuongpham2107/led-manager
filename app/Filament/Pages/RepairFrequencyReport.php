@@ -5,6 +5,7 @@ namespace App\Filament\Pages;
 use App\Enums\RepairResultStatus;
 use App\Models\RepairLog;
 use BackedEnum;
+use Filament\Actions\Action;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
@@ -12,6 +13,7 @@ use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use UnitEnum;
 
 class RepairFrequencyReport extends Page implements HasTable
@@ -71,6 +73,53 @@ class RepairFrequencyReport extends Page implements HasTable
                 SelectFilter::make('result_status')
                     ->label('Kết quả xử lý')
                     ->options(RepairResultStatus::class),
+            ])
+            ->headerActions([
+                Action::make('export_csv')
+                    ->label('Xuất CSV')
+                    ->icon(Heroicon::OutlinedArrowDownTray)
+                    ->color('success')
+                    ->action(fn () => $this->exportCsv()),
             ]);
+    }
+
+    public function exportCsv(): StreamedResponse
+    {
+        $headers = [
+            'Content-Type' => 'text/csv; charset=utf-8',
+            'Content-Disposition' => 'attachment; filename="repair_frequency_report_'.date('Ymd_His').'.csv"',
+        ];
+
+        return response()->stream(function () {
+            $handle = fopen('php://output', 'w');
+            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
+
+            fputcsv($handle, [
+                'Mã Serial',
+                'Dòng LED',
+                'Ngày báo lỗi',
+                'Ngày sửa xong',
+                'Nội dung sửa',
+                'Kết quả',
+                'Chi phí sửa (VND)',
+                'Kỹ thuật viên',
+            ]);
+
+            $logs = RepairLog::with(['asset.productLine', 'creator'])->get();
+            foreach ($logs as $log) {
+                fputcsv($handle, [
+                    $log->asset?->serial_no,
+                    $log->asset?->productLine?->name,
+                    $log->start_date?->format('d/m/Y'),
+                    $log->end_date?->format('d/m/Y'),
+                    $log->repair_note,
+                    $log->result_status?->value ?? '',
+                    $log->repair_cost,
+                    $log->creator?->name,
+                ]);
+            }
+
+            fclose($handle);
+        }, 200, $headers);
     }
 }

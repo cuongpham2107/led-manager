@@ -64,6 +64,14 @@ class CheckoutBatchItem extends Model
     }
 
     /**
+     * @return BelongsTo<User, $this>
+     */
+    public function dispatchedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'dispatched_by');
+    }
+
+    /**
      * @return HasOne<ReturnBatchItem, $this>
      */
     public function returnBatchItem(): HasOne

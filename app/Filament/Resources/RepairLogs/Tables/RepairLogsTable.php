@@ -7,7 +7,9 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Support\Enums\Width;
+use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Enums\RecordActionsPosition;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
@@ -42,7 +44,12 @@ class RepairLogsTable
                     ->label('Chi phí sửa')
                     ->money('VND')
                     ->sortable()
-                    ->weight('bold'),
+                    ->weight('bold')
+                    ->summarize(
+                        Sum::make()
+                            ->label('Tổng chi phí sửa')
+                            ->money('VND'),
+                    ),
                 TextColumn::make('result_status')
                     ->label('Kết quả')
                     ->badge()
@@ -62,7 +69,7 @@ class RepairLogsTable
                     ->modalHeading('Cập nhật phiếu sửa chữa')
                     ->modalDescription('Cập nhật tình trạng khắc phục, kỹ thuật viên phụ trách và chi phí thực tế.')
                     ->modalWidth(Width::FourExtraLarge),
-            ])
+            ], position: RecordActionsPosition::BeforeCells)
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),

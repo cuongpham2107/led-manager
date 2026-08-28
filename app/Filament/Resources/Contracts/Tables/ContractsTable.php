@@ -6,7 +6,9 @@ use App\Enums\ContractStatus;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Enums\RecordActionsPosition;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
@@ -34,11 +36,21 @@ class ContractsTable
                     ->label('Giá trị HĐ')
                     ->money('VND')
                     ->sortable()
-                    ->weight('bold'),
+                    ->weight('bold')
+                    ->summarize(
+                        Sum::make()
+                            ->label('Tổng giá trị HĐ')
+                            ->money('VND'),
+                    ),
                 TextColumn::make('deposit_amount')
                     ->label('Tiền cọc')
                     ->money('VND')
-                    ->sortable(),
+                    ->sortable()
+                    ->summarize(
+                        Sum::make()
+                            ->label('Tổng tiền cọc')
+                            ->money('VND'),
+                    ),
                 TextColumn::make('total_paid')
                     ->label('Đã thanh toán')
                     ->money('VND')
@@ -73,7 +85,7 @@ class ContractsTable
             ])
             ->recordActions([
                 EditAction::make(),
-            ])
+            ], position: RecordActionsPosition::BeforeCells)
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),

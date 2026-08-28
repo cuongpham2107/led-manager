@@ -18,7 +18,7 @@ enum OrderStatus: string implements HasColor, HasIcon, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Draft => 'Mới tạo (Draft)',
+            self::Draft => 'Mới tạo',
             self::OutboundCreated => 'Đã tạo đợt xuất kho',
             self::Dispatched => 'Đã xuất kho đi sự kiện',
             self::Returned => 'Đã thu hồi trả kho',

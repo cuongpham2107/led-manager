@@ -5,7 +5,9 @@ namespace App\Filament\Resources\OrderItems\Tables;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Enums\RecordActionsPosition;
 use Filament\Tables\Table;
 
 class OrderItemsTable
@@ -22,7 +24,11 @@ class OrderItemsTable
                     ->searchable(),
                 TextColumn::make('quantity_required')
                     ->numeric()
-                    ->sortable(),
+                    ->sortable()
+                    ->summarize(
+                        Sum::make()
+                            ->label('Tổng SL'),
+                    ),
                 TextColumn::make('unit_price')
                     ->label('Đơn giá')
                     ->money('VND')
@@ -41,7 +47,7 @@ class OrderItemsTable
             ])
             ->recordActions([
                 EditAction::make(),
-            ])
+            ], position: RecordActionsPosition::BeforeCells)
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),

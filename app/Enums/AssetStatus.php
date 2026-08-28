@@ -12,6 +12,7 @@ enum AssetStatus: string implements HasColor, HasIcon, HasLabel
     case InEvent = 'in_event';
     case InTransit = 'in_transit';
     case Repairing = 'repairing';
+    case Missing = 'missing';
     case Disposed = 'disposed';
 
     public function getLabel(): string
@@ -21,6 +22,7 @@ enum AssetStatus: string implements HasColor, HasIcon, HasLabel
             self::InEvent => 'Đang chạy sự kiện',
             self::InTransit => 'Đang vận chuyển',
             self::Repairing => 'Đang bảo dưỡng / Sửa chữa',
+            self::Missing => 'Mất / Chưa trả về',
             self::Disposed => 'Đã thanh lý',
         };
     }
@@ -32,6 +34,7 @@ enum AssetStatus: string implements HasColor, HasIcon, HasLabel
             self::InEvent => 'info',
             self::InTransit => 'warning',
             self::Repairing => 'danger',
+            self::Missing => 'danger',
             self::Disposed => 'gray',
         };
     }
@@ -43,6 +46,7 @@ enum AssetStatus: string implements HasColor, HasIcon, HasLabel
             self::InEvent => 'heroicon-o-tv',
             self::InTransit => 'heroicon-o-truck',
             self::Repairing => 'heroicon-o-wrench-screwdriver',
+            self::Missing => 'heroicon-o-exclamation-triangle',
             self::Disposed => 'heroicon-o-archive-box-x-mark',
         };
     }

@@ -8,11 +8,11 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Nhập trả — always tied to a specific outbound batch.
+        // Nhập trả — có thể gộp từ nhiều đợt xuất kho (checkout_batch_id nullable).
         Schema::create('return_batches', function (Blueprint $table) {
             $table->id();
             $table->string('code')->unique(); // RET-2608-01
-            $table->foreignId('checkout_batch_id')->constrained()->restrictOnDelete();
+            $table->foreignId('checkout_batch_id')->nullable()->constrained()->restrictOnDelete();
             $table->date('return_date')->nullable();
             $table->text('note')->nullable();
 

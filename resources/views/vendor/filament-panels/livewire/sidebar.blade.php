@@ -193,23 +193,6 @@
             @if ($hasUserMenuInSidebar)
                 <x-filament-panels::user-menu />
             @endif
-
-            <div
-                @if ($isSidebarCollapsibleOnDesktop || $isSidebarFullyCollapsibleOnDesktop)
-                    x-show="$store.sidebar.isOpen"
-                @endif
-                class="fi-sidebar-pda-action-ctn"
-            >
-                <button
-                    type="button"
-                    class="fi-sidebar-pda-btn"
-                >
-                    <svg class="fi-sidebar-pda-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 7.5V4.875C3.75 4.254 4.254 3.75 4.875 3.75H7.5m9 0h2.625c.621 0 1.125.504 1.125 1.125V7.5m0 9v2.625c0 .621-.504 1.125-1.125 1.125H16.5m-9 0H4.875A1.125 1.125 0 0 1 3.75 19.125V16.5M7.5 12h9" />
-                    </svg>
-                    <span class="fi-sidebar-pda-label">PDA scan mode</span>
-                </button>
-            </div>
         </div>
 
         {{ \Filament\Support\Facades\FilamentView::renderHook(\Filament\View\PanelsRenderHook::SIDEBAR_FOOTER) }}

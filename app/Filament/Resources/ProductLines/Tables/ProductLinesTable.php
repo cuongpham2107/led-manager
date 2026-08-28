@@ -9,7 +9,9 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Support\Enums\Width;
 use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\Summarizers\Count;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Enums\RecordActionsPosition;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
@@ -23,7 +25,11 @@ class ProductLinesTable
                     ->label('Dòng LED')
                     ->searchable()
                     ->sortable()
-                    ->weight('bold'),
+                    ->weight('bold')
+                    ->summarize(
+                        Count::make()
+                            ->label('Tổng dòng sản phẩm'),
+                    ),
                 TextColumn::make('code')
                     ->label('Mã dòng')
                     ->searchable()
@@ -65,7 +71,7 @@ class ProductLinesTable
                     ->modalHeading('Cập nhật dòng sản phẩm LED')
                     ->modalDescription('Chỉnh sửa thông số kỹ thuật và cấu hình module của dòng LED.')
                     ->modalWidth(Width::FiveExtraLarge),
-            ])
+            ], position: RecordActionsPosition::BeforeCells)
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),

@@ -8,7 +8,9 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Support\Enums\Width;
+use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Enums\RecordActionsPosition;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
@@ -43,7 +45,12 @@ class PaymentsTable
                     ->money('VND')
                     ->sortable()
                     ->weight('bold')
-                    ->color('success'),
+                    ->color('success')
+                    ->summarize(
+                        Sum::make()
+                            ->label('Tổng tiền đã thu')
+                            ->money('VND'),
+                    ),
                 TextColumn::make('payment_date')
                     ->label('Ngày thu')
                     ->date('d/m/Y')
@@ -77,7 +84,7 @@ class PaymentsTable
                     ->modalHeading('Cập nhật phiếu thu / thanh toán')
                     ->modalDescription('Chỉnh sửa thông tin số tiền, hình thức thanh toán và ghi chú.')
                     ->modalWidth(Width::FourExtraLarge),
-            ])
+            ], position: RecordActionsPosition::BeforeCells)
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),

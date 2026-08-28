@@ -27,6 +27,7 @@ return new class extends Migration
                 'in_event',     // Đang đi sự kiện
                 'in_transit',   // Đang vận chuyển
                 'repairing',    // Đang bảo trì/sửa chữa
+                'missing',      // Mất / Chưa trả về sau sự kiện
                 'disposed',     // Đã hỏng/Thanh lý
             ])->default('ready');
 

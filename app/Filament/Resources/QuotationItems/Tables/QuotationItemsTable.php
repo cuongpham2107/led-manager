@@ -5,7 +5,9 @@ namespace App\Filament\Resources\QuotationItems\Tables;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Enums\RecordActionsPosition;
 use Filament\Tables\Table;
 
 class QuotationItemsTable
@@ -26,7 +28,11 @@ class QuotationItemsTable
                 TextColumn::make('quantity')
                     ->label('Số lượng')
                     ->numeric()
-                    ->sortable(),
+                    ->sortable()
+                    ->summarize(
+                        Sum::make()
+                            ->label('Tổng SL'),
+                    ),
                 TextColumn::make('deviceType.unit')
                     ->label('ĐVT')
                     ->badge(),
@@ -38,7 +44,12 @@ class QuotationItemsTable
                     ->label('Thành tiền')
                     ->money('VND')
                     ->sortable()
-                    ->weight('bold'),
+                    ->weight('bold')
+                    ->summarize(
+                        Sum::make()
+                            ->label('Tổng thành tiền')
+                            ->money('VND'),
+                    ),
                 TextColumn::make('description')
                     ->label('Ghi chú quy cách')
                     ->placeholder('—')
@@ -57,7 +68,7 @@ class QuotationItemsTable
             ])
             ->recordActions([
                 EditAction::make(),
-            ])
+            ], position: RecordActionsPosition::BeforeCells)
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),

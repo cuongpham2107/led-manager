@@ -7,7 +7,9 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Support\Enums\Width;
 use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\Summarizers\Count;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Enums\RecordActionsPosition;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
@@ -21,7 +23,11 @@ class UsersTable
                     ->label('Họ và tên')
                     ->searchable()
                     ->sortable()
-                    ->weight('bold'),
+                    ->weight('bold')
+                    ->summarize(
+                        Count::make()
+                            ->label('Tổng tài khoản'),
+                    ),
                 TextColumn::make('email')
                     ->label('Email')
                     ->searchable()
@@ -51,7 +57,7 @@ class UsersTable
                     ->modalHeading('Cập nhật tài khoản người dùng')
                     ->modalDescription('Chỉnh sửa thông tin cá nhân, phân quyền vai trò và trạng thái hoạt động.')
                     ->modalWidth(Width::ThreeExtraLarge),
-            ])
+            ], position: RecordActionsPosition::BeforeCells)
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),

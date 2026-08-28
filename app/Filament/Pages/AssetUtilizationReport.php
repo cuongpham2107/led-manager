@@ -5,12 +5,14 @@ namespace App\Filament\Pages;
 use App\Enums\AssetStatus;
 use App\Models\ProductLine;
 use BackedEnum;
+use Filament\Actions\Action;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use UnitEnum;
 
 class AssetUtilizationReport extends Page implements HasTable
@@ -79,6 +81,59 @@ class AssetUtilizationReport extends Page implements HasTable
                         return round(($active / $total) * 100, 1).'%';
                     }),
             ])
+            ->headerActions([
+                Action::make('export_csv')
+                    ->label('Xuất CSV')
+                    ->icon(Heroicon::OutlinedArrowDownTray)
+                    ->color('success')
+                    ->action(fn () => $this->exportCsv()),
+            ])
             ->paginated(false);
+    }
+
+    public function exportCsv(): StreamedResponse
+    {
+        $headers = [
+            'Content-Type' => 'text/csv; charset=utf-8',
+            'Content-Disposition' => 'attachment; filename="asset_utilization_report_'.date('Ymd_His').'.csv"',
+        ];
+
+        return response()->stream(function () {
+            $handle = fopen('php://output', 'w');
+            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
+
+            fputcsv($handle, [
+                'Mã dòng',
+                'Dòng LED',
+                'Môi trường',
+                'Tổng số lượng kho',
+                'Sẵn sàng',
+                'Đang đi sự kiện',
+                'Đang bảo trì',
+                'Tỷ lệ khai thác (%)',
+            ]);
+
+            $lines = ProductLine::with('assets')->get();
+            foreach ($lines as $line) {
+                $total = $line->assets()->count();
+                $ready = $line->assets()->where('current_status', AssetStatus::Ready)->count();
+                $inEvent = $line->assets()->where('current_status', AssetStatus::InEvent)->count();
+                $repairing = $line->assets()->where('current_status', AssetStatus::Repairing)->count();
+                $rate = $total > 0 ? round(($inEvent / $total) * 100, 1) : 0;
+
+                fputcsv($handle, [
+                    $line->code,
+                    $line->name,
+                    $line->environment?->value ?? '',
+                    $total,
+                    $ready,
+                    $inEvent,
+                    $repairing,
+                    $rate.'%',
+                ]);
+            }
+
+            fclose($handle);
+        }, 200, $headers);
     }
 }

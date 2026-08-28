@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Widgets\ExecutiveKpiWidget;
 use App\Filament\Widgets\LatestOrdersWidget;
 use App\Filament\Widgets\MonthlyRevenueChartWidget;
 use App\Filament\Widgets\StatsOverviewWidget;
@@ -28,6 +29,7 @@ class Dashboard extends BaseDashboard
     {
         return [
             StatsOverviewWidget::class,
+            ExecutiveKpiWidget::class,
             WarehouseStatusChartWidget::class,
             MonthlyRevenueChartWidget::class,
             LatestOrdersWidget::class,

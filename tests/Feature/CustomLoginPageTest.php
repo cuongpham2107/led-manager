@@ -4,6 +4,7 @@ use App\Filament\Pages\Auth\Login;
 use App\Models\User;
 use Livewire\Livewire;
 
+use function Pest\Laravel\assertAuthenticatedAs;
 use function Pest\Laravel\get;
 
 test('login page can be rendered with custom split layout', function () {
@@ -29,6 +30,5 @@ test('users can authenticate via custom login page', function () {
         ->assertHasNoFormErrors()
         ->assertRedirect('/');
 
-    expect(auth()->check())->toBeTrue();
-    expect(auth()->id())->toBe($user->id);
+    assertAuthenticatedAs($user);
 });

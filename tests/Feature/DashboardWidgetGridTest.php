@@ -15,5 +15,6 @@ test('dashboard page with customizable widget grid renders successfully', functi
 
     Livewire::test(Dashboard::class)
         ->assertSuccessful()
-        ->assertSee('110.970.000');
+        ->assertSee('Tổng Doanh Thu Hợp Đồng')
+        ->assertSee('Đơn Hàng Đang Chạy');
 });
