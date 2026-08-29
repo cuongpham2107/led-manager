@@ -98,9 +98,9 @@ class CreateDepositPaymentAction extends Action
                     'received_by' => Auth::id(),
                 ]);
 
-                // Cập nhật trạng thái hợp đồng khi đã thu đủ tiền cọc
+                // Cập nhật trạng thái hợp đồng khi đã thu đủ tiền cọc → kích hoạt
                 if ($record->deposit_amount > 0 && $newTotal >= (float) $record->deposit_amount) {
-                    $record->update(['status' => ContractStatus::DepositReceived]);
+                    $record->update(['status' => ContractStatus::Active]);
                 }
 
                 Notification::make()

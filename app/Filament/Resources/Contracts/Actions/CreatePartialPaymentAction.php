@@ -105,7 +105,7 @@ class CreatePartialPaymentAction extends Action
                 if ((float) $record->contract_value > 0 && $newTotal >= (float) $record->contract_value) {
                     $record->update(['status' => ContractStatus::Completed]);
                 } elseif ($record->deposit_amount > 0 && $newTotal >= (float) $record->deposit_amount) {
-                    $record->update(['status' => ContractStatus::DepositReceived]);
+                    $record->update(['status' => ContractStatus::Active]);
                 }
 
                 Notification::make()

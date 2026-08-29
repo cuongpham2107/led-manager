@@ -2,10 +2,8 @@
 
 namespace App\Filament\Resources\Contracts\Pages;
 
-use App\Filament\Resources\Contracts\Actions\ApproveContractAction;
 use App\Filament\Resources\Contracts\Actions\CreateDepositPaymentAction;
 use App\Filament\Resources\Contracts\Actions\CreatePartialPaymentAction;
-use App\Filament\Resources\Contracts\Actions\SendForApprovalAction;
 use App\Filament\Resources\Contracts\ContractResource;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
@@ -41,8 +39,6 @@ class EditContract extends EditRecord
     {
         return [
             $this->getSaveFormAction(),
-            SendForApprovalAction::make(),
-            ApproveContractAction::make(),
             CreateDepositPaymentAction::make(),
             CreatePartialPaymentAction::make(),
             $this->getCancelFormAction(),
