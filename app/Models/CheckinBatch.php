@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\BatchStatus;
+use App\Enums\CheckinBatchType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -19,6 +20,11 @@ class CheckinBatch extends Model
         'warehouse_id',
         'note',
         'expected_date',
+        'batch_type',
+        'product_line_id',
+        'device_type_id',
+        'quantity',
+        'production_note',
         'status',
         'created_by',
         'completed_at',
@@ -33,6 +39,7 @@ class CheckinBatch extends Model
             'expected_date' => 'date',
             'completed_at' => 'datetime',
             'status' => BatchStatus::class,
+            'batch_type' => CheckinBatchType::class,
         ];
     }
 
@@ -50,6 +57,22 @@ class CheckinBatch extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * @return BelongsTo<ProductLine, $this>
+     */
+    public function productLine(): BelongsTo
+    {
+        return $this->belongsTo(ProductLine::class);
+    }
+
+    /**
+     * @return BelongsTo<DeviceType, $this>
+     */
+    public function deviceType(): BelongsTo
+    {
+        return $this->belongsTo(DeviceType::class);
     }
 
     /**
