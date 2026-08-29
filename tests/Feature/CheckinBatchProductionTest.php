@@ -182,3 +182,91 @@ test('suggestSerialPrefix returns {ProductLine.code}-{YYMMDD} uppercased', funct
 
     expect($prefix)->toBe(strtoupper($productLine->code).'-'.now()->format('ymd'));
 });
+
+test('check-in table progress column computes scanned/target percent', function () {
+    $warehouse = Warehouse::where('is_active', true)->first();
+    $productLine = ProductLine::where('is_active', true)->first();
+    $deviceType = DeviceType::first();
+    $creator = User::first();
+
+    $batch = CheckinBatch::create([
+        'code' => 'IN-PROG-01',
+        'warehouse_id' => $warehouse->id,
+        'batch_type' => CheckinBatchType::Production,
+        'product_line_id' => $productLine->id,
+        'device_type_id' => $deviceType->id,
+        'quantity' => 10,
+        'status' => BatchStatus::InProgress,
+        'created_by' => $creator->id,
+    ]);
+
+    // 4 items exist, 2 received
+    for ($i = 1; $i <= 4; $i++) {
+        $asset = Asset::create([
+            'serial_no' => 'PROG-'.sprintf('%03d', $i),
+            'product_line_id' => $productLine->id,
+            'device_type_id' => $deviceType->id,
+            'warehouse_id' => $warehouse->id,
+            'status' => AssetStatus::Ready,
+            'condition' => 'ok',
+        ]);
+        CheckinBatchItem::create([
+            'checkin_batch_id' => $batch->id,
+            'asset_id' => $asset->id,
+            'is_received' => $i <= 2,
+            'received_at' => $i <= 2 ? now() : null,
+        ]);
+    }
+
+    $batch = $batch->fresh('items');
+    $scanned = $batch->items->where('is_received', true)->count();
+    $target = max((int) $batch->quantity, $batch->items->count());
+    $percent = $target > 0 ? (int) round(($scanned / $target) * 100) : 0;
+
+    expect($batch->items)->toHaveCount(4);
+    expect($scanned)->toBe(2);
+    expect($target)->toBe(10); // quantity wins when larger than items
+    expect($percent)->toBe(20);
+    expect("{$scanned}/{$target} ({$percent}%)")->toBe('2/10 (20%)');
+});
+
+test('check-in table progress falls back to items count when quantity is null', function () {
+    $warehouse = Warehouse::where('is_active', true)->first();
+    $productLine = ProductLine::where('is_active', true)->first();
+    $deviceType = DeviceType::first();
+    $creator = User::first();
+
+    $batch = CheckinBatch::create([
+        'code' => 'IN-LEGACY-01',
+        'warehouse_id' => $warehouse->id,
+        'status' => BatchStatus::InProgress,
+        'created_by' => $creator->id,
+        // quantity not set (legacy batch)
+    ]);
+
+    for ($i = 1; $i <= 3; $i++) {
+        $asset = Asset::create([
+            'serial_no' => 'LEG-'.sprintf('%03d', $i),
+            'product_line_id' => $productLine->id,
+            'device_type_id' => $deviceType->id,
+            'warehouse_id' => $warehouse->id,
+            'status' => AssetStatus::Ready,
+            'condition' => 'ok',
+        ]);
+        CheckinBatchItem::create([
+            'checkin_batch_id' => $batch->id,
+            'asset_id' => $asset->id,
+            'is_received' => $i <= 1,
+            'received_at' => $i <= 1 ? now() : null,
+        ]);
+    }
+
+    $batch = $batch->fresh('items');
+    $scanned = $batch->items->where('is_received', true)->count();
+    $target = max((int) $batch->quantity, $batch->items->count());
+    $percent = $target > 0 ? (int) round(($scanned / $target) * 100) : 0;
+
+    expect($target)->toBe(3); // falls back to items count
+    expect($percent)->toBe(33); // 1/3 = 33%
+    expect("{$scanned}/{$target} ({$percent}%)")->toBe('1/3 (33%)');
+});
