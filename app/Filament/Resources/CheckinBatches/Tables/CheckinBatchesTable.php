@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\CheckinBatches\Tables;
 
 use App\Enums\BatchStatus;
+use App\Filament\Resources\CheckinBatches\Actions\CreateProductionBatchAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -54,6 +55,9 @@ class CheckinBatchesTable
             ->recordActions([
                 EditAction::make(),
             ], position: RecordActionsPosition::BeforeCells)
+            ->headerActions([
+                CreateProductionBatchAction::make(),
+            ])
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
