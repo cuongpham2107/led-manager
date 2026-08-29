@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\CheckinBatches\Tables;
 
 use App\Enums\BatchStatus;
-use App\Filament\Resources\CheckinBatches\CheckinBatchResource;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -117,16 +116,7 @@ class CheckinBatchesTable
                     ->relationship('warehouse', 'name'),
             ])
             ->recordActions([
-                EditAction::make()
-                    ->modal()
-                    ->modalHeading(fn ($record) => "Sửa đợt nhập kho: {$record->code}")
-                    ->modalSubmitActionLabel('Lưu thay đổi')
-                    ->modalWidth('3xl')
-                    ->schema(function ($schema) {
-                        // Reuse the resource's form schema so the modal
-                        // and the dedicated Edit page stay in lock-step.
-                        return CheckinBatchResource::form($schema);
-                    }),
+                EditAction::make(),
             ], position: RecordActionsPosition::BeforeCells)
             ->toolbarActions([
                 BulkActionGroup::make([
