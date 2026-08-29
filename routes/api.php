@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\AssetApiController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\CheckinBatchApiController;
 use App\Http\Controllers\Api\V1\CheckoutBatchApiController;
 use App\Http\Controllers\Api\V1\ReturnBatchApiController;
 use App\Http\Controllers\Api\V1\WarehouseApiController;
@@ -35,6 +36,12 @@ Route::prefix('v1')->group(function () {
         Route::get('/checkout-batches/{id}', [CheckoutBatchApiController::class, 'show'])->name('api.v1.checkout-batches.show');
         Route::post('/checkout-batches/{id}/scan', [CheckoutBatchApiController::class, 'scan'])->name('api.v1.checkout-batches.scan');
         Route::post('/checkout-batches/{id}/complete', [CheckoutBatchApiController::class, 'complete'])->name('api.v1.checkout-batches.complete');
+
+        // Inbound (Check-in Batches — production intake, return from repair, etc.)
+        Route::get('/checkin-batches', [CheckinBatchApiController::class, 'index'])->name('api.v1.checkin-batches.index');
+        Route::get('/checkin-batches/{id}', [CheckinBatchApiController::class, 'show'])->name('api.v1.checkin-batches.show');
+        Route::post('/checkin-batches/{id}/scan', [CheckinBatchApiController::class, 'scan'])->name('api.v1.checkin-batches.scan');
+        Route::post('/checkin-batches/{id}/complete', [CheckinBatchApiController::class, 'complete'])->name('api.v1.checkin-batches.complete');
 
         // Inbound / Returns (Return Batches)
         Route::get('/return-batches', [ReturnBatchApiController::class, 'index'])->name('api.v1.return-batches.index');
