@@ -3,13 +3,15 @@ import React, { useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { AssetLookupScreen } from './src/screens/AssetLookupScreen';
+import { CheckinBatchesScreen } from './src/screens/CheckinBatchesScreen';
+import { CheckinDetailScreen } from './src/screens/CheckinDetailScreen';
 import { CheckoutBatchesScreen } from './src/screens/CheckoutBatchesScreen';
 import { CheckoutDetailScreen } from './src/screens/CheckoutDetailScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { ReturnBatchesScreen } from './src/screens/ReturnBatchesScreen';
 import { ReturnDetailScreen } from './src/screens/ReturnDetailScreen';
-import { CheckoutBatch, ReturnBatch } from './src/types';
+import { CheckinBatch, CheckoutBatch, ReturnBatch } from './src/types';
 
 type ScreenName =
   | 'home'
@@ -17,6 +19,8 @@ type ScreenName =
   | 'checkout_detail'
   | 'return_batches'
   | 'return_detail'
+  | 'checkin_batches'
+  | 'checkin_detail'
   | 'asset_lookup';
 
 const MainAppContent: React.FC = () => {
@@ -24,6 +28,7 @@ const MainAppContent: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<ScreenName>('home');
   const [selectedCheckoutBatchId, setSelectedCheckoutBatchId] = useState<number | null>(null);
   const [selectedReturnBatchId, setSelectedReturnBatchId] = useState<number | null>(null);
+  const [selectedCheckinBatchId, setSelectedCheckinBatchId] = useState<number | null>(null);
 
   if (isLoading) {
     return (
@@ -49,6 +54,11 @@ const MainAppContent: React.FC = () => {
   const handleSelectReturnBatch = (batch: ReturnBatch) => {
     setSelectedReturnBatchId(batch.id);
     setCurrentScreen('return_detail');
+  };
+
+  const handleSelectCheckinBatch = (batch: CheckinBatch) => {
+    setSelectedCheckinBatchId(batch.id);
+    setCurrentScreen('checkin_detail');
   };
 
   switch (currentScreen) {
@@ -83,6 +93,24 @@ const MainAppContent: React.FC = () => {
         <ReturnDetailScreen
           batchId={selectedReturnBatchId}
           onBack={() => navigateTo('return_batches')}
+        />
+      ) : (
+        <HomeScreen onNavigate={(s) => navigateTo(s as ScreenName)} />
+      );
+
+    case 'checkin_batches':
+      return (
+        <CheckinBatchesScreen
+          onBack={() => navigateTo('home')}
+          onSelectBatch={handleSelectCheckinBatch}
+        />
+      );
+
+    case 'checkin_detail':
+      return selectedCheckinBatchId ? (
+        <CheckinDetailScreen
+          batchId={selectedCheckinBatchId}
+          onBack={() => navigateTo('checkin_batches')}
         />
       ) : (
         <HomeScreen onNavigate={(s) => navigateTo(s as ScreenName)} />

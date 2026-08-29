@@ -162,3 +162,58 @@ export interface ReturnBatch {
   items?: ReturnBatchItem[];
   created_at?: string;
 }
+
+export type CheckinBatchTypeValue = 'production' | 'purchase' | 'transfer';
+
+export interface CheckinBatchItem {
+  id: number;
+  asset_id: number;
+  condition?: 'ok' | 'fault';
+  condition_note?: string;
+  is_received: boolean;
+  received_at?: string;
+  received_by?: {
+    id: number;
+    name: string;
+  };
+  asset?: Asset;
+}
+
+export interface CheckinBatch {
+  id: number;
+  code: string;
+  status: {
+    value: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+    label: string;
+    color: string;
+  };
+  batch_type: {
+    value: CheckinBatchTypeValue;
+    label: string;
+    color: string;
+  };
+  quantity: number;
+  target_items_count: number;
+  scanned_count: number;
+  progress_percent: number;
+  expected_date?: string;
+  completed_at?: string;
+  production_note?: string;
+  note?: string;
+  warehouse?: {
+    id: number;
+    code: string;
+    name: string;
+  };
+  product_line?: {
+    id: number;
+    code: string;
+    name: string;
+  };
+  device_type?: {
+    id: number;
+    name: string;
+  };
+  items?: CheckinBatchItem[];
+  created_at?: string;
+}

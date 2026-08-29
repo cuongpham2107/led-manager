@@ -1,5 +1,6 @@
 import {
   ArrowDownLeft,
+  ArrowDownToLine,
   ArrowUpRight,
   Boxes,
   Building2,
@@ -34,9 +35,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
   const [stats, setStats] = useState<{
     pendingOutbound: number;
     pendingReturns: number;
+    pendingCheckin: number;
   }>({
     pendingOutbound: 0,
     pendingReturns: 0,
+    pendingCheckin: 0,
   });
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
@@ -45,11 +48,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
 
   const fetchDashboardStats = async () => {
     try {
-      const [outboundRes, returnRes] = await Promise.all([
+      const [outboundRes, returnRes, checkinRes] = await Promise.all([
         apiClient.get('/checkout-batches', {
           params: { warehouse_id: selectedWarehouseId, status: 'pending' },
         }),
         apiClient.get('/return-batches', {
+          params: { warehouse_id: selectedWarehouseId, status: 'pending' },
+        }),
+        apiClient.get('/checkin-batches', {
           params: { warehouse_id: selectedWarehouseId, status: 'pending' },
         }),
       ]);
@@ -57,6 +63,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
       setStats({
         pendingOutbound: outboundRes.data?.pagination?.total ?? 0,
         pendingReturns: returnRes.data?.pagination?.total ?? 0,
+        pendingCheckin: checkinRes.data?.pagination?.total ?? 0,
       });
     } catch {
       // Ignore
@@ -116,6 +123,32 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
         {/* Quick Action Big Tiles */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Nghiệp Vụ Kho & Quét QR</Text>
+
+          {/* 0. Inbound / Checkin Scan (production intake, return-from-repair) */}
+          <TouchableOpacity
+            style={[styles.actionCard, { borderLeftColor: '#10B981' }]}
+            onPress={() => onNavigate('checkin_batches')}
+          >
+            <View style={[styles.actionIconBox, { backgroundColor: '#ECFDF5' }]}>
+              <ArrowDownToLine color="#10B981" size={26} />
+            </View>
+            <View style={styles.actionTextBox}>
+              <View style={styles.actionTitleRow}>
+                <Text style={styles.actionTitle}>Nhập Kho Sản Xuất</Text>
+                {stats.pendingCheckin > 0 && (
+                  <View style={[styles.badgeCount, { backgroundColor: '#D1FAE5' }]}>
+                    <Text style={[styles.badgeCountText, { color: '#047857' }]}>
+                      {stats.pendingCheckin} đợt
+                    </Text>
+                  </View>
+                )}
+              </View>
+              <Text style={styles.actionDesc}>
+                Quét QR/Serial thiết bị mới sản xuất xong, nhập kho nhanh 1 thao tác
+              </Text>
+            </View>
+            <ChevronRight color="#94A3B8" size={20} />
+          </TouchableOpacity>
 
           {/* 1. Outbound / Checkout Scan */}
           <TouchableOpacity
