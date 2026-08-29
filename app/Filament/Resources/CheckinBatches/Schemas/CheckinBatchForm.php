@@ -6,11 +6,13 @@ use App\Enums\BatchStatus;
 use App\Enums\CheckinBatchType;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Repeater\TableColumn;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
@@ -106,24 +108,27 @@ class CheckinBatchForm
                             ->columnSpan(['default' => 1, 'lg' => 8])
                             ->schema([
                                 Section::make('Danh sách thiết bị thực tế nhập kho')
-                                    ->description('Mỗi dòng là 1 thiết bị trong đợt nhập. Tình trạng có thể khác nhau từng thiết bị. Người nhận & thời gian quét được ghi tự động khi PDA scan.')
+                                    ->description('Mỗi dòng là 1 thiết bị ĐÃ ĐƯỢC TẠO MỚI trong đợt nhập này (xem ProductionBatchService). Asset không thể chỉnh — chỉ ghi nhận tình trạng kiểm tra chất lượng. Trạng thái quét PDA & người nhận được ghi tự động bởi mobile app.')
                                     ->collapsible()
                                     ->schema([
                                         Repeater::make('items')
                                             ->relationship('items')
                                             ->label('Thiết bị nhập kho')
+                                            ->addable(false)   // Items are created by CreateProductionBatchAction, not manually
+                                            ->deletable(false) // Same reason
                                             ->table([
-                                                TableColumn::make('Mã Serial / Thiết bị'),
+                                                TableColumn::make('Mã Serial (đã tạo)'),
                                                 TableColumn::make('Tình trạng'),
                                                 TableColumn::make('Ghi chú tình trạng'),
                                             ])
                                             ->schema([
-                                                Select::make('asset_id')
-                                                    ->label('Thiết bị trong kho')
-                                                    ->relationship('asset', 'serial_no')
-                                                    ->searchable()
-                                                    ->preload()
-                                                    ->required(),
+                                                // asset_id is preserved via Hidden so the
+                                                // relationship is not orphaned on save.
+                                                Hidden::make('asset_id'),
+                                                TextEntry::make('asset_serial')
+                                                    ->label('Serial')
+                                                    ->state(fn ($record) => $record?->asset?->serial_no ?? '—')
+                                                    ->columnSpan(1),
                                                 Select::make('condition')
                                                     ->label('Tình trạng')
                                                     ->options([
@@ -135,10 +140,7 @@ class CheckinBatchForm
                                                 TextInput::make('condition_note')
                                                     ->label('Ghi chú')
                                                     ->placeholder('VD: trầy nhẹ 1 góc...'),
-                                            ])
-                                            ->addActionLabel('+ Thêm thiết bị vào đợt nhập')
-                                            ->collapsible(false)
-                                            ->reorderable(false),
+                                            ]),
                                     ]),
                             ]),
                     ]),
