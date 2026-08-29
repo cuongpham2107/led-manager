@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\CheckinBatches;
 
 use App\Filament\Resources\CheckinBatches\Pages\CreateCheckinBatch;
-use App\Filament\Resources\CheckinBatches\Pages\EditCheckinBatch;
 use App\Filament\Resources\CheckinBatches\Pages\ListCheckinBatches;
 use App\Filament\Resources\CheckinBatches\Schemas\CheckinBatchForm;
 use App\Filament\Resources\CheckinBatches\Tables\CheckinBatchesTable;
@@ -50,10 +49,11 @@ class CheckinBatchResource extends Resource
 
     public static function getPages(): array
     {
+        // No 'edit' page — editing happens via the slide-over modal in
+        // the table (see CheckinBatchesTable::recordActions).
         return [
             'index' => ListCheckinBatches::route('/'),
             'create' => CreateCheckinBatch::route('/create'),
-            'edit' => EditCheckinBatch::route('/{record}/edit'),
         ];
     }
 }

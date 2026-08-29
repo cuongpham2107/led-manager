@@ -54,7 +54,7 @@ class CheckinBatchesTable
             ])
             ->recordActions([
                 EditAction::make()
-                    ->slideOver()
+                    ->modal()
                     ->modalHeading(fn ($record) => "Sửa đợt nhập kho: {$record->code}")
                     ->modalSubmitActionLabel('Lưu thay đổi')
                     ->modalWidth('3xl')
