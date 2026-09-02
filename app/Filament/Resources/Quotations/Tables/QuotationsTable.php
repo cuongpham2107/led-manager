@@ -94,13 +94,14 @@ class QuotationsTable
                     ->relationship('productLine', 'name'),
             ])
             ->recordActions([
+                EditAction::make()
+                    ->visible(fn (Quotation $record): bool => in_array($record->status, [
+                        QuotationStatus::Draft,
+                        QuotationStatus::Sent,
+                        QuotationStatus::Approved,
+                    ])),
                 ActionGroup::make([
-                    EditAction::make()
-                        ->visible(fn (Quotation $record): bool => in_array($record->status, [
-                            QuotationStatus::Draft,
-                            QuotationStatus::Sent,
-                            QuotationStatus::Approved,
-                        ])),
+
                     ConvertToOrderAction::make(),
                     DownloadPdfAction::make(),
                     MarkRejectedAction::make(),

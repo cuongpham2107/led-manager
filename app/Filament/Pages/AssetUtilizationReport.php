@@ -3,8 +3,11 @@
 namespace App\Filament\Pages;
 
 use App\Enums\AssetStatus;
+use App\Models\Asset;
 use App\Models\ProductLine;
+use App\Models\Warehouse;
 use BackedEnum;
+use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 use Filament\Actions\Action;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
@@ -17,6 +20,7 @@ use UnitEnum;
 
 class AssetUtilizationReport extends Page implements HasTable
 {
+    use HasPageShield;
     use InteractsWithTable;
 
     protected static string|UnitEnum|null $navigationGroup = 'Báo cáo & Thống kê';
@@ -27,9 +31,113 @@ class AssetUtilizationReport extends Page implements HasTable
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedSquare3Stack3d;
 
-    protected static ?int $navigationSort = 3;
-
     protected string $view = 'filament.pages.asset-utilization-report';
+
+    public function getStats(): array
+    {
+        $total = Asset::count();
+        $ready = Asset::where('current_status', AssetStatus::Ready)->count();
+        $inEvent = Asset::whereIn('current_status', [AssetStatus::InEvent, AssetStatus::InTransit])->count();
+        $repairing = Asset::where('current_status', AssetStatus::Repairing)->count();
+        $missing = Asset::where('current_status', AssetStatus::Missing)->count();
+        $disposed = Asset::where('current_status', AssetStatus::Disposed)->count();
+        $rate = $total > 0 ? round(($inEvent / $total) * 100, 1) : 0;
+        $readyRate = $total > 0 ? round(($ready / $total) * 100, 1) : 0;
+        $repairingRate = $total > 0 ? round(($repairing / $total) * 100, 1) : 0;
+
+        return [
+            'total' => $total,
+            'ready' => $ready,
+            'ready_rate' => $readyRate,
+            'in_event' => $inEvent,
+            'utilization_rate' => $rate,
+            'repairing' => $repairing,
+            'repairing_rate' => $repairingRate,
+            'missing' => $missing,
+            'disposed' => $disposed,
+        ];
+    }
+
+    public function getProductLineStats(): array
+    {
+        $lines = ProductLine::with(['assets.currentWarehouse'])->get();
+
+        return $lines->map(function ($line) {
+            $assets = $line->assets;
+            $total = $assets->count();
+            $ready = $assets->where('current_status', AssetStatus::Ready)->count();
+            $inEvent = $assets->whereIn('current_status', [AssetStatus::InEvent, AssetStatus::InTransit])->count();
+            $repairing = $assets->where('current_status', AssetStatus::Repairing)->count();
+            $missing = $assets->where('current_status', AssetStatus::Missing)->count();
+            $disposed = $assets->where('current_status', AssetStatus::Disposed)->count();
+
+            $rate = $total > 0 ? round(($inEvent / $total) * 100, 1) : 0;
+            $readyRate = $total > 0 ? round(($ready / $total) * 100, 1) : 0;
+            $repairingRate = $total > 0 ? round(($repairing / $total) * 100, 1) : 0;
+
+            $warehouseDistribution = $assets->groupBy(fn ($a) => $a->currentWarehouse?->name ?? 'Chưa gán kho')
+                ->map(fn ($group) => $group->count());
+
+            return [
+                'id' => $line->id,
+                'name' => $line->name,
+                'code' => $line->code,
+                'environment' => $line->environment?->value ?? 'indoor',
+                'pixel_pitch' => $line->pixel_pitch_mm ?? $line->pixel_pitch ?? '—',
+                'cabinet_size' => ($line->cabinet_width_mm && $line->cabinet_height_mm) ? "{$line->cabinet_width_mm}x{$line->cabinet_height_mm}mm" : '500x500mm',
+                'total' => $total,
+                'ready' => $ready,
+                'ready_rate' => $readyRate,
+                'in_event' => $inEvent,
+                'repairing' => $repairing,
+                'repairing_rate' => $repairingRate,
+                'missing' => $missing,
+                'disposed' => $disposed,
+                'rate' => $rate,
+                'warehouses' => $warehouseDistribution,
+            ];
+        })->toArray();
+    }
+
+    public function getWarehouseStats(): array
+    {
+        $warehouses = Warehouse::with(['assets.productLine'])->get();
+
+        return $warehouses->map(function ($warehouse) {
+            $assets = $warehouse->assets;
+            $total = $assets->count();
+            $ready = $assets->where('current_status', AssetStatus::Ready)->count();
+            $inEvent = $assets->whereIn('current_status', [AssetStatus::InEvent, AssetStatus::InTransit])->count();
+            $repairing = $assets->where('current_status', AssetStatus::Repairing)->count();
+            $missing = $assets->where('current_status', AssetStatus::Missing)->count();
+            $disposed = $assets->where('current_status', AssetStatus::Disposed)->count();
+
+            $rate = $total > 0 ? round(($inEvent / $total) * 100, 1) : 0;
+            $readyRate = $total > 0 ? round(($ready / $total) * 100, 1) : 0;
+            $repairingRate = $total > 0 ? round(($repairing / $total) * 100, 1) : 0;
+
+            $productLinesDistribution = $assets->groupBy(fn ($a) => $a->productLine?->name ?? 'Khác')
+                ->map(fn ($group) => $group->count());
+
+            return [
+                'id' => $warehouse->id,
+                'name' => $warehouse->name,
+                'code' => $warehouse->code,
+                'address' => $warehouse->address ?? '—',
+                'phone' => $warehouse->phone ?? '—',
+                'total' => $total,
+                'ready' => $ready,
+                'ready_rate' => $readyRate,
+                'in_event' => $inEvent,
+                'repairing' => $repairing,
+                'repairing_rate' => $repairingRate,
+                'missing' => $missing,
+                'disposed' => $disposed,
+                'rate' => $rate,
+                'product_lines' => $productLinesDistribution,
+            ];
+        })->toArray();
+    }
 
     public function table(Table $table): Table
     {
@@ -61,7 +169,7 @@ class AssetUtilizationReport extends Page implements HasTable
                     ->label('Đang đi sự kiện')
                     ->badge()
                     ->color('info')
-                    ->state(fn ($record) => $record->assets()->where('current_status', AssetStatus::InEvent)->count()),
+                    ->state(fn ($record) => $record->assets()->whereIn('current_status', [AssetStatus::InEvent, AssetStatus::InTransit])->count()),
                 TextColumn::make('repairing_count')
                     ->label('Đang bảo trì')
                     ->badge()
@@ -70,13 +178,13 @@ class AssetUtilizationReport extends Page implements HasTable
                 TextColumn::make('utilization_rate')
                     ->label('Tỷ lệ khai thác (%)')
                     ->badge()
-                    ->color(fn ($state) => $state > 70 ? 'danger' : ($state > 40 ? 'warning' : 'success'))
+                    ->color(fn ($state) => (float) $state > 70 ? 'danger' : ((float) $state > 40 ? 'warning' : 'success'))
                     ->state(function ($record) {
                         $total = $record->assets()->count();
                         if ($total === 0) {
                             return '0%';
                         }
-                        $active = $record->assets()->where('current_status', AssetStatus::InEvent)->count();
+                        $active = $record->assets()->whereIn('current_status', [AssetStatus::InEvent, AssetStatus::InTransit])->count();
 
                         return round(($active / $total) * 100, 1).'%';
                     }),

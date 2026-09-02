@@ -6,7 +6,6 @@ use App\Enums\ContractStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Contract extends Model
 {
@@ -88,26 +87,26 @@ class Contract extends Model
     }
 
     /**
-     * @return HasMany<Payment, $this>
-     */
-    public function payments(): HasMany
-    {
-        return $this->hasMany(Payment::class);
-    }
-
-    /**
-     * Calculate total paid amount so far
+     * Calculate total paid amount so far (từ đơn hàng liên kết)
      */
     public function getTotalPaidAttribute(): float
     {
-        return (float) $this->payments()->sum('amount');
+        $order = $this->order;
+
+        return $order ? (float) $order->total_paid : 0;
     }
 
     /**
-     * Calculate remaining debt
+     * Calculate remaining debt (so với đơn hàng liên kết)
      */
     public function getRemainingDebtAttribute(): float
     {
-        return max(0, (float) $this->contract_value - $this->total_paid);
+        $order = $this->order;
+
+        if (! $order) {
+            return max(0, (float) $this->contract_value);
+        }
+
+        return max(0, (float) $this->contract_value - (float) $order->total_paid);
     }
 }

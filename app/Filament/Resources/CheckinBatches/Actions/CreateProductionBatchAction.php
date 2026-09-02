@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\CheckinBatches\Actions;
 
+use App\Filament\Resources\CheckinBatches\CheckinBatchResource;
 use App\Models\DeviceType;
 use App\Models\ProductLine;
 use App\Models\Warehouse;
@@ -28,70 +29,89 @@ class CreateProductionBatchAction extends Action
         parent::setUp();
 
         $this
-            ->label('Tạo đợt nhập từ sản xuất')
+            ->authorize('CreateProductionBatch:CheckinBatch')
+            ->label('Tạo đợt nhập từ sản xuất / Thiết bị mới')
             ->icon('heroicon-o-cog-6-tooth')
             ->color('success')
-            ->modalHeading('Tạo đợt nhập kho từ sản xuất')
-            ->modalDescription('Sản xuất xong lô LED? Chỉ cần chọn dòng sản phẩm, loại thiết bị, số lượng, kho nhập — hệ thống tự sinh mã serial, tạo Asset, CheckinBatch, CheckinBatchItem và ghi log nhập kho trong 1 thao tác.')
+            ->modalHeading('Tạo đợt nhập kho từ sản xuất / Lô thiết bị mới')
+            ->modalDescription('Sản xuất hoặc tạo lô thiết bị mới (Cabinet LED, Video Processor, Sending Card, Khung Truss, Thùng Flycase, Dây cáp...)? Hệ thống tự sinh mã serial, tạo Asset, CheckinBatch, CheckinBatchItem và ghi log nhập kho trong 1 thao tác.')
             ->modalSubmitActionLabel('Tạo đợt nhập')
             ->form([
-                Select::make('product_line_id')
-                    ->label('Dòng sản phẩm (Product Line)')
-                    ->options(ProductLine::query()->where('is_active', true)->pluck('name', 'id'))
-                    ->searchable()
-                    ->preload()
-                    ->required()
-                    ->live()
-                    ->afterStateUpdated(function (?string $state, Set $set, Get $get) {
-                        if (! $state) {
-                            return;
-                        }
-                        $pl = ProductLine::find($state);
-                        if ($pl && blank($get('serial_prefix'))) {
-                            $set('serial_prefix', app(ProductionBatchService::class)->suggestSerialPrefix($pl));
-                        }
-                    }),
-                Select::make('device_type_id')
-                    ->label('Loại thiết bị (Device Type)')
-                    ->options(DeviceType::query()->pluck('name', 'id'))
-                    ->searchable()
-                    ->preload()
-                    ->required(),
-                TextInput::make('quantity')
-                    ->label('Số lượng sản xuất')
-                    ->helperText('Tối đa 500 thiết bị / lần')
-                    ->numeric()
-                    ->minValue(1)
-                    ->maxValue(500)
-                    ->default(10)
-                    ->required(),
-                Select::make('warehouse_id')
-                    ->label('Kho nhập vào')
-                    ->options(Warehouse::query()->where('is_active', true)->pluck('name', 'id'))
-                    ->searchable()
-                    ->preload()
-                    ->default(fn () => Warehouse::where('is_active', true)->first()?->id)
-                    ->required(),
+                Grid::make(2)
+                    ->schema([
+                        Select::make('device_type_id')
+                            ->label('Loại thiết bị (Device Type)')
+                            ->options(DeviceType::query()->pluck('name', 'id'))
+                            ->searchable()
+                            ->preload()
+                            ->required()
+                            ->live()
+                            ->afterStateUpdated(function (?string $state, Set $set, Get $get) {
+                                if (! $state) {
+                                    return;
+                                }
+                                $dt = DeviceType::find($state);
+                                $plId = $get('product_line_id');
+                                $pl = $plId ? ProductLine::find($plId) : null;
+                                if (blank($get('serial_prefix')) || str_contains($get('serial_prefix') ?? '', now()->format('ymd'))) {
+                                    $set('serial_prefix', app(ProductionBatchService::class)->suggestSerialPrefix($pl, $dt));
+                                }
+                            }),
+                        Select::make('product_line_id')
+                            ->label('Dòng sản phẩm (áp dụng cho Cabinet LED)')
+                            ->options(ProductLine::query()->where('is_active', true)->pluck('name', 'id'))
+                            ->searchable()
+                            ->preload()
+                            ->nullable()
+                            ->helperText('Chỉ áp dụng cho Cabinet/Module LED. Thiết bị khác để trống.')
+                            ->live()
+                            ->afterStateUpdated(function (?string $state, Set $set, Get $get) {
+                                $pl = $state ? ProductLine::find($state) : null;
+                                $dtId = $get('device_type_id');
+                                $dt = $dtId ? DeviceType::find($dtId) : null;
+                                if ($pl || $dt) {
+                                    $set('serial_prefix', app(ProductionBatchService::class)->suggestSerialPrefix($pl, $dt));
+                                }
+                            }),
+                    ]),
+                Grid::make(2)
+                    ->schema([
+                        TextInput::make('quantity')
+                            ->label('Số lượng sản xuất / nhập mới')
+                            ->helperText('Tối đa 500 thiết bị / lần')
+                            ->numeric()
+                            ->minValue(1)
+                            ->maxValue(500)
+                            ->default(10)
+                            ->required(),
+                        Select::make('warehouse_id')
+                            ->label('Kho nhập vào')
+                            ->options(Warehouse::query()->where('is_active', true)->pluck('name', 'id'))
+                            ->searchable()
+                            ->preload()
+                            ->default(fn () => Warehouse::where('is_active', true)->first()?->id)
+                            ->required(),
+                    ]),
                 Grid::make(2)
                     ->schema([
                         TextInput::make('size')
-                            ->label('Kích thước cabinet')
-                            ->placeholder('VD: 500x500mm, 500x1000mm')
+                            ->label('Kích thước / Quy cách')
+                            ->placeholder('VD: 500x500mm, 1U Rack, 2m, 10m 3 pha...')
                             ->maxLength(50),
                         TextInput::make('serial_prefix')
-                            ->label('Prefix serial_no')
-                            ->helperText('Mặc định: {Mã dòng SP}-{YYMMDD}. Có thể override.')
+                            ->label('Tiền tố mã Serial')
+                            ->helperText('Mặc định: {Mã SP|Loại}-{YYMMDD}. Có thể tuỳ chỉnh.')
                             ->required()
                             ->maxLength(50),
                     ]),
                 Textarea::make('note')
                     ->label('Ghi chú đợt sản xuất')
                     ->rows(2)
-                    ->placeholder('VD: Lô P3.91 outdoor sản xuất 29/08, QC đạt chuẩn')
+                    ->placeholder('VD: Lô sản xuất ngày 29/08, kiểm tra QC đạt chuẩn...')
                     ->columnSpanFull(),
             ])
             ->action(function (array $data): void {
-                $productLine = ProductLine::findOrFail($data['product_line_id']);
+                $productLine = ! empty($data['product_line_id']) ? ProductLine::find($data['product_line_id']) : null;
                 $deviceType = DeviceType::findOrFail($data['device_type_id']);
                 $warehouse = Warehouse::findOrFail($data['warehouse_id']);
                 $service = app(ProductionBatchService::class);
@@ -130,9 +150,12 @@ class CreateProductionBatchAction extends Action
 
                 Notification::make()
                     ->title('Đã tạo đợt nhập kho từ sản xuất!')
-                    ->body("Đợt [{$batch->code}]: tạo mới {$count} thiết bị trong kho {$warehouse->name}. Serial từ {$result['assets']->first()->serial_no} đến {$result['assets']->last()->serial_no}.")
+                    ->body("Đợt [{$batch->code}]: tạo mới {$count} thiết bị trong kho {$warehouse->name}. Serial từ {$result['assets']->first()->serial_no} đến {$result['assets']->last()->serial_no}. Bấm \"In mã QR\" để in tem dán sản phẩm.")
                     ->success()
                     ->send();
+
+                // Redirect to edit page where user can print QR labels
+                $this->redirect(CheckinBatchResource::getUrl('edit', ['record' => $batch]));
             });
     }
 }

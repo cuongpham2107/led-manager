@@ -12,6 +12,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Enums\RecordActionsPosition;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Packstub\AccountSwitcher\Filament\Actions\ImpersonateAction;
 
 class UsersTable
 {
@@ -57,6 +58,7 @@ class UsersTable
                     ->modalHeading('Cập nhật tài khoản người dùng')
                     ->modalDescription('Chỉnh sửa thông tin cá nhân, phân quyền vai trò và trạng thái hoạt động.')
                     ->modalWidth(Width::ThreeExtraLarge),
+                ImpersonateAction::make(),
             ], position: RecordActionsPosition::BeforeCells)
             ->toolbarActions([
                 BulkActionGroup::make([

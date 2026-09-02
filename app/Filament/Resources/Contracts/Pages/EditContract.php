@@ -2,11 +2,8 @@
 
 namespace App\Filament\Resources\Contracts\Pages;
 
-use App\Filament\Resources\Contracts\Actions\CreateDepositPaymentAction;
-use App\Filament\Resources\Contracts\Actions\CreatePartialPaymentAction;
 use App\Filament\Resources\Contracts\ContractResource;
 use Filament\Actions\Action;
-use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Support\Enums\Alignment;
@@ -39,8 +36,6 @@ class EditContract extends EditRecord
     {
         return [
             $this->getSaveFormAction(),
-            CreateDepositPaymentAction::make(),
-            CreatePartialPaymentAction::make(),
             $this->getCancelFormAction(),
         ];
     }

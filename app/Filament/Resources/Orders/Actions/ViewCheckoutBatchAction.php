@@ -18,6 +18,7 @@ class ViewCheckoutBatchAction extends Action
         parent::setUp();
 
         $this
+            ->authorize('ViewCheckoutBatch:Order')
             ->label('Xem Đợt Xuất Kho')
             ->icon('heroicon-o-arrow-top-right-on-square')
             ->color('warning')

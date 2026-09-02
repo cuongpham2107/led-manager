@@ -23,6 +23,7 @@ class CreateCheckoutBatchAction extends Action
         parent::setUp();
 
         $this
+            ->authorize('CreateCheckoutBatch:Order')
             ->label('Tạo Đợt Xuất Kho')
             ->icon('heroicon-o-arrow-up-tray')
             ->color('warning')

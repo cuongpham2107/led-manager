@@ -4,11 +4,9 @@ namespace App\Filament\Widgets;
 
 use App\Enums\AssetStatus;
 use App\Enums\OrderStatus;
-use App\Enums\PaymentType;
 use App\Enums\QuotationStatus;
 use App\Models\Asset;
 use App\Models\Order;
-use App\Models\Payment;
 use App\Models\Quotation;
 use Carbon\Carbon;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
@@ -25,7 +23,7 @@ class StatsOverviewWidget extends BaseWidget
     protected function getStats(): array
     {
         $totalRevenue = (float) Order::where('status', '!=', OrderStatus::Cancelled)->sum('value');
-        $totalPaid = (float) Payment::where('type', '!=', PaymentType::Refund)->sum('amount');
+        $totalPaid = (float) Order::sum('total_paid');
 
         $activeOrders = Order::whereIn('status', [
             OrderStatus::OutboundCreated,

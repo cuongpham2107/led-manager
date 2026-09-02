@@ -21,6 +21,7 @@ class CompleteOrderAction extends Action
         parent::setUp();
 
         $this
+            ->authorize('Complete:Order')
             ->label('Hoàn tất Đơn hàng')
             ->icon('heroicon-o-check-circle')
             ->color('success')

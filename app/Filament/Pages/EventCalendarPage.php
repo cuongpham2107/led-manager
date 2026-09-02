@@ -4,12 +4,15 @@ namespace App\Filament\Pages;
 
 use App\Filament\Widgets\EventCalendarWidget;
 use BackedEnum;
+use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
 use UnitEnum;
 
 class EventCalendarPage extends Page
 {
+    use HasPageShield;
+
     protected static string|UnitEnum|null $navigationGroup = 'Tổng quan';
 
     protected static ?string $navigationLabel = 'Lịch sự kiện & Thi công';

@@ -16,8 +16,12 @@
         "laravel/framework": "^13.17",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^3.0",
+        "leek/filament-right-click": "^1.5",
+        "packstub/filament-account-switcher": "^4.0",
         "saade/filament-fullcalendar": "^4.0-beta",
-        "simplesoftwareio/simple-qrcode": "^4.2"
+        "simplesoftwareio/simple-qrcode": "^4.2",
+        "zvizvi/filament-column-filters": "^0.0.6",
+        "zvizvi/filament-notifications-tabs": "^0.0.3"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

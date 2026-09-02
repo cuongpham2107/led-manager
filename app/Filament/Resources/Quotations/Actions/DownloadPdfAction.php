@@ -18,6 +18,7 @@ class DownloadPdfAction extends Action
         parent::setUp();
 
         $this
+            ->authorize('DownloadPdf:Quotation')
             ->label('Tải Báo giá PDF')
             ->icon('heroicon-o-arrow-down-tray')
             ->color('gray')

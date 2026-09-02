@@ -89,6 +89,45 @@ test('createFromProduction creates N assets, 1 batch, N items and N status logs 
         ->count())->toBe(10);
 });
 
+test('createFromProduction supports peripheral equipment without product line (e.g. Processors, Cables)', function () {
+    $user = User::where('email', 'admin@ledmanager.com')->first();
+    actingAs($user);
+
+    $deviceType = DeviceType::where('code', 'PROC')->first() ?? DeviceType::first();
+    $warehouse = Warehouse::where('is_active', true)->first();
+
+    $service = app(ProductionBatchService::class);
+    $prefix = $service->suggestSerialPrefix(null, $deviceType);
+
+    $result = $service->createFromProduction(
+        productLine: null,
+        deviceType: $deviceType,
+        quantity: 5,
+        warehouse: $warehouse,
+        size: '1U Rack',
+        serialPrefix: $prefix,
+        note: 'Lô Video Processor nhập mới',
+        createdBy: $user,
+    );
+
+    expect($result['batch'])->toBeInstanceOf(CheckinBatch::class);
+    expect($result['assets'])->toHaveCount(5);
+
+    /** @var CheckinBatch $batch */
+    $batch = $result['batch'];
+    expect($batch->product_line_id)->toBeNull();
+    expect($batch->device_type_id)->toBe($deviceType->id);
+    expect($batch->quantity)->toBe(5);
+
+    foreach ($result['assets'] as $i => $asset) {
+        /** @var Asset $asset */
+        expect($asset->product_line_id)->toBeNull();
+        expect($asset->device_type_id)->toBe($deviceType->id);
+        expect($asset->size)->toBe('1U Rack');
+        expect($asset->serial_no)->toBe($prefix.'-'.str_pad((string) ($i + 1), 3, '0', STR_PAD_LEFT));
+    }
+});
+
 test('createFromProduction rejects quantity below 1 and above 500', function () {
     $user = User::where('email', 'admin@ledmanager.com')->first();
     actingAs($user);

@@ -25,7 +25,9 @@ class AssignCrewAction extends Action
     {
         parent::setUp();
 
-        $this->label('Phân công nhân sự')
+        $this
+            ->authorize('AssignCrew:Order')
+            ->label('Phân công nhân sự')
             ->icon(Heroicon::OutlinedUserGroup)
             ->color('info')
             ->visible(fn (Order $record): bool => ! in_array($record->status, [OrderStatus::Cancelled, OrderStatus::Completed]))

@@ -10,3 +10,7 @@
 @source '../../../../vendor/bezhansalleh/filament-shield/**/*.blade.php';
 @source '../../../../vendor/jeffersongoncalves/filament-qrcode-field/**/*.blade.php';
 @source '../../../../vendor/johnrivera7/filament-custom-dashboard-widgets/**/*.blade.php';
+@source '../../../../vendor/packstub/filament-account-switcher/resources/views/**/*.blade.php';
+@source '../../../../vendor/zvizvi/filament-notifications-tabs/resources/views/**/*.blade.php';
+@source '../../../../vendor/zvizvi/filament-column-filters/resources/views/**/*.blade.php';
+@source '../../../../vendor/leek/filament-right-click/resources/views/**/*.blade.php';

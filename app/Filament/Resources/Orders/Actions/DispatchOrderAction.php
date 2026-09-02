@@ -25,6 +25,7 @@ class DispatchOrderAction extends Action
         parent::setUp();
 
         $this
+            ->authorize('Dispatch:Order')
             ->label('Xuất kho đi sự kiện')
             ->icon('heroicon-o-truck')
             ->color('info')

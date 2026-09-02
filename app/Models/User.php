@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Packstub\AccountSwitcher\Concerns\HasLinkedAccounts;
 use Spatie\Permission\Traits\HasRoles;
 
 /**
@@ -27,9 +28,20 @@ class User extends Authenticatable implements FilamentUser
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
+    use HasLinkedAccounts;
     use HasRoles;
 
     public function canAccessPanel(Panel $panel): bool
+    {
+        return true;
+    }
+
+    public function canImpersonate(User $target): bool
+    {
+        return $this->hasRole(['super_admin', 'admin']);
+    }
+
+    public function canBeImpersonated(): bool
     {
         return true;
     }

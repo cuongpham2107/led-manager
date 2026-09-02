@@ -25,7 +25,9 @@ class ManageTimelineAction extends Action
     {
         parent::setUp();
 
-        $this->label('Mốc tiến độ thi công')
+        $this
+            ->authorize('ManageTimeline:Order')
+            ->label('Mốc tiến độ thi công')
             ->icon(Heroicon::OutlinedClock)
             ->color('warning')
             ->visible(fn (Order $record): bool => ! in_array($record->status, [OrderStatus::Cancelled, OrderStatus::Completed]))

@@ -3,8 +3,10 @@
 namespace App\Filament\Pages;
 
 use App\Enums\RepairResultStatus;
+use App\Models\ProductLine;
 use App\Models\RepairLog;
 use BackedEnum;
+use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 use Filament\Actions\Action;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
@@ -18,6 +20,7 @@ use UnitEnum;
 
 class RepairFrequencyReport extends Page implements HasTable
 {
+    use HasPageShield;
     use InteractsWithTable;
 
     protected static string|UnitEnum|null $navigationGroup = 'Báo cáo & Thống kê';
@@ -28,9 +31,54 @@ class RepairFrequencyReport extends Page implements HasTable
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedWrenchScrewdriver;
 
-    protected static ?int $navigationSort = 4;
-
     protected string $view = 'filament.pages.repair-frequency-report';
+
+    public function getStats(): array
+    {
+        $logs = RepairLog::all();
+        $total = $logs->count();
+        $pending = $logs->where('result_status', RepairResultStatus::Pending)->count();
+        $fixed = $logs->where('result_status', RepairResultStatus::Fixed)->count();
+        $disposed = $logs->where('result_status', RepairResultStatus::Disposed)->count();
+        $totalCost = (float) $logs->sum('repair_cost');
+        $fixRate = $total > 0 ? round(($fixed / $total) * 100, 1) : 0;
+
+        return [
+            'total' => $total,
+            'pending' => $pending,
+            'fixed' => $fixed,
+            'disposed' => $disposed,
+            'total_cost' => $totalCost,
+            'fix_rate' => $fixRate,
+        ];
+    }
+
+    public function getProductLineFailureStats(): array
+    {
+        return ProductLine::with(['assets.repairLogs'])
+            ->get()
+            ->map(function ($line) {
+                $logs = $line->assets->flatMap->repairLogs;
+                $count = $logs->count();
+                $cost = (float) $logs->sum('repair_cost');
+                $fixed = $logs->where('result_status', RepairResultStatus::Fixed)->count();
+                $pending = $logs->where('result_status', RepairResultStatus::Pending)->count();
+
+                return [
+                    'name' => $line->name,
+                    'code' => $line->code,
+                    'environment' => $line->environment?->value ?? 'indoor',
+                    'count' => $count,
+                    'cost' => $cost,
+                    'fixed' => $fixed,
+                    'pending' => $pending,
+                ];
+            })
+            ->filter(fn ($item) => $item['count'] > 0)
+            ->sortByDesc('count')
+            ->values()
+            ->toArray();
+    }
 
     public function table(Table $table): Table
     {

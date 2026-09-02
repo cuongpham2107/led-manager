@@ -27,12 +27,15 @@ class ProductionBatchService
      *  - N CheckinBatchItem rows (is_received = true)
      *  - N AssetStatusLog rows (transition into Ready)
      *
+     * Supports both LED modules/cabinets (with ProductLine) and peripheral equipment
+     * (Processors, Sending cards, Truss, Cables, Flycases) where ProductLine may be null.
+     *
      * @return array{batch: CheckinBatch, assets: Collection<int, Asset>}
      *
      * @throws \RuntimeException when any generated serial_no already exists
      */
     public function createFromProduction(
-        ProductLine $productLine,
+        ?ProductLine $productLine,
         DeviceType $deviceType,
         int $quantity,
         Warehouse $warehouse,
@@ -53,7 +56,7 @@ class ProductionBatchService
                 'code' => $batchCode,
                 'warehouse_id' => $warehouse->id,
                 'batch_type' => CheckinBatchType::Production,
-                'product_line_id' => $productLine->id,
+                'product_line_id' => $productLine?->id,
                 'device_type_id' => $deviceType->id,
                 'quantity' => $quantity,
                 'production_note' => $note,
@@ -75,7 +78,7 @@ class ProductionBatchService
                 $asset = Asset::create([
                     'serial_no' => $serial,
                     'qr_code' => $serial,
-                    'product_line_id' => $productLine->id,
+                    'product_line_id' => $productLine?->id,
                     'device_type_id' => $deviceType->id,
                     'size' => $size,
                     'manufactured_date' => $now->toDateString(),
@@ -125,12 +128,13 @@ class ProductionBatchService
     }
 
     /**
-     * Default serial prefix suggestion: {ProductLine.code}-{YYMMDD}
+     * Serial prefix suggestion: {ProductLine.code|DeviceType.code}-{YYMMDD}
      */
-    public function suggestSerialPrefix(ProductLine $productLine, ?Carbon $date = null): string
+    public function suggestSerialPrefix(?ProductLine $productLine = null, ?DeviceType $deviceType = null, ?Carbon $date = null): string
     {
         $date ??= now();
+        $code = $productLine?->code ?: ($deviceType?->code ?: 'ASSET');
 
-        return Str::upper($productLine->code ?: 'LED').'-'.$date->format('ymd');
+        return Str::upper($code).'-'.$date->format('ymd');
     }
 }

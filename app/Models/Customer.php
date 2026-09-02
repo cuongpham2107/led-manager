@@ -66,12 +66,4 @@ class Customer extends Model
     {
         return $this->hasMany(Contract::class);
     }
-
-    /**
-     * @return HasMany<Payment, $this>
-     */
-    public function payments(): HasMany
-    {
-        return $this->hasMany(Payment::class);
-    }
 }

@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\Orders\Tables;
 
 use App\Enums\OrderStatus;
-use App\Enums\PaymentType;
 use App\Filament\Resources\Contracts\ContractResource;
 use App\Filament\Resources\Orders\Actions\AssignCrewAction;
 use App\Filament\Resources\Orders\Actions\ChangeOrderAction;
@@ -32,7 +31,7 @@ class OrdersTable
     public static function configure(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn ($query) => $query->with(['contracts.payments', 'payments', 'customer', 'warehouse', 'quotation', 'salesUser', 'checkoutBatches.items.asset.productLine', 'checkoutBatches.returnBatches']))
+            ->modifyQueryUsing(fn ($query) => $query->with(['contracts', 'customer', 'warehouse', 'quotation', 'salesUser', 'checkoutBatches.items.asset.productLine', 'checkoutBatches.returnBatches']))
             ->columns([
                 TextColumn::make('order_no')
                     ->label('Số đơn hàng')
@@ -204,6 +203,22 @@ class OrdersTable
                             ->label('Tổng doanh thu')
                             ->money('VND'),
                     ),
+                TextColumn::make('deposit_paid')
+                    ->label('Tiền cọc đã thu')
+                    ->money('VND')
+                    ->sortable()
+                    ->color('warning')
+                    ->summarize(
+                        Sum::make()
+                            ->label('Tổng tiền cọc')
+                            ->money('VND'),
+                    ),
+                TextColumn::make('remaining_due')
+                    ->label('Còn phải thu')
+                    ->money('VND')
+                    ->sortable()
+                    ->color(fn ($state) => $state > 0 ? 'danger' : 'success')
+                    ->state(fn (Order $record): float => max(0, (float) $record->value - (float) $record->total_paid)),
                 TextColumn::make('status')
                     ->label('Trạng thái')
                     ->badge()
@@ -242,13 +257,9 @@ class OrdersTable
                     ])
                     ->query(function ($query, array $data) {
                         if (($data['value'] ?? null) === 'deposited') {
-                            $query->where(function ($q) {
-                                $q->whereHas('payments', fn ($pq) => $pq->where('type', PaymentType::Deposit)->where('amount', '>', 0))
-                                    ->orWhereHas('contracts.payments', fn ($cq) => $cq->where('type', PaymentType::Deposit)->where('amount', '>', 0));
-                            });
+                            $query->where('deposit_paid', '>', 0);
                         } elseif (($data['value'] ?? null) === 'not_deposited') {
-                            $query->whereDoesntHave('payments', fn ($pq) => $pq->where('type', PaymentType::Deposit)->where('amount', '>', 0))
-                                ->whereDoesntHave('contracts.payments', fn ($cq) => $cq->where('type', PaymentType::Deposit)->where('amount', '>', 0));
+                            $query->where(fn ($q) => $q->whereNull('deposit_paid')->orWhere('deposit_paid', 0));
                         }
                     }),
                 SelectFilter::make('warehouse_id')

@@ -26,7 +26,11 @@ use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use JohnRivera7\FilamentWidgetGrid\FilamentWidgetGridPlugin;
+use Leek\FilamentRightClick\FilamentRightClickPlugin;
+use Packstub\AccountSwitcher\AccountSwitcherPlugin;
 use Saade\FilamentFullCalendar\FilamentFullCalendarPlugin;
+use Zvizvi\FilamentColumnFilters\FilamentColumnFiltersPlugin;
+use Zvizvi\FilamentNotificationsTabs\FilamentNotificationsTabsPlugin;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -81,6 +85,7 @@ class AdminPanelProvider extends PanelProvider
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
             ])
+            ->databaseNotifications()
             ->plugins([
                 CalendarPlugin::make(),
                 FilamentFullCalendarPlugin::make()
@@ -115,6 +120,18 @@ class AdminPanelProvider extends PanelProvider
                         'default' => 1,
                         'sm' => 2,
                     ]),
+                AccountSwitcherPlugin::make()
+                    ->developerLogins([
+                        'admin@ledmanager.com',
+                        'sales1@ledmanager.com',
+                        'khohn@ledmanager.com',
+                        'tech@ledmanager.com',
+                        'ketoan@ledmanager.com',
+                    ]),
+                FilamentNotificationsTabsPlugin::make()
+                    ->confirmDelete(),
+                FilamentColumnFiltersPlugin::make(),
+                FilamentRightClickPlugin::make(),
             ])
             ->authMiddleware([
                 Authenticate::class,

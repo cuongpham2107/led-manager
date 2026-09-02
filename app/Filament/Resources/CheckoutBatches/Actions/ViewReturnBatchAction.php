@@ -18,6 +18,7 @@ class ViewReturnBatchAction extends Action
         parent::setUp();
 
         $this
+            ->authorize('ViewReturnBatch:CheckoutBatch')
             ->label('Xem Đợt Trả Kho')
             ->icon('heroicon-o-document-magnifying-glass')
             ->color('info')

@@ -191,8 +191,16 @@ class CheckinBatchApiController extends Controller
                 'created_at' => $now,
             ]);
 
+            // Auto-complete when all expected items are received
             $scannedCount = $batch->items()->where('is_received', true)->count();
             $targetCount = max((int) $batch->quantity, $batch->items()->count());
+
+            if ($targetCount > 0 && $scannedCount >= $targetCount && $batch->status !== BatchStatus::Completed) {
+                $batch->update([
+                    'status' => BatchStatus::Completed,
+                    'completed_at' => $now,
+                ]);
+            }
 
             return response()->json([
                 'success' => true,
@@ -235,15 +243,58 @@ class CheckinBatchApiController extends Controller
             ], 422);
         }
 
-        $batch->update([
-            'status' => BatchStatus::Completed,
-            'completed_at' => now(),
-        ]);
+        $now = now();
 
-        return response()->json([
-            'success' => true,
-            'message' => "Đợt nhập kho {$batch->code} đã hoàn tất.",
-            'data' => new CheckinBatchResource($batch->fresh(['warehouse', 'productLine', 'deviceType', 'items.asset'])),
-        ]);
+        return DB::transaction(function () use ($batch, $now) {
+            // Đảm bảo tất cả items trong batch đều được nhận
+            $batch->items()->where('is_received', false)->update([
+                'is_received' => true,
+                'received_by' => Auth::id(),
+                'received_at' => $now,
+            ]);
+
+            // Đồng bộ tất cả asset trong batch về Ready + kho đích
+            $batch->items->each(function ($item) use ($batch, $now) {
+                $asset = $item->asset;
+
+                if (! $asset) {
+                    return;
+                }
+
+                $oldStatus = $asset->current_status;
+                $oldWarehouseId = $asset->current_warehouse_id;
+
+                if ($asset->current_status !== AssetStatus::Ready || $asset->current_warehouse_id !== $batch->warehouse_id) {
+                    $asset->update([
+                        'current_status' => AssetStatus::Ready,
+                        'current_warehouse_id' => $batch->warehouse_id,
+                    ]);
+
+                    AssetStatusLog::create([
+                        'asset_id' => $asset->id,
+                        'from_status' => $oldStatus,
+                        'to_status' => AssetStatus::Ready,
+                        'from_warehouse_id' => $oldWarehouseId,
+                        'to_warehouse_id' => $batch->warehouse_id,
+                        'source_type' => CheckinBatch::class,
+                        'source_id' => $batch->id,
+                        'changed_by' => Auth::id(),
+                        'note' => 'Hoàn tất đợt nhập kho: '.$batch->code,
+                        'created_at' => $now,
+                    ]);
+                }
+            });
+
+            $batch->update([
+                'status' => BatchStatus::Completed,
+                'completed_at' => $now,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => "Đợt nhập kho {$batch->code} đã hoàn tất. Tất cả thiết bị đã được chuyển về trạng thái Sẵn sàng.",
+                'data' => new CheckinBatchResource($batch->fresh(['warehouse', 'productLine', 'deviceType', 'items.asset'])),
+            ]);
+        });
     }
 }

@@ -24,6 +24,7 @@ class CreateContractAction extends Action
         parent::setUp();
 
         $this
+            ->authorize('CreateContract:Order')
             ->label('Tạo Hợp đồng')
             ->icon('heroicon-o-document-plus')
             ->color('primary')

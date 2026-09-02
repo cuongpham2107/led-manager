@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "57fc072ff94d35c8d9059dcb64d062c0",
+    "content-hash": "83dcbc60f679c12e522d60637b6238e8",
     "packages": [
         {
             "name": "anourvalar/eloquent-serialize",
@@ -4038,6 +4038,77 @@
             "time": "2026-03-08T20:05:35+00:00"
         },
         {
+            "name": "leek/filament-right-click",
+            "version": "v1.5.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/leek/filament-right-click.git",
+                "reference": "56a7a5177eb5d0e76445b57912472bc4d17d72db"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/leek/filament-right-click/zipball/56a7a5177eb5d0e76445b57912472bc4d17d72db",
+                "reference": "56a7a5177eb5d0e76445b57912472bc4d17d72db",
+                "shasum": ""
+            },
+            "require": {
+                "filament/filament": "^4.0 || ^5.0",
+                "php": "^8.2",
+                "spatie/laravel-package-tools": "^1.15"
+            },
+            "require-dev": {
+                "laravel/pint": "^1.0",
+                "orchestra/testbench": "^9.0 || ^10.0 || ^11.0",
+                "pestphp/pest": "^3.0 || ^4.0",
+                "pestphp/pest-plugin-laravel": "^3.0 || ^4.0"
+            },
+            "suggest": {
+                "leek/filament-header-filters": "Add inline header filters to the tables you enhance with right-click menus.",
+                "leek/filament-ui-plus": "Enhanced Filament UI components to match your upgraded tables.",
+                "leek/filament-workflows": "Trigger a workflow on the right-clicked record — wrap TriggerWorkflowAction in a ContextMenuItem."
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Leek\\FilamentRightClick\\FilamentRightClickServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Leek\\FilamentRightClick\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Chris Jones",
+                    "email": "leeked@gmail.com",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Right-click table row menus for Filament panels that trigger native Filament actions.",
+            "keywords": [
+                "actions",
+                "context-menu",
+                "filament",
+                "filamentphp",
+                "laravel",
+                "leek",
+                "right-click",
+                "tables"
+            ],
+            "support": {
+                "issues": "https://github.com/leek/filament-right-click/issues",
+                "source": "https://github.com/leek/filament-right-click"
+            },
+            "time": "2026-08-12T16:59:00+00:00"
+        },
+        {
             "name": "livewire/livewire",
             "version": "v4.4.2",
             "source": {
@@ -4856,6 +4927,93 @@
                 }
             ],
             "time": "2025-09-03T16:03:54+00:00"
+        },
+        {
+            "name": "packstub/filament-account-switcher",
+            "version": "v4.0.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/packstub/filament-account-switcher.git",
+                "reference": "7ac7e47f5b9d9486a2629772fb9dba71769e60a4"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/packstub/filament-account-switcher/zipball/7ac7e47f5b9d9486a2629772fb9dba71769e60a4",
+                "reference": "7ac7e47f5b9d9486a2629772fb9dba71769e60a4",
+                "shasum": ""
+            },
+            "require": {
+                "filament/filament": "^4.0 || ^5.0",
+                "illuminate/contracts": "^12.0 || ^13.0",
+                "php": "^8.2",
+                "spatie/laravel-package-tools": "^1.92"
+            },
+            "require-dev": {
+                "laravel/pint": "^1.27",
+                "orchestra/testbench": "^10.0 || ^11.0",
+                "pestphp/pest": "^4.0 || ^5.0",
+                "pestphp/pest-plugin-livewire": "^4.0 || ^5.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "aliases": {
+                        "AccountSwitcher": "Packstub\\AccountSwitcher\\Facades\\AccountSwitcher"
+                    },
+                    "providers": [
+                        "Packstub\\AccountSwitcher\\AccountSwitcherServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Packstub\\AccountSwitcher\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Ion Caliman",
+                    "email": "icaliman92@gmail.com",
+                    "role": "Developer"
+                },
+                {
+                    "name": "Packstub",
+                    "email": "support@packstub.dev",
+                    "homepage": "https://packstub.dev"
+                }
+            ],
+            "description": "Switch between accounts in Filament: impersonate users, linked sub-accounts with password-confirmed escalation, and one-click developer logins.",
+            "homepage": "https://github.com/packstub/filament-account-switcher",
+            "keywords": [
+                "developer-login",
+                "filament",
+                "filament-account-switcher",
+                "filament-impersonate",
+                "filament-plugin",
+                "filament-v5",
+                "impersonate",
+                "impersonation",
+                "laravel",
+                "linked-accounts",
+                "packstub",
+                "sub-accounts"
+            ],
+            "support": {
+                "docs": "https://packstub.dev/docs/filament-account-switcher",
+                "issues": "https://github.com/packstub/filament-account-switcher/issues",
+                "source": "https://github.com/packstub/filament-account-switcher"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/icaliman",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-08-25T22:52:36+00:00"
         },
         {
             "name": "paragonie/constant_time_encoding",
@@ -9485,6 +9643,155 @@
                 }
             ],
             "time": "2026-04-26T05:33:54+00:00"
+        },
+        {
+            "name": "zvizvi/filament-column-filters",
+            "version": "0.0.6",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/zvizvi/filament-column-filters.git",
+                "reference": "eccb4f0878ba3e94bcada5080fd2e68d8ed5b5bf"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/zvizvi/filament-column-filters/zipball/eccb4f0878ba3e94bcada5080fd2e68d8ed5b5bf",
+                "reference": "eccb4f0878ba3e94bcada5080fd2e68d8ed5b5bf",
+                "shasum": ""
+            },
+            "require": {
+                "filament/filament": "^5.0",
+                "filament/forms": "^5.0",
+                "filament/tables": "^5.0",
+                "php": "^8.2",
+                "spatie/laravel-package-tools": "^1.15.0"
+            },
+            "require-dev": {
+                "larastan/larastan": "^3.0",
+                "laravel/pint": "^1.0",
+                "nunomaduro/collision": "^8.0",
+                "orchestra/testbench": "^9.0|^10.0|^11.0",
+                "pestphp/pest": "^3.7|^4.0",
+                "pestphp/pest-plugin-arch": "^3.0|^4.0",
+                "pestphp/pest-plugin-laravel": "^3.0|^4.0",
+                "pestphp/pest-plugin-livewire": "^3.0|^4.0",
+                "rector/rector": "^2.0",
+                "spatie/laravel-ray": "^1.26"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Zvizvi\\FilamentColumnFilters\\FilamentColumnFiltersServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Zvizvi\\FilamentColumnFilters\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "zvizvi",
+                    "email": "yaakov@workflow.co.il",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Excel-style column header filters for Filament tables, with search, date range and multi-select filter types that sync with regular table filters.",
+            "homepage": "https://github.com/zvizvi/filament-column-filters",
+            "keywords": [
+                "filament",
+                "filament-column-filters",
+                "filament-plugin",
+                "filamentphp",
+                "filters",
+                "laravel",
+                "table",
+                "zvizvi"
+            ],
+            "support": {
+                "issues": "https://github.com/zvizvi/filament-column-filters/issues",
+                "source": "https://github.com/zvizvi/filament-column-filters"
+            },
+            "time": "2026-08-03T01:58:02+00:00"
+        },
+        {
+            "name": "zvizvi/filament-notifications-tabs",
+            "version": "0.0.3",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/zvizvi/filament-notifications-tabs.git",
+                "reference": "5ec03f3b2f5b03ec4366494bc22f92671c49b65f"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/zvizvi/filament-notifications-tabs/zipball/5ec03f3b2f5b03ec4366494bc22f92671c49b65f",
+                "reference": "5ec03f3b2f5b03ec4366494bc22f92671c49b65f",
+                "shasum": ""
+            },
+            "require": {
+                "filament/filament": "^5.0",
+                "php": "^8.2",
+                "spatie/laravel-package-tools": "^1.15.0"
+            },
+            "require-dev": {
+                "laravel/pint": "^1.0",
+                "nunomaduro/collision": "^8.0",
+                "orchestra/testbench": "^9.0|^10.0|^11.0",
+                "pestphp/pest": "^3.7|^4.0",
+                "pestphp/pest-plugin-arch": "^3.0|^4.0",
+                "pestphp/pest-plugin-laravel": "^3.0|^4.0",
+                "pestphp/pest-plugin-livewire": "^3.0|^4.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Zvizvi\\FilamentNotificationsTabs\\FilamentNotificationsTabsServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Zvizvi\\FilamentNotificationsTabs\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "zvizvi",
+                    "email": "5633910@gmail.com",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Tabs and per-notification actions (delete, toggle read status) for the Filament database notifications modal.",
+            "homepage": "https://github.com/zvizvi/filament-notifications-tabs",
+            "keywords": [
+                "filament",
+                "filament-notifications-tabs",
+                "filament-plugin",
+                "filamentphp",
+                "laravel",
+                "zvizvi"
+            ],
+            "support": {
+                "issues": "https://github.com/zvizvi/filament-notifications-tabs/issues",
+                "source": "https://github.com/zvizvi/filament-notifications-tabs"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/zvizvi",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-07-18T22:53:02+00:00"
         }
     ],
     "packages-dev": [

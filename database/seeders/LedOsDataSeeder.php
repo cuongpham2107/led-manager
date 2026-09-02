@@ -11,8 +11,6 @@ use App\Enums\DeviceUnit;
 use App\Enums\MilestoneStatus;
 use App\Enums\MilestoneType;
 use App\Enums\OrderStatus;
-use App\Enums\PaymentMethod;
-use App\Enums\PaymentType;
 use App\Enums\ProductEnvironment;
 use App\Enums\QuotationStatus;
 use App\Enums\RepairResultStatus;
@@ -31,7 +29,6 @@ use App\Models\EventAssignment;
 use App\Models\EventMilestone;
 use App\Models\Order;
 use App\Models\OrderItem;
-use App\Models\Payment;
 use App\Models\PricingRule;
 use App\Models\ProductLine;
 use App\Models\Quotation;
@@ -44,6 +41,7 @@ use App\Models\Warehouse;
 use App\Services\LedCalculationService;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -52,16 +50,33 @@ class LedOsDataSeeder extends Seeder
 {
     public function run(): void
     {
+        // 0. Auto-generate all Shield permissions (Resources, Pages, Widgets, and Custom Permissions)
+        try {
+            Artisan::call('shield:generate', [
+                '--all' => true,
+                '--option' => 'permissions',
+                '--panel' => 'admin',
+                '--no-interaction' => true,
+            ]);
+        } catch (\Throwable) {
+            $customPerms = config('filament-shield.custom_permissions', []);
+            foreach (array_keys($customPerms) as $permName) {
+                Permission::firstOrCreate(['name' => $permName, 'guard_name' => 'web']);
+            }
+        }
+
         // 1. Roles
         $superAdminRole = Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
         $salesRole = Role::firstOrCreate(['name' => 'sales_executive', 'guard_name' => 'web']);
         $whRole = Role::firstOrCreate(['name' => 'warehouse_manager', 'guard_name' => 'web']);
         $techRole = Role::firstOrCreate(['name' => 'technician', 'guard_name' => 'web']);
         $accountantRole = Role::firstOrCreate(['name' => 'accountant', 'guard_name' => 'web']);
+        $adminRole = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
 
         // Sync Shield Permissions if permissions exist
         if (Permission::count() > 0) {
             $superAdminRole->syncPermissions(Permission::all());
+            $adminRole->syncPermissions(Permission::all());
 
             $salesPermissions = Permission::where(function ($q) {
                 $q->where('name', 'like', '%:Quotation%')
@@ -76,6 +91,10 @@ class LedOsDataSeeder extends Seeder
                     ->orWhere('name', 'like', 'View%:Payment%')
                     ->orWhere('name', 'like', 'View%:Dashboard%')
                     ->orWhere('name', 'like', 'View%:EventCalendar%')
+                    ->orWhere('name', 'like', 'View%:SalesConversionReport%')
+                    ->orWhere('name', 'like', 'View%:LostDealReport%')
+                    ->orWhere('name', 'like', 'View%:RevenueReport%')
+                    ->orWhere('name', 'like', 'View%:AssetUtilizationReport%')
                     ->orWhere('name', 'like', 'View%:StatsOverview%')
                     ->orWhere('name', 'like', 'View%:LatestOrders%')
                     ->orWhere('name', 'like', 'View%:MonthlyRevenueChart%');
@@ -101,6 +120,7 @@ class LedOsDataSeeder extends Seeder
                     ->orWhere('name', 'like', 'View%:Dashboard%')
                     ->orWhere('name', 'like', 'View%:WarehouseStatusChart%')
                     ->orWhere('name', 'like', 'View%:AssetUtilizationReport%')
+                    ->orWhere('name', 'like', 'View%:RepairFrequencyReport%')
                     ->orWhere('name', 'like', 'View%:EventCalendar%');
             })->get();
             $whRole->syncPermissions($whPermissions);
@@ -117,6 +137,7 @@ class LedOsDataSeeder extends Seeder
                     ->orWhere('name', 'like', 'View%:Order%')
                     ->orWhere('name', 'like', 'View%:Dashboard%')
                     ->orWhere('name', 'like', 'View%:EventCalendar%')
+                    ->orWhere('name', 'like', 'View%:AssetUtilizationReport%')
                     ->orWhere('name', 'like', 'View%:RepairFrequencyReport%');
             })->get();
             $techRole->syncPermissions($techPermissions);
@@ -129,6 +150,10 @@ class LedOsDataSeeder extends Seeder
                     ->orWhere('name', 'like', 'View%:Quotation%')
                     ->orWhere('name', 'like', 'View%:Dashboard%')
                     ->orWhere('name', 'like', 'View%:RevenueReport%')
+                    ->orWhere('name', 'like', 'View%:SalesConversionReport%')
+                    ->orWhere('name', 'like', 'View%:LostDealReport%')
+                    ->orWhere('name', 'like', 'View%:RepairFrequencyReport%')
+                    ->orWhere('name', 'like', 'View%:EventCalendar%')
                     ->orWhere('name', 'like', 'View%:StatsOverview%')
                     ->orWhere('name', 'like', 'View%:MonthlyRevenueChart%');
             })->get();
@@ -254,6 +279,21 @@ class LedOsDataSeeder extends Seeder
             'is_active' => true,
         ]);
         $techUser3->syncRoles([$techRole]);
+
+        $accountantUser = User::updateOrCreate(['email' => 'ketoan@ledmanager.com'], [
+            'name' => 'Nguyễn Thị Mai',
+            'password' => Hash::make('password'),
+            'phone' => '0933 445 566',
+            'warehouse_id' => $whHn->id,
+            'is_active' => true,
+        ]);
+        $accountantUser->syncRoles([$accountantRole]);
+
+        // Link accounts to admin for quick switching without password
+        $admin->linkAccount($sales1, label: 'Sales Executive (Trần Minh Tuấn)', requiresPassword: false);
+        $admin->linkAccount($whStaff1, label: 'Kho Hà Nội (Lê Hoàng Nam)', requiresPassword: false);
+        $admin->linkAccount($techUser1, label: 'Kỹ thuật viên (Vũ Đình Trọng)', requiresPassword: false);
+        $admin->linkAccount($accountantUser, label: 'Kế toán (Nguyễn Thị Mai)', requiresPassword: false);
 
         // 4. Device Types
         $dtCabinet = DeviceType::updateOrCreate(['code' => 'CAB'], [
@@ -1621,17 +1661,10 @@ class LedOsDataSeeder extends Seeder
             'created_by' => $admin->id,
         ]);
 
-        Payment::updateOrCreate(['code' => 'PAY-2608-01'], [
-            'contract_id' => $contract1->id,
-            'order_id' => $order1->id,
-            'customer_id' => $customers[0]->id,
-            'type' => PaymentType::Deposit,
-            'method' => PaymentMethod::BankTransfer,
-            'amount' => $contract1->deposit_amount,
-            'payment_date' => now()->subDays(1)->toDateString(),
-            'reference' => 'VCOM-VF3-DEP-01',
-            'note' => 'Thu tiền đặt cọc 50% trước khi xuất kho màn hình',
-            'received_by' => $admin->id,
+        $order1->update([
+            'deposit_paid' => $contract1->deposit_amount,
+            'total_paid' => $contract1->deposit_amount,
+            'paid_at' => now()->subDays(1),
         ]);
 
         // Contract 2 (Signed, 50% deposit paid)
@@ -1651,17 +1684,10 @@ class LedOsDataSeeder extends Seeder
             'created_by' => $admin->id,
         ]);
 
-        Payment::updateOrCreate(['code' => 'PAY-2608-02'], [
-            'contract_id' => $contract2->id,
-            'order_id' => $order2->id,
-            'customer_id' => $customers[2]->id,
-            'type' => PaymentType::Deposit,
-            'method' => PaymentMethod::BankTransfer,
-            'amount' => $contract2->deposit_amount,
-            'payment_date' => now()->toDateString(),
-            'reference' => 'REX-GALA-DEP-02',
-            'note' => 'Thu tiền đặt cọc 50% sự kiện Gala Rex',
-            'received_by' => $admin->id,
+        $order2->update([
+            'deposit_paid' => $contract2->deposit_amount,
+            'total_paid' => $contract2->deposit_amount,
+            'paid_at' => now(),
         ]);
 
         // Contract 3 (Active, Sun Group DIFF)
@@ -1681,17 +1707,10 @@ class LedOsDataSeeder extends Seeder
             'created_by' => $admin->id,
         ]);
 
-        Payment::updateOrCreate(['code' => 'PAY-2608-03'], [
-            'contract_id' => $contract3->id,
-            'order_id' => $order3->id,
-            'customer_id' => $customers[6]->id,
-            'type' => PaymentType::Deposit,
-            'method' => PaymentMethod::BankTransfer,
-            'amount' => $contract3->deposit_amount,
-            'payment_date' => now()->subDays(2)->toDateString(),
-            'reference' => 'SUN-DIFF-DEP-03',
-            'note' => 'Tạm ứng đợt 1 hợp đồng lễ hội pháo hoa quốc tế DIFF',
-            'received_by' => $admin->id,
+        $order3->update([
+            'deposit_paid' => $contract3->deposit_amount,
+            'total_paid' => $contract3->deposit_amount,
+            'paid_at' => now()->subDays(2),
         ]);
 
         // Contract 4 (Completed, 100% paid - Dat Viet VAC)
@@ -1711,30 +1730,10 @@ class LedOsDataSeeder extends Seeder
             'created_by' => $admin->id,
         ]);
 
-        Payment::updateOrCreate(['code' => 'PAY-2608-04-1'], [
-            'contract_id' => $contract4->id,
-            'order_id' => $order4->id,
-            'customer_id' => $customers[7]->id,
-            'type' => PaymentType::Deposit,
-            'method' => PaymentMethod::BankTransfer,
-            'amount' => $contract4->deposit_amount,
-            'payment_date' => now()->subDays(15)->toDateString(),
-            'reference' => 'DATVIET-DEP-04',
-            'note' => 'Thu cọc 50% gameshow Anh Trai Say Hi',
-            'received_by' => $admin->id,
-        ]);
-
-        Payment::updateOrCreate(['code' => 'PAY-2608-04-2'], [
-            'contract_id' => $contract4->id,
-            'order_id' => $order4->id,
-            'customer_id' => $customers[7]->id,
-            'type' => PaymentType::Final,
-            'method' => PaymentMethod::BankTransfer,
-            'amount' => $contract4->contract_value - $contract4->deposit_amount,
-            'payment_date' => now()->subDays(4)->toDateString(),
-            'reference' => 'DATVIET-FIN-04',
-            'note' => 'Thanh toán quyết toán đợt cuối sau nghiệm thu',
-            'received_by' => $admin->id,
+        $order4->update([
+            'deposit_paid' => $contract4->deposit_amount,
+            'total_paid' => $contract4->contract_value,
+            'paid_at' => now()->subDays(4),
         ]);
 
         // 15. Event Assignments & Milestones

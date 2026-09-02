@@ -2,8 +2,11 @@
 
 namespace App\Filament\Pages;
 
+use App\Enums\QuotationStatus;
+use App\Models\Quotation;
 use App\Models\User;
 use BackedEnum;
+use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Pages\Page;
@@ -19,6 +22,7 @@ use UnitEnum;
 
 class SalesConversionReport extends Page implements HasTable
 {
+    use HasPageShield;
     use InteractsWithTable;
 
     protected static string|UnitEnum|null $navigationGroup = 'Báo cáo & Thống kê';
@@ -29,9 +33,83 @@ class SalesConversionReport extends Page implements HasTable
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedPresentationChartLine;
 
-    protected static ?int $navigationSort = 1;
-
     protected string $view = 'filament.pages.sales-conversion-report';
+
+    public function getStats(): array
+    {
+        $quotes = Quotation::all();
+        $total = $quotes->count();
+        $totalVal = (float) $quotes->sum('total_price');
+
+        $won = $quotes->where('status', QuotationStatus::Converted)->count();
+        $wonVal = (float) $quotes->where('status', QuotationStatus::Converted)->sum('total_price');
+
+        $lost = $quotes->whereIn('status', [QuotationStatus::Rejected, QuotationStatus::Expired])->count();
+        $lostVal = (float) $quotes->whereIn('status', [QuotationStatus::Rejected, QuotationStatus::Expired])->sum('total_price');
+
+        $pending = $quotes->whereIn('status', [QuotationStatus::Draft, QuotationStatus::Sent, QuotationStatus::Approved])->count();
+        $pendingVal = (float) $quotes->whereIn('status', [QuotationStatus::Draft, QuotationStatus::Sent, QuotationStatus::Approved])->sum('total_price');
+
+        $winRate = $total > 0 ? round(($won / $total) * 100, 1) : 0;
+
+        return [
+            'total' => $total,
+            'total_value' => $totalVal,
+            'won' => $won,
+            'won_value' => $wonVal,
+            'lost' => $lost,
+            'lost_value' => $lostVal,
+            'pending' => $pending,
+            'pending_value' => $pendingVal,
+            'win_rate' => $winRate,
+        ];
+    }
+
+    public function getSalesFunnel(): array
+    {
+        $quotes = Quotation::all();
+        $total = max(1, $quotes->count());
+
+        $draft = $quotes->where('status', QuotationStatus::Draft)->count();
+        $sent = $quotes->where('status', QuotationStatus::Sent)->count();
+        $approved = $quotes->where('status', QuotationStatus::Approved)->count();
+        $converted = $quotes->where('status', QuotationStatus::Converted)->count();
+        $rejected = $quotes->where('status', QuotationStatus::Rejected)->count();
+
+        return [
+            ['label' => 'Báo giá Nháp (Draft)', 'count' => $draft, 'pct' => round(($draft / $total) * 100, 1), 'color' => 'bg-gray-400'],
+            ['label' => 'Đã gửi khách (Sent)', 'count' => $sent, 'pct' => round(($sent / $total) * 100, 1), 'color' => 'bg-blue-500'],
+            ['label' => 'Khách duyệt (Approved)', 'count' => $approved, 'pct' => round(($approved / $total) * 100, 1), 'color' => 'bg-amber-500'],
+            ['label' => 'Chốt thành đơn (Converted)', 'count' => $converted, 'pct' => round(($converted / $total) * 100, 1), 'color' => 'bg-emerald-500'],
+            ['label' => 'Từ chối / Hủy (Rejected)', 'count' => $rejected, 'pct' => round(($rejected / $total) * 100, 1), 'color' => 'bg-red-500'],
+        ];
+    }
+
+    public function getSalesLeaderboard(): array
+    {
+        return User::whereHas('salesQuotations')
+            ->with('salesQuotations')
+            ->get()
+            ->map(function ($user) {
+                $quotes = $user->salesQuotations;
+                $total = $quotes->count();
+                $won = $quotes->where('status', QuotationStatus::Converted)->count();
+                $wonVal = (float) $quotes->where('status', QuotationStatus::Converted)->sum('total_price');
+                $winRate = $total > 0 ? round(($won / $total) * 100, 1) : 0;
+
+                return [
+                    'name' => $user->name,
+                    'avatar' => $user->avatar_url ?? null,
+                    'total' => $total,
+                    'won' => $won,
+                    'won_value' => $wonVal,
+                    'win_rate' => $winRate,
+                ];
+            })
+            ->sortByDesc('won_value')
+            ->values()
+            ->toArray();
+    }
 
     public function table(Table $table): Table
     {

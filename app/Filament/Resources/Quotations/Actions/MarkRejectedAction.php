@@ -21,6 +21,7 @@ class MarkRejectedAction extends Action
         parent::setUp();
 
         $this
+            ->authorize('MarkRejected:Quotation')
             ->label('Đánh dấu Bị từ chối')
             ->icon('heroicon-o-x-circle')
             ->color('danger')

@@ -6,7 +6,6 @@ use App\Enums\OrderStatus;
 use App\Models\Contract;
 use App\Models\EventAssignment;
 use App\Models\Order;
-use App\Models\Payment;
 use Carbon\Carbon;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
@@ -41,7 +40,7 @@ class ExecutiveKpiWidget extends BaseWidget
 
         // 2. Outstanding Receivables (Công nợ hợp đồng chưa thu)
         $totalContractValue = (float) Contract::sum('contract_value');
-        $totalReceived = (float) Payment::sum('amount');
+        $totalReceived = (float) Order::sum('total_paid');
         $outstandingDebt = max(0, $totalContractValue - $totalReceived);
 
         // 3. Crew on field (Nhân sự đang trực tiếp thi công sự kiện hôm nay)

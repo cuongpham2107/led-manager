@@ -24,6 +24,7 @@ class ChangeOrderAction extends Action
         parent::setUp();
 
         $this
+            ->authorize('Change:Order')
             ->label('Thay đổi đơn hàng')
             ->icon('heroicon-o-pencil-square')
             ->color('gray')

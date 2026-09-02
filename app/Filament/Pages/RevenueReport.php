@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Models\Order;
 use BackedEnum;
+use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Pages\Page;
@@ -20,6 +21,7 @@ use UnitEnum;
 
 class RevenueReport extends Page implements HasTable
 {
+    use HasPageShield;
     use InteractsWithTable;
 
     protected static string|UnitEnum|null $navigationGroup = 'Báo cáo & Thống kê';
@@ -30,15 +32,57 @@ class RevenueReport extends Page implements HasTable
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedChartPie;
 
-    protected static ?int $navigationSort = 2;
-
     protected string $view = 'filament.pages.revenue-report';
+
+    public function getStats(): array
+    {
+        $orders = Order::with('quotation')->get();
+        $totalRevenue = $orders->sum('value');
+        $totalCogs = $orders->sum(fn ($o) => (float) ($o->quotation?->total_cost ?? 0));
+        $grossProfit = $totalRevenue - $totalCogs;
+        $avgMargin = $totalRevenue > 0 ? round(($grossProfit / $totalRevenue) * 100, 1) : 0;
+        $totalOrders = $orders->count();
+
+        return [
+            'total_revenue' => $totalRevenue,
+            'total_cogs' => $totalCogs,
+            'gross_profit' => $grossProfit,
+            'avg_margin' => $avgMargin,
+            'total_orders' => $totalOrders,
+        ];
+    }
+
+    public function getTopProjects(): array
+    {
+        return Order::with(['customer', 'quotation', 'salesUser'])
+            ->orderByDesc('value')
+            ->take(5)
+            ->get()
+            ->map(function ($order) {
+                $rev = (float) $order->value;
+                $cogs = (float) ($order->quotation?->total_cost ?? 0);
+                $profit = $rev - $cogs;
+                $margin = $rev > 0 ? round(($profit / $rev) * 100, 1) : 0;
+
+                return [
+                    'order_no' => $order->order_no,
+                    'event' => $order->event ?: $order->order_no,
+                    'customer' => $order->customer?->name ?? '—',
+                    'sales_user' => $order->salesUser?->name ?? '—',
+                    'revenue' => $rev,
+                    'cogs' => $cogs,
+                    'profit' => $profit,
+                    'margin' => $margin,
+                    'date' => $order->request_date?->format('d/m/Y') ?? '—',
+                ];
+            })->toArray();
+    }
 
     public function table(Table $table): Table
     {
         return $table
             ->query(
-                Order::query()->with(['customer', 'quotation', 'salesUser', 'contracts.payments'])
+                Order::query()->with(['customer', 'quotation', 'salesUser', 'contracts'])
             )
             ->columns([
                 TextColumn::make('order_no')

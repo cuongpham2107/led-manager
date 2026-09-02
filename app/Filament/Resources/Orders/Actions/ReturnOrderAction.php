@@ -43,6 +43,7 @@ class ReturnOrderAction extends Action
         parent::setUp();
 
         $this
+            ->authorize('Return:Order')
             ->label('Thu hồi trả kho')
             ->icon('heroicon-o-arrow-path-rounded-square')
             ->color('primary')

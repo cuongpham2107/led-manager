@@ -66,7 +66,7 @@ class QuotationForm
                                             ->createOptionForm(fn (Schema $schema) => CustomerForm::configure($schema))
                                             ->createOptionModalHeading('Thêm khách hàng mới')
                                             ->live()
-                                            ->afterStateUpdated(fn (Get $get, Set $set) => self::recalculateBomAndPricing($get, $set)),
+                                            ->afterStateUpdated(fn (Get $get, Set $set, ?Quotation $record) => self::recalculateBomAndPricing($get, $set, $record)),
                                         TextInput::make('event_name')
                                             ->label('Tên sự kiện')
                                             ->placeholder('VD: Lễ Ra Mắt Xe Điện VinFast VF3'),
@@ -79,18 +79,18 @@ class QuotationForm
                                                 ->default(fn () => now()->addDays(3)->toDateString())
                                                 ->native(false)
                                                 ->live()
-                                                ->afterStateUpdated(function (Get $get, Set $set) {
+                                                ->afterStateUpdated(function (Get $get, Set $set, ?Quotation $record) {
                                                     self::updateRentalDaysFromDates($get, $set);
-                                                    self::recalculateBomAndPricing($get, $set);
+                                                    self::recalculateBomAndPricing($get, $set, $record);
                                                 }),
                                             DatePicker::make('event_end_date')
                                                 ->label('Ngày kết thúc')
                                                 ->default(fn () => now()->addDays(6)->toDateString())
                                                 ->native(false)
                                                 ->live()
-                                                ->afterStateUpdated(function (Get $get, Set $set) {
+                                                ->afterStateUpdated(function (Get $get, Set $set, ?Quotation $record) {
                                                     self::updateRentalDaysFromDates($get, $set);
-                                                    self::recalculateBomAndPricing($get, $set);
+                                                    self::recalculateBomAndPricing($get, $set, $record);
                                                 }),
                                         ]),
                                         Grid::make(2)->schema([
@@ -134,20 +134,20 @@ class QuotationForm
 
                                                 return "⚡ Giá áp dụng: {$baseFmt} đ/cabinet/ngày{$discText}";
                                             })
-                                            ->afterStateUpdated(fn (Get $get, Set $set) => self::recalculateBomAndPricing($get, $set)),
+                                            ->afterStateUpdated(fn (Get $get, Set $set, ?Quotation $record) => self::recalculateBomAndPricing($get, $set, $record)),
                                         Grid::make(2)->schema([
                                             TextInput::make('screen_width_m')
                                                 ->label('Chiều rộng (m)')
                                                 ->numeric()
                                                 ->default(6.0)
                                                 ->live(debounce: 300)
-                                                ->afterStateUpdated(fn (Get $get, Set $set) => self::recalculateBomAndPricing($get, $set)),
+                                                ->afterStateUpdated(fn (Get $get, Set $set, ?Quotation $record) => self::recalculateBomAndPricing($get, $set, $record)),
                                             TextInput::make('screen_height_m')
                                                 ->label('Chiều cao (m)')
                                                 ->numeric()
                                                 ->default(3.5)
                                                 ->live(debounce: 300)
-                                                ->afterStateUpdated(fn (Get $get, Set $set) => self::recalculateBomAndPricing($get, $set)),
+                                                ->afterStateUpdated(fn (Get $get, Set $set, ?Quotation $record) => self::recalculateBomAndPricing($get, $set, $record)),
                                         ]),
                                         Grid::make(3)->schema([
                                             TextInput::make('rental_days')
@@ -173,21 +173,21 @@ class QuotationForm
 
                                                     return 'Áp dụng bảng giá theo ngày tiêu chuẩn';
                                                 })
-                                                ->afterStateUpdated(fn (Get $get, Set $set) => self::recalculateBomAndPricing($get, $set)),
+                                                ->afterStateUpdated(fn (Get $get, Set $set, ?Quotation $record) => self::recalculateBomAndPricing($get, $set, $record)),
                                             TextInput::make('crew_size')
                                                 ->label('Số thợ kỹ thuật')
                                                 ->numeric()
                                                 ->default(4)
                                                 ->suffix('người')
                                                 ->live(debounce: 300)
-                                                ->afterStateUpdated(fn (Get $get, Set $set) => self::recalculateBomAndPricing($get, $set)),
+                                                ->afterStateUpdated(fn (Get $get, Set $set, ?Quotation $record) => self::recalculateBomAndPricing($get, $set, $record)),
                                             TextInput::make('transport_distance_km')
                                                 ->label('Khoảng cách')
                                                 ->numeric()
                                                 ->default(45)
                                                 ->suffix('km')
                                                 ->live(debounce: 300)
-                                                ->afterStateUpdated(fn (Get $get, Set $set) => self::recalculateBomAndPricing($get, $set)),
+                                                ->afterStateUpdated(fn (Get $get, Set $set, ?Quotation $record) => self::recalculateBomAndPricing($get, $set, $record)),
                                         ]),
                                     ]),
                             ]),
@@ -286,7 +286,7 @@ class QuotationForm
                                                     ->default(1)
                                                     ->extraInputAttributes(['class' => 'text-center'])
                                                     ->live(debounce: 300)
-                                                    ->afterStateUpdated(fn (Get $get, Set $set) => self::recalculateLineTotal($get, $set)),
+                                                    ->afterStateUpdated(fn (Get $get, Set $set, ?Quotation $record) => self::recalculateLineTotal($get, $set, $record)),
                                                 TextInput::make('unit_cost')
                                                     ->label('Đơn giá')
                                                     ->mask(RawJs::make('$money($input)'))
@@ -295,7 +295,7 @@ class QuotationForm
                                                     ->default(0)
                                                     ->extraInputAttributes(['class' => 'text-center font-mono'])
                                                     ->live(debounce: 300)
-                                                    ->afterStateUpdated(fn (Get $get, Set $set) => self::recalculateLineTotal($get, $set)),
+                                                    ->afterStateUpdated(fn (Get $get, Set $set, ?Quotation $record) => self::recalculateLineTotal($get, $set, $record)),
                                                 TextInput::make('line_total')
                                                     ->label('Thành tiền')
                                                     ->mask(RawJs::make('$money($input)'))
@@ -340,7 +340,7 @@ class QuotationForm
                                                                 ->default(1600000)
                                                                 ->suffix(' đ/người/ngày')
                                                                 ->live(debounce: 300)
-                                                                ->afterStateUpdated(fn (Get $get, Set $set) => self::recalculateLabourFromRate($get, $set)),
+                                                                ->afterStateUpdated(fn (Get $get, Set $set, ?Quotation $record) => self::recalculateLabourFromRate($get, $set, $record)),
 
                                                             TextInput::make('labour_cost')
                                                                 ->label('Tổng tiền nhân công')
@@ -370,7 +370,7 @@ class QuotationForm
                                                                 ->default(28000)
                                                                 ->suffix(' đ/km')
                                                                 ->live(debounce: 300)
-                                                                ->afterStateUpdated(fn (Get $get, Set $set) => self::recalculateTransportFromRate($get, $set)),
+                                                                ->afterStateUpdated(fn (Get $get, Set $set, ?Quotation $record) => self::recalculateTransportFromRate($get, $set, $record)),
 
                                                             TextInput::make('transport_cost')
                                                                 ->label('Tổng tiền vận chuyển')
@@ -397,7 +397,7 @@ class QuotationForm
                                                         ->suffix(' đ')
                                                         ->helperText('Dây tín hiệu, nguồn, phụ kiện lắp ráp dự phòng')
                                                         ->live(debounce: 300)
-                                                        ->afterStateUpdated(fn (Get $get, Set $set) => self::recalculateTotals($get, $set)),
+                                                        ->afterStateUpdated(fn (Get $get, Set $set, ?Quotation $record) => self::recalculateTotals($get, $set, $record)),
                                                 ]),
 
                                             // Right Column (Span 5): Bảng tổng kết thanh toán (Summary Card)
@@ -414,7 +414,7 @@ class QuotationForm
                                                                 ->default(0)
                                                                 ->suffix(' đ')
                                                                 ->live(debounce: 300)
-                                                                ->afterStateUpdated(fn (Get $get, Set $set) => self::recalculateTotals($get, $set)),
+                                                                ->afterStateUpdated(fn (Get $get, Set $set, ?Quotation $record) => self::recalculateTotals($get, $set, $record)),
 
                                                             TextInput::make('total_price')
                                                                 ->label('TỔNG CỘNG THANH TOÁN')
@@ -447,33 +447,48 @@ class QuotationForm
             ]);
     }
 
-    public static function recalculateLineTotal(Get $get, Set $set): void
+    public static function recalculateLineTotal(Get $get, Set $set, ?Quotation $record = null): void
     {
+        // ponytail: in edit mode, keep saved line_total unless qty/unit_cost actually changed
+        if ($record !== null) {
+            return;
+        }
+
         $qty = (float) str_replace(',', '', (string) ($get('quantity') ?: 0));
         $cost = (float) str_replace(',', '', (string) ($get('unit_cost') ?: 0));
         $set('line_total', $qty * $cost);
     }
 
-    public static function recalculateLabourFromRate(Get $get, Set $set): void
+    public static function recalculateLabourFromRate(Get $get, Set $set, ?Quotation $record = null): void
     {
+        // ponytail: in edit mode, keep saved cost; user edits are blocked via disabled+dehydrated
+        if ($record !== null) {
+            return;
+        }
+
         $crewSize = (float) ($get('crew_size') ?: 0);
         $rentalDays = (float) ($get('rental_days') ?: 1);
         $crewRate = (float) str_replace(',', '', (string) ($get('crew_rate') ?: 0));
         $labourCost = $crewSize * $crewRate * $rentalDays;
         $set('labour_cost', $labourCost);
-        self::recalculateTotals($get, $set);
+        self::recalculateTotals($get, $set, $record);
     }
 
-    public static function recalculateTransportFromRate(Get $get, Set $set): void
+    public static function recalculateTransportFromRate(Get $get, Set $set, ?Quotation $record = null): void
     {
+        // ponytail: in edit mode, keep saved cost; user edits are blocked via disabled+dehydrated
+        if ($record !== null) {
+            return;
+        }
+
         $dist = (float) ($get('transport_distance_km') ?: 0);
         $transRate = (float) str_replace(',', '', (string) ($get('transport_rate') ?: 0));
         $transportCost = ($dist * 2) * $transRate;
         $set('transport_cost', $transportCost);
-        self::recalculateTotals($get, $set);
+        self::recalculateTotals($get, $set, $record);
     }
 
-    public static function recalculateBomAndPricing(Get $get, Set $set): void
+    public static function recalculateBomAndPricing(Get $get, Set $set, ?Quotation $record = null): void
     {
         $width = (float) ($get('screen_width_m') ?: 6.0);
         $height = (float) ($get('screen_height_m') ?: 3.5);
@@ -490,14 +505,22 @@ class QuotationForm
 
         $service = app(LedCalculationService::class);
         $config = $service->deriveConfiguration($width, $height, $productLine);
-        $bom = $service->generateBom($width, $height, $productLine, $rentalDays, $customerType);
-        $rates = $service->resolvePricing($productLine, $rentalDays, $customerType);
 
+        // ponytail: derived config always recomputes (cheap, deterministic)
         $set('screen_area_m2', $config['wall_area']);
         $set('estimated_cabinet_qty', $config['cabinets_qty']);
         $set('estimated_processor_qty', 2);
         $set('estimated_load_kg', $config['load_kg']);
         $set('estimated_power_kw', $config['peak_power_kw']);
+
+        // ponytail: when editing, keep saved BOM/cost/total_price intact;
+        // user must explicitly press "Recalculate" (TODO) to refresh from screen params.
+        if ($record !== null) {
+            return;
+        }
+
+        $bom = $service->generateBom($width, $height, $productLine, $rentalDays, $customerType);
+        $rates = $service->resolvePricing($productLine, $rentalDays, $customerType);
 
         // Set items repeater with clean fields
         $items = [];
@@ -543,8 +566,13 @@ class QuotationForm
         $set('margin_percent', $marginPercent);
     }
 
-    public static function recalculateTotals(Get $get, Set $set): void
+    public static function recalculateTotals(Get $get, Set $set, ?Quotation $record = null): void
     {
+        // ponytail: in edit mode, do not touch total_price; keep DB value intact
+        if ($record !== null) {
+            return;
+        }
+
         $eq = (float) str_replace(',', '', (string) ($get('equipment_cost') ?: 0));
         $labour = (float) str_replace(',', '', (string) ($get('labour_cost') ?: 0));
         $trans = (float) str_replace(',', '', (string) ($get('transport_cost') ?: 0));

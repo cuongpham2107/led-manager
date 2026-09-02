@@ -6,13 +6,12 @@ use App\Enums\BatchStatus;
 use App\Enums\CheckinBatchType;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
-use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Repeater\TableColumn;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Infolists\Components\TextEntry;
+use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
@@ -55,14 +54,15 @@ class CheckinBatchForm
                                             ->required()
                                             ->columnSpanFull(),
                                         Grid::make(2)->schema([
-                                            Select::make('product_line_id')
-                                                ->label('Dòng sản phẩm')
-                                                ->relationship('productLine', 'name')
-                                                ->searchable()
-                                                ->preload(),
                                             Select::make('device_type_id')
                                                 ->label('Loại thiết bị')
                                                 ->relationship('deviceType', 'name')
+                                                ->searchable()
+                                                ->preload()
+                                                ->required(),
+                                            Select::make('product_line_id')
+                                                ->label('Dòng SP LED (nếu có)')
+                                                ->relationship('productLine', 'name')
                                                 ->searchable()
                                                 ->preload(),
                                         ]),
@@ -108,39 +108,44 @@ class CheckinBatchForm
                             ->columnSpan(['default' => 1, 'lg' => 8])
                             ->schema([
                                 Section::make('Danh sách thiết bị thực tế nhập kho')
-                                    ->description('Mỗi dòng là 1 thiết bị ĐÃ ĐƯỢC TẠO MỚI trong đợt nhập này (xem ProductionBatchService). Asset không thể chỉnh — chỉ ghi nhận tình trạng kiểm tra chất lượng. Trạng thái quét PDA & người nhận được ghi tự động bởi mobile app.')
+                                    ->description('Quản lý chi tiết từng thiết bị trong đợt nhập: mã serial, chủng loại, tình trạng chất lượng và trạng thái quét nhận kho.')
                                     ->collapsible()
                                     ->schema([
                                         Repeater::make('items')
                                             ->relationship('items')
                                             ->label('Thiết bị nhập kho')
-                                            ->addable(false)   // Items are created by CreateProductionBatchAction, not manually
-                                            ->deletable(false) // Same reason
                                             ->table([
-                                                TableColumn::make('Mã Serial (đã tạo)'),
-                                                TableColumn::make('Tình trạng'),
-                                                TableColumn::make('Ghi chú tình trạng'),
+                                                TableColumn::make('Mã Serial & Tên thiết bị'),
+                                                TableColumn::make('Đã nhận kho'),
+                                                TableColumn::make('Tình trạng chất lượng'),
+                                                TableColumn::make('Ghi chú kiểm tra'),
                                             ])
                                             ->schema([
-                                                // asset_id is preserved via Hidden so the
-                                                // relationship is not orphaned on save.
-                                                Hidden::make('asset_id'),
-                                                TextEntry::make('asset_serial')
-                                                    ->label('Serial')
-                                                    ->state(fn ($record) => $record?->asset?->serial_no ?? '—')
-                                                    ->columnSpan(1),
+                                                Select::make('asset_id')
+                                                    ->label('Thiết bị')
+                                                    ->relationship('asset', 'serial_no')
+                                                    ->getOptionLabelFromRecordUsing(fn ($record) => "{$record->serial_no} — ".($record->productLine?->name ?? $record->deviceType?->name ?? 'Thiết bị').($record->size ? " ({$record->size})" : ''))
+                                                    ->searchable()
+                                                    ->preload()
+                                                    ->required(),
+                                                Toggle::make('is_received')
+                                                    ->label('Đã nhận')
+                                                    ->default(true),
                                                 Select::make('condition')
                                                     ->label('Tình trạng')
                                                     ->options([
-                                                        'ok' => 'OK (đạt)',
-                                                        'fault' => 'Lỗi / hư hỏng',
+                                                        'ok' => 'OK (Đạt chuẩn)',
+                                                        'fault' => 'Lỗi / Hư hỏng',
                                                     ])
                                                     ->default('ok')
                                                     ->required(),
                                                 TextInput::make('condition_note')
                                                     ->label('Ghi chú')
-                                                    ->placeholder('VD: trầy nhẹ 1 góc...'),
-                                            ]),
+                                                    ->placeholder('VD: trầy nhẹ, nút kẹt...'),
+                                            ])
+                                            ->addActionLabel('+ Thêm thiết bị vào đợt nhập')
+                                            ->reorderable(false)
+                                            ->collapsible(false),
                                     ]),
                             ]),
                     ]),

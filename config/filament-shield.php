@@ -27,7 +27,7 @@ return [
             'pages' => true,
             'widgets' => true,
             'resources' => true,
-            'custom_permissions' => false,
+            'custom_permissions' => true,
         ],
     ],
 
@@ -252,7 +252,44 @@ return [
     |
     */
 
-    'custom_permissions' => [],
+    'custom_permissions' => [
+        // Order Actions
+        'CreateContract:Order' => 'Tạo Hợp đồng (Đơn hàng)',
+        'ViewContract:Order' => 'Xem Hợp đồng (Đơn hàng)',
+        'CreateCheckoutBatch:Order' => 'Tạo phiếu Xuất kho (Đơn hàng)',
+        'ViewCheckoutBatch:Order' => 'Xem phiếu Xuất kho (Đơn hàng)',
+        'Dispatch:Order' => 'Xuất kho đi sự kiện (Đơn hàng)',
+        'Return:Order' => 'Thu hồi trả kho (Đơn hàng)',
+        'ViewReturnBatch:Order' => 'Xem phiếu Trả hàng (Đơn hàng)',
+        'Change:Order' => 'Thay đổi / Phụ lục đơn hàng',
+        'AssignCrew:Order' => 'Phân công nhân sự sự kiện',
+        'ManageTimeline:Order' => 'Mốc tiến độ thi công',
+        'Complete:Order' => 'Hoàn tất & Đóng đơn hàng',
+
+        // Asset Actions
+        'SendToMaintenance:Asset' => 'Gửi bảo trì / Sửa chữa (Thiết bị)',
+        'CompleteMaintenance:Asset' => 'Hoàn tất sửa chữa / Bảo dưỡng (Thiết bị)',
+        'SendToMaintenanceBulk:Asset' => 'Gửi bảo trì hàng loạt (Thiết bị)',
+        'CompleteMaintenanceBulk:Asset' => 'Hoàn tất sửa chữa hàng loạt (Thiết bị)',
+        'ViewQrCode:Asset' => 'Xem mã QR (Thiết bị)',
+
+        // Quotation Actions
+        'ConvertToOrder:Quotation' => 'Chuyển Báo giá thành Đơn hàng',
+        'DownloadPdf:Quotation' => 'Tải Báo giá PDF',
+        'MarkRejected:Quotation' => 'Đánh dấu Bị từ chối (Báo giá)',
+
+        // Contract Actions
+        'CreateDepositPayment:Contract' => 'Tạo phiếu thu Đặt cọc (Hợp đồng)',
+        'CreatePartialPayment:Contract' => 'Tạo phiếu thu Đợt / Thanh toán (Hợp đồng)',
+
+        // Checkout Batch Actions
+        'CreateReturnBatch:CheckoutBatch' => 'Tạo Đợt Trả kho (Phiếu xuất)',
+        'ViewReturnBatch:CheckoutBatch' => 'Xem Đợt Trả kho (Phiếu xuất)',
+
+        // Checkin Batch Actions
+        'CreateProductionBatch:CheckinBatch' => 'Tạo đợt nhập từ sản xuất / Lô mới',
+        'PrintBatchQr:CheckinBatch' => 'In mã QR lô hàng (Phiếu nhập)',
+    ],
 
     /*
     |--------------------------------------------------------------------------

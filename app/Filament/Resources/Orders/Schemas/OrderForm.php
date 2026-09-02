@@ -114,6 +114,34 @@ class OrderForm
                                         ]),
                                     ]),
 
+                                Section::make('Thông tin thanh toán')
+                                    ->description('Số tiền cọc đã thu, tổng tiền đã thu và ngày thu gần nhất')
+                                    ->collapsible()
+                                    ->schema([
+                                        Grid::make(2)->schema([
+                                            TextInput::make('deposit_paid')
+                                                ->label('Tiền cọc đã thu')
+                                                ->mask(RawJs::make('$money($input)'))
+                                                ->stripCharacters(',')
+                                                ->numeric()
+                                                ->suffix(' đ')
+                                                ->default(0)
+                                                ->columnSpan(1),
+                                            TextInput::make('total_paid')
+                                                ->label('Tổng tiền đã thu')
+                                                ->mask(RawJs::make('$money($input)'))
+                                                ->stripCharacters(',')
+                                                ->numeric()
+                                                ->suffix(' đ')
+                                                ->default(0)
+                                                ->columnSpan(1),
+                                        ]),
+                                        DateTimePicker::make('paid_at')
+                                            ->label('Ngày thu gần nhất')
+                                            ->native(false)
+                                            ->columnSpanFull(),
+                                    ]),
+
                                 Section::make('Chi tiết sự kiện & Giá trị đơn hàng')
                                     ->description('Tên sự kiện, thời gian thi công, diện tích và giá trị hợp đồng')
                                     ->collapsible()

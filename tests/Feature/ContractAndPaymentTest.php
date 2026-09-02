@@ -1,32 +1,21 @@
 <?php
 
 use App\Enums\ContractStatus;
-use App\Enums\PaymentMethod;
-use App\Enums\PaymentType;
-use App\Models\Contract;
-use App\Models\Payment;
+use App\Models\Order;
 use Database\Seeders\LedOsDataSeeder;
 
-test('contracts and payments track financial commitments and debt correctly', function () {
+test('orders track deposit and total paid correctly', function () {
     (new LedOsDataSeeder)->run();
 
-    $contract = Contract::where('code', 'HD-2608-01')->first();
+    $order = Order::where('order_no', 'ORD-2608-01')->first();
+
+    expect($order)->not->toBeNull()
+        ->and($order->deposit_paid)->toBeGreaterThan(0)
+        ->and($order->total_paid)->toBeGreaterThanOrEqual($order->deposit_paid);
+
+    $contract = $order->contracts->first();
+
     expect($contract)->not->toBeNull()
         ->and($contract->status)->toBe(ContractStatus::Active)
-        ->and($contract->total_paid)->toEqual($contract->deposit_amount)
-        ->and($contract->remaining_debt)->toEqual($contract->contract_value - $contract->deposit_amount);
-
-    // Make final payment
-    $finalPayment = Payment::create([
-        'code' => 'PAY-TEST-FINAL',
-        'contract_id' => $contract->id,
-        'customer_id' => $contract->customer_id,
-        'type' => PaymentType::Final,
-        'method' => PaymentMethod::BankTransfer,
-        'amount' => $contract->remaining_debt,
-        'payment_date' => now()->toDateString(),
-    ]);
-
-    expect($contract->fresh()->total_paid)->toEqual($contract->contract_value)
-        ->and($contract->fresh()->remaining_debt)->toEqual(0.0);
+        ->and($contract->remaining_debt)->toEqual(max(0, (float) $contract->contract_value - (float) $order->total_paid));
 });

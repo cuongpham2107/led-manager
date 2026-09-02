@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Enums\OrderStatus;
-use App\Enums\PaymentType;
 use Guava\Calendar\Contracts\Eventable;
 use Guava\Calendar\ValueObjects\CalendarEvent;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -54,6 +53,9 @@ class Order extends Model implements Eventable
         'event',
         'device_type_id',
         'value',
+        'deposit_paid',
+        'total_paid',
+        'paid_at',
         'status',
         'sales_user_id',
     ];
@@ -68,6 +70,9 @@ class Order extends Model implements Eventable
             'expected_return_date' => 'date',
             'area_m2' => 'decimal:2',
             'value' => 'decimal:2',
+            'deposit_paid' => 'decimal:2',
+            'total_paid' => 'decimal:2',
+            'paid_at' => 'datetime',
             'status' => OrderStatus::class,
         ];
     }
@@ -153,14 +158,6 @@ class Order extends Model implements Eventable
     }
 
     /**
-     * @return HasMany<Payment, $this>
-     */
-    public function payments(): HasMany
-    {
-        return $this->hasMany(Payment::class);
-    }
-
-    /**
      * @return HasMany<EventAssignment, $this>
      */
     public function assignments(): HasMany
@@ -190,28 +187,6 @@ class Order extends Model implements Eventable
     public function reservations(): HasMany
     {
         return $this->hasMany(InventoryReservation::class);
-    }
-
-    /**
-     * Get deposit amount paid so far
-     */
-    public function getDepositPaidAttribute(): float
-    {
-        $orderDeposit = (float) $this->payments->where('type', PaymentType::Deposit)->sum('amount');
-        $contractDeposit = (float) $this->contracts->flatMap->payments->where('type', PaymentType::Deposit)->sum('amount');
-
-        return max($orderDeposit, $contractDeposit);
-    }
-
-    /**
-     * Get total amount paid so far
-     */
-    public function getTotalPaidAttribute(): float
-    {
-        $orderPaid = (float) $this->payments->where('type', '!=', PaymentType::Refund)->sum('amount');
-        $contractPaid = (float) $this->contracts->flatMap->payments->where('type', '!=', PaymentType::Refund)->sum('amount');
-
-        return max($orderPaid, $contractPaid);
     }
 
     public function toCalendarEvent(): CalendarEvent

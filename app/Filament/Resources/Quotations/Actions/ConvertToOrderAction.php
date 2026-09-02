@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Quotation;
 use App\Models\Warehouse;
+use App\Services\AvailabilityService;
 use App\Services\CodeGeneratorService;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
@@ -25,6 +26,7 @@ class ConvertToOrderAction extends Action
         parent::setUp();
 
         $this
+            ->authorize('ConvertToOrder:Quotation')
             ->label('Tạo Đơn hàng')
             ->icon('heroicon-o-check-circle')
             ->color('success')
@@ -43,6 +45,38 @@ class ConvertToOrderAction extends Action
                     ->required(),
             ])
             ->action(function (Quotation $record, array $data): void {
+                // Availability guard: block conversion when requested devices exceed stock
+                $bom = $record->items
+                    ->filter(fn ($item) => $item->device_type_id)
+                    ->map(fn ($item) => [
+                        'device_type_id' => (int) $item->device_type_id,
+                        'quantity' => (int) $item->quantity,
+                    ])
+                    ->toArray();
+
+                if (! empty($bom)) {
+                    $result = app(AvailabilityService::class)->checkBomAvailability(
+                        $bom,
+                        $record->event_start_date ?? now(),
+                        $record->event_end_date ?? now()->addDays(max(1, $record->rental_days ?? 3)),
+                        $data['warehouse_id'] ?? null,
+                    );
+
+                    if ($result['has_conflicts']) {
+                        $messages = collect($result['conflicts'])
+                            ->map(fn (array $c): string => "• {$c['device_type_name']}: cần {$c['requested']}, chỉ còn {$c['available']} (thiếu {$c['shortage']})")
+                            ->implode("\n");
+
+                        Notification::make()
+                            ->title('Không thể chuyển đổi — thiếu thiết bị khả dụng')
+                            ->body("Trong khoảng ngày sự kiện, các thiết bị sau không đủ tồn kho:\n{$messages}")
+                            ->danger()
+                            ->send();
+
+                        return;
+                    }
+                }
+
                 $orderNo = CodeGeneratorService::generate('ORD', 'orders');
 
                 $warehouseId = $data['warehouse_id'] ?? Warehouse::first()?->id ?? 1;

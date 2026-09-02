@@ -18,6 +18,7 @@ class ViewContractAction extends Action
         parent::setUp();
 
         $this
+            ->authorize('ViewContract:Order')
             ->label('Xem Hợp đồng')
             ->icon('heroicon-o-document-check')
             ->color('info')

@@ -19,6 +19,7 @@ class ViewReturnBatchAction extends Action
         parent::setUp();
 
         $this
+            ->authorize('ViewReturnBatch:Order')
             ->label('Xem Đợt Trả Kho')
             ->icon('heroicon-o-arrow-path-rounded-square')
             ->color('primary')

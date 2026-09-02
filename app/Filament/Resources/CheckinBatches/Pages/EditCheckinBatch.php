@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\CheckinBatches\Pages;
 
+use App\Filament\Resources\CheckinBatches\Actions\PrintBatchQrAction;
 use App\Filament\Resources\CheckinBatches\CheckinBatchResource;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
@@ -19,6 +20,7 @@ class EditCheckinBatch extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
+            PrintBatchQrAction::make(),
             DeleteAction::make(),
         ];
     }

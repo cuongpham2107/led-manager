@@ -6,6 +6,7 @@ use App\Filament\Resources\Users\UserResource;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Support\Enums\Width;
+use Filament\Support\Icons\Heroicon;
 
 class ListUsers extends ListRecords
 {
@@ -15,6 +16,7 @@ class ListUsers extends ListRecords
     {
         return [
             CreateAction::make()
+                ->icon(Heroicon::Plus)
                 ->modalHeading('Tạo tài khoản người dùng mới')
                 ->modalDescription('Nhập thông tin nhân viên, vai trò phân quyền và mật khẩu đăng nhập.')
                 ->modalWidth(Width::ThreeExtraLarge),

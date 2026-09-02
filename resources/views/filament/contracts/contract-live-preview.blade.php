@@ -143,15 +143,8 @@
     }
 
     $subtotalItems = array_sum(array_column($items, 'line_total'));
-    $displaySubtotal = $subtotalItems > 0 ? $subtotalItems : ($contractValue > 0 ? max(0, $contractValue - round($contractValue * 0.1)) : 0);
-    $displayVat = round($displaySubtotal * 0.1);
-    $displayTotal = $displaySubtotal + $displayVat;
-
-    if ($contractValue > 0 && abs($contractValue - $displayTotal) > 1000) {
-        $displayTotal = $contractValue;
-        $displayVat = round($contractValue * 0.1);
-        $displaySubtotal = max(0, $contractValue - $displayVat);
-    }
+    // ponytail: contract_value is the final payable amount; no VAT math.
+    $displayTotal = $contractValue > 0 ? (float) $contractValue : max(0, $subtotalItems);
 @endphp
 
 <style>
@@ -347,9 +340,9 @@
             <div class="space-y-1">
                 <p class="font-bold">ĐIỀU 2: GIÁ TRỊ HỢP ĐỒNG VÀ ĐIỀU KIỆN THANH TOÁN</p>
                 <p class="text-justify">
-                    Tổng giá trị hợp đồng đã bao gồm VAT là: <span
-                        class="font-bold">{{ number_format($contractValue, 0, ',', '.') }} VNĐ</span> (Số tiền bằng chữ:
-                    <span class="font-bold">{{ VietnameseCurrencyReader::convert($contractValue) }}</span>).
+                    Tổng giá trị hợp đồng: <span
+                        class="font-bold">{{ number_format($displayTotal, 0, ',', '.') }} VNĐ</span> (Số tiền bằng chữ:
+                    <span class="font-bold">{{ VietnameseCurrencyReader::convert($displayTotal) }}</span>).
                 </p>
                 <p class="font-bold">Phương thức thanh toán:</p>
                 <p class="text-justify">
@@ -496,23 +489,13 @@
                                 <td class="border border-black p-1.5 text-center">gói</td>
                                 <td class="border border-black p-1.5 text-center font-bold">1</td>
                                 <td class="border border-black p-1.5 text-right">
-                                    {{ number_format($displaySubtotal, 0, ',', '.') }}</td>
+                                    {{ number_format($displayTotal, 0, ',', '.') }}</td>
                                 <td class="border border-black p-1.5 text-right font-bold">
-                                    {{ number_format($displaySubtotal, 0, ',', '.') }}</td>
+                                    {{ number_format($displayTotal, 0, ',', '.') }}</td>
                             </tr>
                         @endif
 
-                        <!-- Summary rows -->
-                        <tr>
-                            <td colspan="6" class="border border-black p-1.5 text-right font-bold">TỔNG CHƯA VAT</td>
-                            <td class="border border-black p-1.5 text-right font-bold">
-                                {{ number_format($displaySubtotal, 0, ',', '.') }}</td>
-                        </tr>
-                        <tr>
-                            <td colspan="6" class="border border-black p-1.5 text-right font-bold">THUẾ VAT (10%)</td>
-                            <td class="border border-black p-1.5 text-right font-bold">
-                                {{ number_format($displayVat, 0, ',', '.') }}</td>
-                        </tr>
+                        <!-- Summary row -->
                         <tr>
                             <td colspan="6" class="border border-black p-1.5 text-right font-bold uppercase">TỔNG CỘNG THANH TOÁN</td>
                             <td class="border border-black p-1.5 text-right font-bold">
@@ -595,23 +578,13 @@
                                 <td class="border border-black p-1.5 text-center">gói</td>
                                 <td class="border border-black p-1.5 text-center font-bold">1</td>
                                 <td class="border border-black p-1.5 text-right">
-                                    {{ number_format($displaySubtotal, 0, ',', '.') }}</td>
+                                    {{ number_format($displayTotal, 0, ',', '.') }}</td>
                                 <td class="border border-black p-1.5 text-right font-bold">
-                                    {{ number_format($displaySubtotal, 0, ',', '.') }}</td>
+                                    {{ number_format($displayTotal, 0, ',', '.') }}</td>
                             </tr>
                         @endif
                         <tr>
-                            <td colspan="5" class="border border-black p-1.5 text-right font-bold">TỔNG GIÁ TRỊ (CHƯA VAT)</td>
-                            <td class="border border-black p-1.5 text-right font-bold">
-                                {{ number_format($displaySubtotal, 0, ',', '.') }}</td>
-                        </tr>
-                        <tr>
-                            <td colspan="5" class="border border-black p-1.5 text-right font-bold">THUẾ VAT (10%)</td>
-                            <td class="border border-black p-1.5 text-right font-bold">
-                                {{ number_format($displayVat, 0, ',', '.') }}</td>
-                        </tr>
-                        <tr>
-                            <td colspan="5" class="border border-black p-1.5 text-right font-bold uppercase">TỔNG CỘNG THANH TOÁN</td>
+                            <td colspan="5" class="border border-black p-1.5 text-right font-bold uppercase">TỔNG GIÁ TRỊ NGHIỆM THU</td>
                             <td class="border border-black p-1.5 text-right font-bold">
                                 {{ number_format($displayTotal, 0, ',', '.') }}</td>
                         </tr>

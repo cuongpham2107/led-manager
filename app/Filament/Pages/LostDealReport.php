@@ -2,8 +2,10 @@
 
 namespace App\Filament\Pages;
 
+use App\Enums\QuotationStatus;
 use App\Models\Quotation;
 use BackedEnum;
+use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Pages\Page;
@@ -21,6 +23,7 @@ use UnitEnum;
 
 class LostDealReport extends Page implements HasTable
 {
+    use HasPageShield;
     use InteractsWithTable;
 
     protected static string|UnitEnum|null $navigationGroup = 'Báo cáo & Thống kê';
@@ -31,9 +34,50 @@ class LostDealReport extends Page implements HasTable
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedXCircle;
 
-    protected static ?int $navigationSort = 4;
-
     protected string $view = 'filament.pages.lost-deal-report';
+
+    public function getStats(): array
+    {
+        $lost = Quotation::whereIn('status', [QuotationStatus::Rejected, QuotationStatus::Expired])->get();
+        $totalDeals = $lost->count();
+        $totalValue = (float) $lost->sum('total_price');
+        $totalArea = (float) $lost->sum('screen_area_m2');
+
+        $primaryReason = $lost->groupBy('lost_reason')
+            ->sortByDesc(fn ($group) => $group->count())
+            ->keys()
+            ->first() ?? 'Chưa ghi rõ';
+
+        return [
+            'total_deals' => $totalDeals,
+            'total_value' => $totalValue,
+            'total_area' => $totalArea,
+            'primary_reason' => $primaryReason,
+        ];
+    }
+
+    public function getReasonBreakdown(): array
+    {
+        $lost = Quotation::whereIn('status', [QuotationStatus::Rejected, QuotationStatus::Expired])->get();
+        $totalDeals = max(1, $lost->count());
+
+        return $lost->groupBy(fn ($q) => $q->lost_reason ?: 'Khác / Chưa ghi rõ')
+            ->map(function ($group, $reason) use ($totalDeals) {
+                $count = $group->count();
+                $value = (float) $group->sum('total_price');
+                $pct = round(($count / $totalDeals) * 100, 1);
+
+                return [
+                    'reason' => $reason,
+                    'count' => $count,
+                    'value' => $value,
+                    'pct' => $pct,
+                ];
+            })
+            ->sortByDesc('count')
+            ->values()
+            ->toArray();
+    }
 
     public function table(Table $table): Table
     {

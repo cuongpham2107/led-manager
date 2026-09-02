@@ -17,6 +17,7 @@ class ViewQrCodeAction extends Action
         parent::setUp();
 
         $this
+            ->authorize('ViewQrCode:Asset')
             ->label('Mã QR')
             ->icon('heroicon-o-qr-code')
             ->color('gray')

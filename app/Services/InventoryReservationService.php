@@ -33,7 +33,7 @@ class InventoryReservationService
                     $reservations->push(InventoryReservation::create([
                         'quotation_id' => $quotation->id,
                         'device_type_id' => $item->device_type_id,
-                        'quantity' => (int) ceil($item->quantity),
+                        'quantity' => (int) ceil((float) $item->quantity),
                         'lock_type' => 'soft',
                         'start_date' => $startDate,
                         'end_date' => $endDate,

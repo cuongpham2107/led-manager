@@ -49,25 +49,25 @@ class AssetStatsOverviewWidget extends BaseWidget
         $avgCost = $totalAssets > 0 ? $totalCost / $totalAssets : 0;
 
         return [
-            Stat::make('Tổng thiết bị trong kho', number_format($totalAssets, 0, ',', '.').' cabin')
-                ->description('Nguyên giá TB: '.number_format($avgCost, 0, ',', '.').' đ/cabin')
+            Stat::make('Tổng thiết bị trong kho', number_format($totalAssets, 0, ',', '.').' thiết bị')
+                ->description('Tổng nguyên giá: '.number_format($totalCost, 0, ',', '.').' đ')
                 ->descriptionIcon('heroicon-m-cube')
                 ->chart($newAssetsTrend)
                 ->color('primary'),
 
-            Stat::make('Sẵn sàng xuất kho', number_format($readyCount, 0, ',', '.')." cabin ({$readyPercent}%)")
-                ->description('Thiết bị hoạt động tốt trong kho')
+            Stat::make('Sẵn sàng trong kho', number_format($readyCount, 0, ',', '.')." thiết bị ({$readyPercent}%)")
+                ->description('Thiết bị sẵn sàng xuất kho đi sự kiện')
                 ->descriptionIcon('heroicon-m-check-circle')
                 ->chart(array_map(fn () => $readyCount, range(1, 6)))
                 ->color('success'),
 
-            Stat::make('Đang chạy sự kiện / Vận chuyển', number_format($busyCount, 0, ',', '.').' cabin')
+            Stat::make('Đang chạy sự kiện / Vận chuyển', number_format($busyCount, 0, ',', '.').' thiết bị')
                 ->description("{$inEventCount} tại sự kiện • {$inTransitCount} đang vận chuyển")
                 ->descriptionIcon('heroicon-m-truck')
                 ->chart($busyAssetsTrend)
                 ->color('warning'),
 
-            Stat::make('Đang bảo dưỡng / Sửa chữa', number_format($repairingCount, 0, ',', '.').' cabin')
+            Stat::make('Bảo dưỡng / Sửa chữa', number_format($repairingCount, 0, ',', '.').' thiết bị')
                 ->description($disposedCount > 0 ? "{$repairingCount} bảo dưỡng • {$disposedCount} đã thanh lý" : 'Cần kiểm tra kỹ thuật')
                 ->descriptionIcon('heroicon-m-wrench-screwdriver')
                 ->chart($repairTrend)

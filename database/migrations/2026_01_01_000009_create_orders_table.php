@@ -26,6 +26,11 @@ return new class extends Migration
 
             $table->decimal('value', 14, 2)->default(0); // contract/order value
 
+            // Payment snapshot (số tiền đã thu được nhập tay — không còn bảng payments)
+            $table->decimal('deposit_paid', 14, 2)->default(0);
+            $table->decimal('total_paid', 14, 2)->default(0);
+            $table->timestamp('paid_at')->nullable();
+
             $table->enum('status', [
                 'draft',            // New orders start here
                 'outbound_created', // "Create outbound batch" moved it into warehouse workflow

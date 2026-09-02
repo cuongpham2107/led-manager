@@ -6,6 +6,7 @@ use App\Filament\Resources\Warehouses\WarehouseResource;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Support\Enums\Width;
+use Filament\Support\Icons\Heroicon;
 
 class ListWarehouses extends ListRecords
 {
@@ -15,6 +16,7 @@ class ListWarehouses extends ListRecords
     {
         return [
             CreateAction::make()
+                ->icon(Heroicon::Plus)
                 ->modalHeading('Thêm mới kho hàng')
                 ->modalDescription('Nhập thông tin kho hàng lưu trữ và quản lý thiết bị LED.')
                 ->modalWidth(Width::FourExtraLarge),

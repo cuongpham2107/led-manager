@@ -24,6 +24,7 @@ class CreateReturnBatchAction extends Action
         $service = app(ReturnProcessingService::class);
 
         $this
+            ->authorize('CreateReturnBatch:CheckoutBatch')
             ->label('Tạo Đợt Trả Kho')
             ->icon('heroicon-o-arrow-path-rounded-square')
             ->color('primary')
