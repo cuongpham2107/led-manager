@@ -22,6 +22,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Enums\RecordActionsPosition;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -35,6 +36,7 @@ class OrdersTable
             ->columns([
                 TextColumn::make('order_no')
                     ->label('Số đơn hàng')
+                    ->color('primary')
                     ->searchable()
                     ->sortable()
                     ->weight('bold'),
@@ -222,7 +224,17 @@ class OrdersTable
                 TextColumn::make('status')
                     ->label('Trạng thái')
                     ->badge()
-                    ->sortable(),
+                    ->sortable(query: function ($query, string $direction) {
+                        return $query->orderByRaw("CASE orders.status
+                            WHEN 'draft' THEN 1
+                            WHEN 'outbound_created' THEN 2
+                            WHEN 'dispatched' THEN 3
+                            WHEN 'returned' THEN 4
+                            WHEN 'completed' THEN 5
+                            WHEN 'cancelled' THEN 6
+                            ELSE 7
+                        END {$direction}");
+                    }),
                 TextColumn::make('quotation.code')
                     ->label('Từ báo giá')
                     ->searchable()
@@ -264,11 +276,13 @@ class OrdersTable
                     }),
                 SelectFilter::make('warehouse_id')
                     ->label('Kho hàng')
-                    ->relationship('warehouse', 'name'),
+                    ->relationship('warehouse', 'name')
+                    ->hidden(fn (): bool => (bool) auth()->user()?->getScopedWarehouseId()),
                 SelectFilter::make('customer_id')
                     ->label('Khách hàng')
                     ->relationship('customer', 'name'),
-            ])
+            ], layout: FiltersLayout::AboveContent)
+            ->deferFilters(false)
             ->recordActions([
                 EditAction::make(),
                 ActionGroup::make([
@@ -289,6 +303,7 @@ class OrdersTable
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->defaultSort('status', 'asc');
     }
 }

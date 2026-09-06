@@ -8,11 +8,13 @@ use App\Filament\Resources\ReturnBatches\Pages\ListReturnBatches;
 use App\Filament\Resources\ReturnBatches\Schemas\ReturnBatchForm;
 use App\Filament\Resources\ReturnBatches\Tables\ReturnBatchesTable;
 use App\Models\ReturnBatch;
+use App\Models\User;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use UnitEnum;
 
 class ReturnBatchResource extends Resource
@@ -30,6 +32,20 @@ class ReturnBatchResource extends Resource
     protected static ?int $navigationSort = 4;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowPathRoundedSquare;
+
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+
+        /** @var User|null $user */
+        $user = auth()->user();
+
+        if ($whId = $user?->getScopedWarehouseId()) {
+            $query->whereHas('checkoutBatch', fn ($q) => $q->where('warehouse_id', $whId));
+        }
+
+        return $query;
+    }
 
     public static function form(Schema $schema): Schema
     {

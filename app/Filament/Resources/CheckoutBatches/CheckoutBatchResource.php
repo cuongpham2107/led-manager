@@ -8,11 +8,13 @@ use App\Filament\Resources\CheckoutBatches\Pages\ListCheckoutBatches;
 use App\Filament\Resources\CheckoutBatches\Schemas\CheckoutBatchForm;
 use App\Filament\Resources\CheckoutBatches\Tables\CheckoutBatchesTable;
 use App\Models\CheckoutBatch;
+use App\Models\User;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use UnitEnum;
 
 class CheckoutBatchResource extends Resource
@@ -30,6 +32,20 @@ class CheckoutBatchResource extends Resource
     protected static ?int $navigationSort = 3;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowUpTray;
+
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+
+        /** @var User|null $user */
+        $user = auth()->user();
+
+        if ($whId = $user?->getScopedWarehouseId()) {
+            $query->where('checkout_batches.warehouse_id', $whId);
+        }
+
+        return $query;
+    }
 
     public static function form(Schema $schema): Schema
     {

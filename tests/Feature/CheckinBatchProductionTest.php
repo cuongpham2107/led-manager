@@ -7,10 +7,10 @@ use App\Models\Asset;
 use App\Models\AssetStatusLog;
 use App\Models\CheckinBatch;
 use App\Models\CheckinBatchItem;
-use App\Models\DeviceType;
 use App\Models\ProductLine;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Models\WarehouseLocation;
 use App\Services\ProductionBatchService;
 use Database\Seeders\LedOsDataSeeder;
 
@@ -25,11 +25,9 @@ test('createFromProduction creates N assets, 1 batch, N items and N status logs 
     actingAs($user);
 
     $productLine = ProductLine::where('is_active', true)->first();
-    $deviceType = DeviceType::first();
     $warehouse = Warehouse::where('is_active', true)->first();
 
     expect($productLine)->not->toBeNull('ProductLine seed missing');
-    expect($deviceType)->not->toBeNull('DeviceType seed missing');
     expect($warehouse)->not->toBeNull('Warehouse seed missing');
 
     $service = app(ProductionBatchService::class);
@@ -37,7 +35,6 @@ test('createFromProduction creates N assets, 1 batch, N items and N status logs 
 
     $result = $service->createFromProduction(
         productLine: $productLine,
-        deviceType: $deviceType,
         quantity: 10,
         warehouse: $warehouse,
         size: '500x500mm',
@@ -58,7 +55,6 @@ test('createFromProduction creates N assets, 1 batch, N items and N status logs 
     expect($batch->status)->toBe(BatchStatus::Completed);
     expect($batch->quantity)->toBe(10);
     expect($batch->product_line_id)->toBe($productLine->id);
-    expect($batch->device_type_id)->toBe($deviceType->id);
     expect($batch->warehouse_id)->toBe($warehouse->id);
     expect($batch->completed_at)->not->toBeNull();
     expect($batch->code)->toStartWith('IN-');
@@ -70,7 +66,6 @@ test('createFromProduction creates N assets, 1 batch, N items and N status logs 
         expect($asset->qr_code)->toBe($asset->serial_no);
         expect($asset->current_status)->toBe(AssetStatus::Ready);
         expect($asset->current_warehouse_id)->toBe($warehouse->id);
-        expect($asset->device_type_id)->toBe($deviceType->id);
         expect($asset->product_line_id)->toBe($productLine->id);
         expect($asset->size)->toBe('500x500mm');
     }
@@ -89,19 +84,49 @@ test('createFromProduction creates N assets, 1 batch, N items and N status logs 
         ->count())->toBe(10);
 });
 
-test('createFromProduction supports peripheral equipment without product line (e.g. Processors, Cables)', function () {
+test('createFromProduction assigns warehouse location to created assets when provided', function () {
     $user = User::where('email', 'admin@ledmanager.com')->first();
     actingAs($user);
 
-    $deviceType = DeviceType::where('code', 'PROC')->first() ?? DeviceType::first();
+    $productLine = ProductLine::where('is_active', true)->first();
+    $warehouse = Warehouse::where('is_active', true)->first();
+    $location = WarehouseLocation::firstOrCreate(
+        ['warehouse_id' => $warehouse->id, 'name' => 'Zone Production A'],
+        ['is_active' => true]
+    );
+
+    $service = app(ProductionBatchService::class);
+    $prefix = 'PROD-LOC-'.now()->format('ymd');
+
+    $result = $service->createFromProduction(
+        productLine: $productLine,
+        quantity: 3,
+        warehouse: $warehouse,
+        size: '500x500mm',
+        serialPrefix: $prefix,
+        note: 'Test nhập kèm vị trí kho',
+        createdBy: $user,
+        warehouseLocation: $location,
+    );
+
+    expect($result['assets'])->toHaveCount(3);
+    foreach ($result['assets'] as $asset) {
+        expect($asset->warehouse_location_id)->toBe($location->id)
+            ->and($asset->current_warehouse_id)->toBe($warehouse->id);
+    }
+});
+
+test('createFromProduction supports equipment without product line (e.g. Processors, Cables)', function () {
+    $user = User::where('email', 'admin@ledmanager.com')->first();
+    actingAs($user);
+
     $warehouse = Warehouse::where('is_active', true)->first();
 
     $service = app(ProductionBatchService::class);
-    $prefix = $service->suggestSerialPrefix(null, $deviceType);
+    $prefix = $service->suggestSerialPrefix(null);
 
     $result = $service->createFromProduction(
         productLine: null,
-        deviceType: $deviceType,
         quantity: 5,
         warehouse: $warehouse,
         size: '1U Rack',
@@ -116,13 +141,11 @@ test('createFromProduction supports peripheral equipment without product line (e
     /** @var CheckinBatch $batch */
     $batch = $result['batch'];
     expect($batch->product_line_id)->toBeNull();
-    expect($batch->device_type_id)->toBe($deviceType->id);
     expect($batch->quantity)->toBe(5);
 
     foreach ($result['assets'] as $i => $asset) {
         /** @var Asset $asset */
         expect($asset->product_line_id)->toBeNull();
-        expect($asset->device_type_id)->toBe($deviceType->id);
         expect($asset->size)->toBe('1U Rack');
         expect($asset->serial_no)->toBe($prefix.'-'.str_pad((string) ($i + 1), 3, '0', STR_PAD_LEFT));
     }
@@ -133,13 +156,11 @@ test('createFromProduction rejects quantity below 1 and above 500', function () 
     actingAs($user);
 
     $productLine = ProductLine::where('is_active', true)->first();
-    $deviceType = DeviceType::first();
     $warehouse = Warehouse::where('is_active', true)->first();
     $service = app(ProductionBatchService::class);
 
     expect(fn () => $service->createFromProduction(
         productLine: $productLine,
-        deviceType: $deviceType,
         quantity: 0,
         warehouse: $warehouse,
         size: null,
@@ -150,7 +171,6 @@ test('createFromProduction rejects quantity below 1 and above 500', function () 
 
     expect(fn () => $service->createFromProduction(
         productLine: $productLine,
-        deviceType: $deviceType,
         quantity: 501,
         warehouse: $warehouse,
         size: null,
@@ -165,7 +185,6 @@ test('createFromProduction aborts transaction and throws when a generated serial
     actingAs($user);
 
     $productLine = ProductLine::where('is_active', true)->first();
-    $deviceType = DeviceType::first();
     $warehouse = Warehouse::where('is_active', true)->first();
     $service = app(ProductionBatchService::class);
 
@@ -174,7 +193,6 @@ test('createFromProduction aborts transaction and throws when a generated serial
     // First batch succeeds
     $service->createFromProduction(
         productLine: $productLine,
-        deviceType: $deviceType,
         quantity: 3,
         warehouse: $warehouse,
         size: null,
@@ -189,7 +207,6 @@ test('createFromProduction aborts transaction and throws when a generated serial
 
     expect(fn () => $service->createFromProduction(
         productLine: $productLine,
-        deviceType: $deviceType,
         quantity: 3,
         warehouse: $warehouse,
         size: null,
@@ -225,7 +242,6 @@ test('suggestSerialPrefix returns {ProductLine.code}-{YYMMDD} uppercased', funct
 test('check-in table progress column computes scanned/target percent', function () {
     $warehouse = Warehouse::where('is_active', true)->first();
     $productLine = ProductLine::where('is_active', true)->first();
-    $deviceType = DeviceType::first();
     $creator = User::first();
 
     $batch = CheckinBatch::create([
@@ -233,7 +249,6 @@ test('check-in table progress column computes scanned/target percent', function 
         'warehouse_id' => $warehouse->id,
         'batch_type' => CheckinBatchType::Production,
         'product_line_id' => $productLine->id,
-        'device_type_id' => $deviceType->id,
         'quantity' => 10,
         'status' => BatchStatus::InProgress,
         'created_by' => $creator->id,
@@ -244,10 +259,8 @@ test('check-in table progress column computes scanned/target percent', function 
         $asset = Asset::create([
             'serial_no' => 'PROG-'.sprintf('%03d', $i),
             'product_line_id' => $productLine->id,
-            'device_type_id' => $deviceType->id,
-            'warehouse_id' => $warehouse->id,
-            'status' => AssetStatus::Ready,
-            'condition' => 'ok',
+            'current_warehouse_id' => $warehouse->id,
+            'current_status' => AssetStatus::Ready,
         ]);
         CheckinBatchItem::create([
             'checkin_batch_id' => $batch->id,
@@ -272,7 +285,6 @@ test('check-in table progress column computes scanned/target percent', function 
 test('check-in table progress falls back to items count when quantity is null', function () {
     $warehouse = Warehouse::where('is_active', true)->first();
     $productLine = ProductLine::where('is_active', true)->first();
-    $deviceType = DeviceType::first();
     $creator = User::first();
 
     $batch = CheckinBatch::create([
@@ -287,10 +299,8 @@ test('check-in table progress falls back to items count when quantity is null', 
         $asset = Asset::create([
             'serial_no' => 'LEG-'.sprintf('%03d', $i),
             'product_line_id' => $productLine->id,
-            'device_type_id' => $deviceType->id,
-            'warehouse_id' => $warehouse->id,
-            'status' => AssetStatus::Ready,
-            'condition' => 'ok',
+            'current_warehouse_id' => $warehouse->id,
+            'current_status' => AssetStatus::Ready,
         ]);
         CheckinBatchItem::create([
             'checkin_batch_id' => $batch->id,

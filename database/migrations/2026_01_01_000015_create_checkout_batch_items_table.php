@@ -17,12 +17,7 @@ return new class extends Migration
             $table->foreignId('dispatched_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('dispatched_at')->nullable();
 
-            // Quality Handover Checklist
-            $table->boolean('checked_brightness')->default(true);  // Độ sáng đồng đều
-            $table->boolean('checked_dead_pixels')->default(true); // Không chết điểm LED
-            $table->boolean('checked_color')->default(true);       // Cân bằng màu sắc
-            $table->boolean('checked_power')->default(true);       // Nguồn & cáp an toàn
-            $table->text('checklist_note')->nullable();
+            $table->text('note')->nullable();
 
             $table->timestamps();
 

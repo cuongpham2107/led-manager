@@ -6,7 +6,6 @@ use App\Enums\OrderStatus;
 use App\Models\Asset;
 use App\Models\CheckoutBatch;
 use App\Models\Customer;
-use App\Models\DeviceType;
 use App\Models\Order;
 use App\Models\ProductLine;
 use App\Models\User;
@@ -60,17 +59,10 @@ beforeEach(function () {
         'pitch' => 3.9,
     ]);
 
-    $this->deviceType = DeviceType::create([
-        'code' => 'CAB-P39',
-        'name' => 'Cabinet P3.9',
-        'category' => 'led_screen',
-    ]);
-
     $this->asset = Asset::create([
         'serial_no' => 'CAB-P39-001',
         'qr_code' => 'QR-CAB-P39-001',
         'product_line_id' => $this->productLine->id,
-        'device_type_id' => $this->deviceType->id,
         'current_warehouse_id' => $this->warehouse->id,
         'current_status' => AssetStatus::Ready,
         'size' => '0.5x0.5',

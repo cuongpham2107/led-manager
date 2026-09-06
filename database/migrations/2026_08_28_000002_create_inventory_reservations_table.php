@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('quotation_id')->nullable()->constrained()->cascadeOnDelete();
             $table->foreignId('order_id')->nullable()->constrained()->cascadeOnDelete();
-            $table->foreignId('device_type_id')->constrained()->restrictOnDelete();
+            $table->foreignId('product_line_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('warehouse_id')->nullable()->constrained('warehouses')->nullOnDelete();
 
             $table->unsignedInteger('quantity')->default(1);
@@ -24,7 +24,7 @@ return new class extends Migration
             $table->text('note')->nullable();
             $table->timestamps();
 
-            $table->index(['device_type_id', 'status', 'start_date', 'end_date']);
+            $table->index(['product_line_id', 'status', 'start_date', 'end_date']);
         });
     }
 

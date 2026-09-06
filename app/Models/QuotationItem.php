@@ -12,7 +12,7 @@ class QuotationItem extends Model
 
     protected $fillable = [
         'quotation_id',
-        'device_type_id',
+        'product_line_id',
         'quantity',
         'unit_cost',
         'line_total',
@@ -40,10 +40,10 @@ class QuotationItem extends Model
     }
 
     /**
-     * @return BelongsTo<DeviceType, $this>
+     * @return BelongsTo<ProductLine, $this>
      */
-    public function deviceType(): BelongsTo
+    public function productLine(): BelongsTo
     {
-        return $this->belongsTo(DeviceType::class);
+        return $this->belongsTo(ProductLine::class);
     }
 }

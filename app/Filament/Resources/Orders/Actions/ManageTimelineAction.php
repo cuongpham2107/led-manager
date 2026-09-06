@@ -30,7 +30,7 @@ class ManageTimelineAction extends Action
             ->label('Mốc tiến độ thi công')
             ->icon(Heroicon::OutlinedClock)
             ->color('warning')
-            ->visible(fn (Order $record): bool => ! in_array($record->status, [OrderStatus::Cancelled, OrderStatus::Completed]))
+            ->visible(fn (Order $record): bool => ! in_array($record->status, [OrderStatus::Draft, OrderStatus::Cancelled, OrderStatus::Completed]))
             ->modalHeading(fn (Order $record): string => "Thêm mốc lịch trình thi công — Đơn hàng {$record->order_no}")
             ->modalDescription('Cập nhật mốc thời gian giao hàng, lắp đặt, chạy thử, sự kiện...')
             ->modalSubmitActionLabel('Tạo mốc')

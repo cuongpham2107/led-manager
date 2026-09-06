@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\Warehouses\Schemas;
 
+use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Repeater\TableColumn;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -41,6 +43,42 @@ class WarehouseForm
                             ->label('Kho đang hoạt động')
                             ->default(true)
                             ->inline(false),
+                    ]),
+
+                Section::make('Vị trí trong kho (Khu vực / Kệ / Dãy)')
+                    ->description('Định nghĩa các vị trí lưu trữ thiết bị trực tiếp trong kho hàng này')
+                    ->columnSpanFull()
+                    ->schema([
+                        Repeater::make('locations')
+                            ->relationship('locations')
+                            ->label('Danh sách vị trí')
+                            ->addActionLabel('+ Thêm vị trí kho')
+                            ->table([
+                                TableColumn::make('Mã vị trí')
+                                    ->width('20%'),
+                                TableColumn::make('Tên vị trí / Kệ')
+                                    ->width('35%')
+                                    ->markAsRequired(),
+                                TableColumn::make('Mô tả / Ghi chú')
+                                    ->width('35%'),
+                                TableColumn::make('Hoạt động')
+                                    ->width('10%')
+                                    ->alignCenter(),
+                            ])
+                            ->schema([
+                                TextInput::make('code')
+                                    ->placeholder('VD: HN-K1, K01'),
+                                TextInput::make('name')
+                                    ->required()
+                                    ->placeholder('VD: Khu 1 - Kệ Module P2.6'),
+                                TextInput::make('description')
+                                    ->placeholder('Ghi chú khu vực lưu trữ...'),
+                                Toggle::make('is_active')
+                                    ->default(true),
+                            ])
+                            ->defaultItems(0)
+                            ->reorderable(false)
+                            ->columnSpanFull(),
                     ]),
             ]);
     }

@@ -9,6 +9,7 @@ use Filament\Actions\EditAction;
 use Filament\Support\Enums\Width;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Enums\RecordActionsPosition;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -69,7 +70,8 @@ class PricingRulesTable
                 SelectFilter::make('customer_type')
                     ->label('Nhóm khách')
                     ->options(CustomerType::class),
-            ])
+            ], layout: FiltersLayout::AboveContent)
+            ->deferFilters(false)
             ->recordActions([
                 EditAction::make()
                     ->modalHeading('Cập nhật bảng giá thuê')

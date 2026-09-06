@@ -21,10 +21,13 @@ class LatestOrdersWidget extends BaseWidget
 
     public function table(Table $table): Table
     {
+        $query = Order::query()->latest();
+        if ($whId = auth()->user()?->getScopedWarehouseId()) {
+            $query->where('warehouse_id', $whId);
+        }
+
         return $table
-            ->query(
-                Order::query()->latest()->limit(5)
-            )
+            ->query($query->limit(5))
             ->columns([
                 TextColumn::make('order_no')
                     ->label('Mã đơn')

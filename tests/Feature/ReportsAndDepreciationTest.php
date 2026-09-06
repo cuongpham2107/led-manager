@@ -1,8 +1,15 @@
 <?php
 
+use App\Filament\Pages\AssetUtilizationReport;
+use App\Filament\Pages\InventoryReport;
+use App\Filament\Pages\LostDealReport;
+use App\Filament\Pages\MovementHistoryReport;
+use App\Filament\Pages\RepairFrequencyReport;
+use App\Filament\Pages\RevenueReport;
+use App\Filament\Pages\SalesConversionReport;
 use App\Models\Asset;
-use App\Models\DeviceType;
 use App\Models\ProductLine;
+use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\DepreciationService;
 use Database\Seeders\LedOsDataSeeder;
@@ -12,13 +19,11 @@ test('depreciation service correctly calculates straight line monthly depreciati
     (new LedOsDataSeeder)->run();
 
     $service = app(DepreciationService::class);
-    $dt = DeviceType::first();
     $pl = ProductLine::first();
     $wh = Warehouse::first();
 
     $asset = Asset::create([
         'serial_no' => 'ASSET-DEP-001',
-        'device_type_id' => $dt->id,
         'product_line_id' => $pl->id,
         'current_warehouse_id' => $wh->id,
         'purchase_cost' => 36000000,
@@ -43,4 +48,52 @@ test('calculate depreciation artisan command executes successfully', function ()
 
     $exitCode = Artisan::call('assets:calculate-depreciation');
     expect($exitCode)->toBe(0);
+});
+
+test('only the 4 expected report pages are registered in navigation under group Bao cao', function () {
+    expect(InventoryReport::getNavigationGroup())->toBe('Báo cáo')
+        ->and(InventoryReport::getNavigationLabel())->toBe('Tồn kho')
+        ->and(InventoryReport::getNavigationSort())->toBe(1)
+        ->and(InventoryReport::shouldRegisterNavigation())->toBeTrue();
+
+    expect(AssetUtilizationReport::getNavigationGroup())->toBe('Báo cáo')
+        ->and(AssetUtilizationReport::getNavigationLabel())->toBe('Sử dụng tài sản')
+        ->and(AssetUtilizationReport::getNavigationSort())->toBe(2)
+        ->and(AssetUtilizationReport::shouldRegisterNavigation())->toBeTrue();
+
+    expect(MovementHistoryReport::getNavigationGroup())->toBe('Báo cáo')
+        ->and(MovementHistoryReport::getNavigationLabel())->toBe('Lịch sử nhập/xuất')
+        ->and(MovementHistoryReport::getNavigationSort())->toBe(3)
+        ->and(MovementHistoryReport::shouldRegisterNavigation())->toBeTrue();
+
+    expect(RevenueReport::getNavigationGroup())->toBe('Báo cáo')
+        ->and(RevenueReport::getNavigationLabel())->toBe('Doanh thu')
+        ->and(RevenueReport::getNavigationSort())->toBe(4)
+        ->and(RevenueReport::shouldRegisterNavigation())->toBeTrue();
+
+    // The other report pages should be hidden from navigation
+    expect(SalesConversionReport::shouldRegisterNavigation())->toBeFalse()
+        ->and(LostDealReport::shouldRegisterNavigation())->toBeFalse()
+        ->and(RepairFrequencyReport::shouldRegisterNavigation())->toBeFalse();
+});
+
+test('super admin can access and render all 4 report pages', function () {
+    (new LedOsDataSeeder)->run();
+    $admin = User::where('email', 'admin@ledmanager.com')->first();
+
+    $this->actingAs($admin)
+        ->get(InventoryReport::getUrl())
+        ->assertSuccessful();
+
+    $this->actingAs($admin)
+        ->get(AssetUtilizationReport::getUrl())
+        ->assertSuccessful();
+
+    $this->actingAs($admin)
+        ->get(MovementHistoryReport::getUrl())
+        ->assertSuccessful();
+
+    $this->actingAs($admin)
+        ->get(RevenueReport::getUrl())
+        ->assertSuccessful();
 });

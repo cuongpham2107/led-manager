@@ -17,7 +17,6 @@ return new class extends Migration
             $table->foreignId('warehouse_id')->constrained()->restrictOnDelete();
 
             $table->decimal('required_area_m2', 10, 2)->nullable();
-            $table->foreignId('device_type_id')->nullable()->constrained()->nullOnDelete();
             $table->date('expected_return_date')->nullable();
 
             $table->enum('status', [

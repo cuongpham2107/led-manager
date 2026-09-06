@@ -22,11 +22,17 @@ class WarehouseStatusChartWidget extends ChartWidget
 
     protected function getData(): array
     {
-        $ready = Asset::where('current_status', AssetStatus::Ready)->count();
-        $inEvent = Asset::where('current_status', AssetStatus::InEvent)->count();
-        $inTransit = Asset::where('current_status', AssetStatus::InTransit)->count();
-        $repairing = Asset::where('current_status', AssetStatus::Repairing)->count();
-        $disposed = Asset::where('current_status', AssetStatus::Disposed)->count();
+        $whId = auth()->user()?->getScopedWarehouseId();
+        $base = Asset::query();
+        if ($whId) {
+            $base->where('current_warehouse_id', $whId);
+        }
+
+        $ready = (clone $base)->where('current_status', AssetStatus::Ready)->count();
+        $inEvent = (clone $base)->where('current_status', AssetStatus::InEvent)->count();
+        $inTransit = (clone $base)->where('current_status', AssetStatus::InTransit)->count();
+        $repairing = (clone $base)->where('current_status', AssetStatus::Repairing)->count();
+        $disposed = (clone $base)->where('current_status', AssetStatus::Disposed)->count();
 
         return [
             'datasets' => [

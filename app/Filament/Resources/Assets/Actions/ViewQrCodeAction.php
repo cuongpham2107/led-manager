@@ -19,9 +19,8 @@ class ViewQrCodeAction extends Action
         $this
             ->authorize('ViewQrCode:Asset')
             ->label('Mã QR')
-            ->icon('heroicon-o-qr-code')
+            ->icon('heroicon-o-squares-2x2')
             ->color('gray')
-            ->button()
             ->modalHeading(fn (Asset $record): string => "Mã QR Thiết bị: {$record->serial_no}")
             ->modalContent(fn (Asset $record) => view('filament.components.asset-qr-modal', ['record' => $record]))
             ->modalSubmitAction(false)

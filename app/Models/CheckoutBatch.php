@@ -20,7 +20,6 @@ class CheckoutBatch extends Model
         'customer_id',
         'warehouse_id',
         'required_area_m2',
-        'device_type_id',
         'expected_return_date',
         'status',
         'created_by',
@@ -62,14 +61,6 @@ class CheckoutBatch extends Model
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class);
-    }
-
-    /**
-     * @return BelongsTo<DeviceType, $this>
-     */
-    public function deviceType(): BelongsTo
-    {
-        return $this->belongsTo(DeviceType::class);
     }
 
     /**

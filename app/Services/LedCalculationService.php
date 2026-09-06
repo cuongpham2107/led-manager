@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\DeviceType;
 use App\Models\PricingRule;
 use App\Models\ProductLine;
 
@@ -121,7 +120,7 @@ class LedCalculationService
      * @return array<int, array{
      *     item: string,
      *     qty: int,
-     *     device_type_id: ?int,
+     *     product_line_id: ?int,
      *     unit_cost: float,
      *     line_total: float
      * }>
@@ -135,29 +134,9 @@ class LedCalculationService
     ): array {
         $config = $this->deriveConfiguration($width, $height, $productLine);
         $cabs = $config['cabinets_qty'];
-        $cols = $config['grid_cols'];
-        $cases = $config['flight_cases'];
 
         $wMm = $productLine ? (int) $productLine->module_width_mm : 500;
         $hMm = $productLine ? (int) $productLine->module_height_mm : 500;
-
-        $spareModules = max(2, (int) ceil($cabs * 0.06));
-        $videoProcessors = max(1, (int) ceil(($config['resolution_w'] * $config['resolution_h']) / (1920 * 1080))) + 1;
-        $sendingCards = $videoProcessors;
-        $fiberConverters = $config['wall_area'] > 15 ? 4 : 2;
-
-        $hangingBars = $cols * 2;
-        $quickLocks = $cabs * 2;
-        $daisyPowerCables = (int) ceil($cabs / 6);
-        $cat6Cables = (int) ceil($cabs / 12);
-
-        // Resolve DeviceType IDs
-        $dtCabinet = DeviceType::where('code', 'CAB')->value('id');
-        $dtProcessor = DeviceType::where('code', 'PROC')->value('id');
-        $dtSending = DeviceType::where('code', 'SEND')->value('id');
-        $dtTruss = DeviceType::where('code', 'TRUSS')->value('id');
-        $dtFlycase = DeviceType::where('code', 'FLY')->value('id');
-        $dtCable = DeviceType::where('code', 'CABLE')->value('id');
 
         // Dynamic pricing lookup
         $rates = $this->resolvePricing($productLine, $rentalDays, $customerType);
@@ -169,79 +148,9 @@ class LedCalculationService
             [
                 'item' => "Cabinet LED {$productLine?->name} ({$wMm}×{$hMm}mm){$descNote}",
                 'qty' => $cabs,
-                'device_type_id' => $dtCabinet,
+                'product_line_id' => $productLine?->id,
                 'unit_cost' => $cabUnitCost,
                 'line_total' => $cabs * $cabUnitCost,
-            ],
-            [
-                'item' => "Module LED dự phòng ({$productLine?->name})",
-                'qty' => $spareModules,
-                'device_type_id' => $dtCabinet,
-                'unit_cost' => 0.0,
-                'line_total' => 0.0,
-            ],
-            [
-                'item' => 'Card nhận tín hiệu (Receiving Cards)',
-                'qty' => $cabs,
-                'device_type_id' => $dtSending ?: $dtProcessor,
-                'unit_cost' => 0.0,
-                'line_total' => 0.0,
-            ],
-            [
-                'item' => 'Bộ xử lý hình ảnh Video Processor 4K',
-                'qty' => $videoProcessors,
-                'device_type_id' => $dtProcessor,
-                'unit_cost' => 0.0,
-                'line_total' => 0.0,
-            ],
-            [
-                'item' => 'Master Controller / Sending Box',
-                'qty' => $sendingCards,
-                'device_type_id' => $dtSending,
-                'unit_cost' => 0.0,
-                'line_total' => 0.0,
-            ],
-            [
-                'item' => 'Bộ chuyển đổi quang Fiber Converter',
-                'qty' => $fiberConverters,
-                'device_type_id' => $dtProcessor,
-                'unit_cost' => 0.0,
-                'line_total' => 0.0,
-            ],
-            [
-                'item' => 'Thanh treo màn hình Hanging Bar (Flybar)',
-                'qty' => $hangingBars,
-                'device_type_id' => $dtTruss,
-                'unit_cost' => 0.0,
-                'line_total' => 0.0,
-            ],
-            [
-                'item' => 'Bộ khóa liên kết Quick Lock',
-                'qty' => $quickLocks,
-                'device_type_id' => $dtTruss,
-                'unit_cost' => 0.0,
-                'line_total' => 0.0,
-            ],
-            [
-                'item' => 'Cáp nguồn liên kết Daisy-chain',
-                'qty' => $daisyPowerCables,
-                'device_type_id' => $dtCable,
-                'unit_cost' => 0.0,
-                'line_total' => 0.0,
-            ],
-            [
-                'item' => 'Cáp tín hiệu mạng Cat6 chống nhiễu',
-                'qty' => $cat6Cables,
-                'device_type_id' => $dtCable,
-                'unit_cost' => 0.0,
-                'line_total' => 0.0,
-            ],
-            [
-                'item' => 'Thùng đựng Flycase chuyên dụng (6-in-1)',
-                'qty' => $cases,
-                'device_type_id' => $dtFlycase,
-                'unit_cost' => 0.0,
-                'line_total' => 0.0,
             ],
         ];
     }

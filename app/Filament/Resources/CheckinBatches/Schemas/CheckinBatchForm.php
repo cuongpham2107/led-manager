@@ -2,19 +2,14 @@
 
 namespace App\Filament\Resources\CheckinBatches\Schemas;
 
-use App\Enums\BatchStatus;
-use App\Enums\CheckinBatchType;
+use App\Enums\AssetStatus;
+use App\Models\CheckinBatch;
+use App\Services\CodeGeneratorService;
 use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\DateTimePicker;
-use Filament\Forms\Components\Repeater;
-use Filament\Forms\Components\Repeater\TableColumn;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\ViewField;
 use Filament\Schemas\Components\Grid;
-use Filament\Schemas\Components\Group;
-use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
 class CheckinBatchForm
@@ -23,132 +18,88 @@ class CheckinBatchForm
     {
         return $schema
             ->components([
-                Grid::make(['default' => 1, 'lg' => 12])
-                    ->columnSpanFull()
+                TextInput::make('code')
+                    ->label('Mã đợt')
+                    ->default(fn () => CodeGeneratorService::generate('IN', 'checkin_batches'))
+                    ->required()
+                    ->placeholder('VD: IN-2608-01')
+                    ->columnSpanFull(),
+
+                TextInput::make('note')
+                    ->label('Ghi chú')
+                    ->placeholder('Thu hồi sau sự kiện ABC Corp / XYZ / Rex Hotel')
+                    ->columnSpanFull(),
+
+                Grid::make(2)
                     ->schema([
+                        Select::make('warehouse_id')
+                            ->label('Kho hàng')
+                            ->relationship('warehouse', 'name')
+                            ->searchable()
+                            ->preload()
+                            ->required(),
 
-                        // ================= LEFT COLUMN: Batch Information (4 cols) =================
-                        Group::make()
-                            ->columnSpan(['default' => 1, 'lg' => 4])
-                            ->schema([
-                                Section::make('Thông tin đợt nhập kho')
-                                    ->description('Quản lý nhập mới thiết bị LED hoặc phụ kiện vào kho')
-                                    ->collapsible()
-                                    ->schema([
-                                        TextInput::make('code')
-                                            ->label('Mã đợt nhập')
-                                            ->required()
-                                            ->placeholder('VD: IN-2608-01')
-                                            ->columnSpanFull(),
-                                        Select::make('batch_type')
-                                            ->label('Loại nhập')
-                                            ->options(CheckinBatchType::class)
-                                            ->required()
-                                            ->default(CheckinBatchType::Production)
-                                            ->columnSpanFull(),
-                                        Select::make('warehouse_id')
-                                            ->label('Kho nhận hàng')
-                                            ->relationship('warehouse', 'name')
-                                            ->searchable()
-                                            ->preload()
-                                            ->required()
-                                            ->columnSpanFull(),
-                                        Grid::make(2)->schema([
-                                            Select::make('device_type_id')
-                                                ->label('Loại thiết bị')
-                                                ->relationship('deviceType', 'name')
-                                                ->searchable()
-                                                ->preload()
-                                                ->required(),
-                                            Select::make('product_line_id')
-                                                ->label('Dòng SP LED (nếu có)')
-                                                ->relationship('productLine', 'name')
-                                                ->searchable()
-                                                ->preload(),
-                                        ]),
-                                        Grid::make(2)->schema([
-                                            TextInput::make('quantity')
-                                                ->label('Số lượng dự kiến')
-                                                ->numeric()
-                                                ->minValue(1)
-                                                ->placeholder('VD: 100'),
-                                            DatePicker::make('expected_date')
-                                                ->label('Ngày dự kiến')
-                                                ->native(false),
-                                        ]),
-                                        Select::make('status')
-                                            ->label('Trạng thái')
-                                            ->options(BatchStatus::class)
-                                            ->required()
-                                            ->default(BatchStatus::Pending)
-                                            ->columnSpanFull(),
-                                        Grid::make(2)->schema([
-                                            Select::make('created_by')
-                                                ->label('Người tạo')
-                                                ->relationship('creator', 'name')
-                                                ->searchable()
-                                                ->preload(),
-                                            DateTimePicker::make('completed_at')
-                                                ->label('Hoàn thành lúc')
-                                                ->native(false),
-                                        ]),
-                                        Textarea::make('note')
-                                            ->label('Ghi chú')
-                                            ->rows(2)
-                                            ->columnSpanFull(),
-                                        Textarea::make('production_note')
-                                            ->label('Ghi chú sản xuất')
-                                            ->rows(2)
-                                            ->columnSpanFull(),
-                                    ]),
-                            ]),
+                        DatePicker::make('expected_date')
+                            ->label('Ngày dự kiến')
+                            ->native(false)
+                            ->displayFormat('d/m/Y')
+                            ->placeholder('DD/MM/YYYY')
+                            ->extraAttributes(['class' => 'relative z-30']),
+                    ])
+                    ->extraAttributes(['class' => 'relative z-30'])
+                    ->columnSpanFull(),
 
-                        // ================= RIGHT COLUMN: Actual Devices Imported (8 cols) =================
-                        Group::make()
-                            ->columnSpan(['default' => 1, 'lg' => 8])
-                            ->schema([
-                                Section::make('Danh sách thiết bị thực tế nhập kho')
-                                    ->description('Quản lý chi tiết từng thiết bị trong đợt nhập: mã serial, chủng loại, tình trạng chất lượng và trạng thái quét nhận kho.')
-                                    ->collapsible()
-                                    ->schema([
-                                        Repeater::make('items')
-                                            ->relationship('items')
-                                            ->label('Thiết bị nhập kho')
-                                            ->table([
-                                                TableColumn::make('Mã Serial & Tên thiết bị'),
-                                                TableColumn::make('Đã nhận kho'),
-                                                TableColumn::make('Tình trạng chất lượng'),
-                                                TableColumn::make('Ghi chú kiểm tra'),
-                                            ])
-                                            ->schema([
-                                                Select::make('asset_id')
-                                                    ->label('Thiết bị')
-                                                    ->relationship('asset', 'serial_no')
-                                                    ->getOptionLabelFromRecordUsing(fn ($record) => "{$record->serial_no} — ".($record->productLine?->name ?? $record->deviceType?->name ?? 'Thiết bị').($record->size ? " ({$record->size})" : ''))
-                                                    ->searchable()
-                                                    ->preload()
-                                                    ->required(),
-                                                Toggle::make('is_received')
-                                                    ->label('Đã nhận')
-                                                    ->default(true),
-                                                Select::make('condition')
-                                                    ->label('Tình trạng')
-                                                    ->options([
-                                                        'ok' => 'OK (Đạt chuẩn)',
-                                                        'fault' => 'Lỗi / Hư hỏng',
-                                                    ])
-                                                    ->default('ok')
-                                                    ->required(),
-                                                TextInput::make('condition_note')
-                                                    ->label('Ghi chú')
-                                                    ->placeholder('VD: trầy nhẹ, nút kẹt...'),
-                                            ])
-                                            ->addActionLabel('+ Thêm thiết bị vào đợt nhập')
-                                            ->reorderable(false)
-                                            ->collapsible(false),
-                                    ]),
-                            ]),
-                    ]),
+                ViewField::make('selected_assets')
+                    ->label('Mã hàng trong đợt')
+                    ->view('filament.components.checkin-batch-assets-selector')
+                    ->viewData(function ($record = null, string $operation = 'create') {
+                        $isEdit = ($record instanceof CheckinBatch) || $operation === 'edit';
+                        $initialAssets = [];
+
+                        if ($record instanceof CheckinBatch) {
+                            $initialAssets = $record->items()
+                                ->with('asset.productLine')
+                                ->get()
+                                ->map(function ($item) {
+                                    $asset = $item->asset;
+                                    if (! $asset) {
+                                        return null;
+                                    }
+                                    $statusLabel = $asset->current_status instanceof AssetStatus
+                                        ? $asset->current_status->getLabel()
+                                        : 'Sẵn sàng trong kho';
+                                    $statusColor = $asset->current_status instanceof AssetStatus
+                                        ? $asset->current_status->getColor()
+                                        : 'success';
+
+                                    return [
+                                        'id' => (int) $asset->id,
+                                        'serial_no' => (string) $asset->serial_no,
+                                        'name' => (string) ($asset->productLine?->name ?? 'LED'),
+                                        'size' => (string) ($asset->size ?? '0.5×0.5 m'),
+                                        'status' => (string) $statusLabel,
+                                        'status_color' => (string) $statusColor,
+                                    ];
+                                })
+                                ->filter()
+                                ->values()
+                                ->toArray();
+                        }
+
+                        return [
+                            'isEdit' => $isEdit,
+                            'initialAssets' => $initialAssets,
+                            'apiUrl' => route('filament.checkin-assets'),
+                        ];
+                    })
+                    ->default([])
+                    ->afterStateHydrated(function ($component, $state, ?CheckinBatch $record) {
+                        if ($record) {
+                            $component->state($record->items()->pluck('asset_id')->map(fn ($id) => (int) $id)->toArray());
+                        }
+                    })
+                    ->dehydrated(true)
+                    ->columnSpanFull(),
             ]);
     }
 }

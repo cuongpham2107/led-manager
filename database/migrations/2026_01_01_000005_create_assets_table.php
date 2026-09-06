@@ -14,7 +14,6 @@ return new class extends Migration
             $table->string('qr_code')->nullable()->unique();
 
             $table->foreignId('product_line_id')->nullable()->constrained()->nullOnDelete();
-            $table->foreignId('device_type_id')->constrained()->restrictOnDelete();
 
             $table->string('size')->nullable();       // 500x500mm
             $table->date('manufactured_date')->nullable();
@@ -32,6 +31,7 @@ return new class extends Migration
             ])->default('ready');
 
             $table->foreignId('current_warehouse_id')->nullable()->constrained('warehouses')->nullOnDelete();
+            $table->foreignId('warehouse_location_id')->nullable()->constrained('warehouse_locations')->nullOnDelete();
 
             $table->text('note')->nullable();
             $table->timestamps();
@@ -39,6 +39,7 @@ return new class extends Migration
 
             $table->index(['product_line_id', 'current_status']);
             $table->index(['current_warehouse_id', 'current_status']);
+            $table->index(['warehouse_location_id', 'current_status']);
         });
     }
 

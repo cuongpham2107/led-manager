@@ -21,7 +21,7 @@ class AssetApiController extends Controller
 
         $code = trim($request->input('code'));
 
-        $asset = Asset::with(['productLine', 'deviceType', 'currentWarehouse', 'statusLogs', 'repairLogs'])
+        $asset = Asset::with(['productLine', 'currentWarehouse', 'statusLogs', 'repairLogs'])
             ->where('serial_no', $code)
             ->orWhere('qr_code', $code)
             ->orWhere('id', is_numeric($code) ? (int) $code : 0)

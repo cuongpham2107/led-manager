@@ -7,12 +7,12 @@ use App\Enums\RepairResultStatus;
 use App\Enums\ReturnBatchStatus;
 use App\Enums\ReturnGrade;
 use App\Filament\Resources\CheckoutBatches\Pages\ListCheckoutBatches;
+use App\Filament\Resources\Orders\Pages\EditOrder;
 use App\Filament\Resources\Orders\Pages\ListOrders;
 use App\Models\Asset;
 use App\Models\CheckoutBatch;
 use App\Models\CheckoutBatchItem;
 use App\Models\Customer;
-use App\Models\DeviceType;
 use App\Models\Order;
 use App\Models\RepairLog;
 use App\Models\ReturnBatch;
@@ -31,13 +31,11 @@ test('order return action successfully creates return batch, transitions asset s
 
     $customer = Customer::first();
     $warehouse = Warehouse::first();
-    $deviceType = DeviceType::first();
 
     $order = Order::create([
         'order_no' => 'ORD-TEST-RET-01',
         'customer_id' => $customer->id,
         'warehouse_id' => $warehouse->id,
-        'device_type_id' => $deviceType->id,
         'request_date' => now()->toDateString(),
         'value' => 100000000,
         'status' => OrderStatus::Dispatched,
@@ -150,13 +148,11 @@ test('order return action marks unreceived asset as Missing and still advances o
 
     $customer = Customer::first();
     $warehouse = Warehouse::first();
-    $deviceType = DeviceType::first();
 
     $order = Order::create([
         'order_no' => 'ORD-TEST-RET-02',
         'customer_id' => $customer->id,
         'warehouse_id' => $warehouse->id,
-        'device_type_id' => $deviceType->id,
         'request_date' => now()->toDateString(),
         'value' => 50000000,
         'status' => OrderStatus::Dispatched,
@@ -233,13 +229,11 @@ test('checkout batch return advances order to Returned only when every batch is 
 
     $customer = Customer::first();
     $warehouse = Warehouse::first();
-    $deviceType = DeviceType::first();
 
     $order = Order::create([
         'order_no' => 'ORD-TEST-RET-03',
         'customer_id' => $customer->id,
         'warehouse_id' => $warehouse->id,
-        'device_type_id' => $deviceType->id,
         'request_date' => now()->toDateString(),
         'value' => 80000000,
         'status' => OrderStatus::Dispatched,
@@ -327,4 +321,36 @@ test('checkout batch return advances order to Returned only when every batch is 
     expect($order->fresh()->status)->toBe(OrderStatus::Returned);
     expect($asset1->fresh()->current_status)->toBe(AssetStatus::Ready);
     expect($asset2->fresh()->current_status)->toBe(AssetStatus::Ready);
+});
+
+test('draft order displays only initial header actions in edit page', function () {
+    (new LedOsDataSeeder)->run();
+
+    $user = User::where('email', 'admin@ledmanager.com')->first();
+    actingAs($user);
+
+    $customer = Customer::first();
+    $warehouse = Warehouse::first();
+
+    $order = Order::create([
+        'order_no' => 'ORD-TEST-DRAFT-01',
+        'customer_id' => $customer->id,
+        'warehouse_id' => $warehouse->id,
+        'request_date' => now()->toDateString(),
+        'value' => 30000000,
+        'status' => OrderStatus::Draft,
+        'event' => 'Sự kiện khai mạc',
+    ]);
+
+    Livewire::test(EditOrder::class, ['record' => $order->id])
+        ->assertActionVisible('create_contract')
+        ->assertActionVisible('create_checkout_batch')
+        ->assertActionHidden('view_contract')
+        ->assertActionHidden('view_checkout_batch')
+        ->assertActionHidden('change_order')
+        ->assertActionHidden('assign_crew')
+        ->assertActionHidden('manage_timeline')
+        ->assertActionHidden('dispatch_order')
+        ->assertActionHidden('return_order')
+        ->assertActionHidden('complete_order');
 });

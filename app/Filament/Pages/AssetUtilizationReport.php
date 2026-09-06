@@ -23,24 +23,32 @@ class AssetUtilizationReport extends Page implements HasTable
     use HasPageShield;
     use InteractsWithTable;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Báo cáo & Thống kê';
+    protected static string|UnitEnum|null $navigationGroup = 'Báo cáo';
 
-    protected static ?string $navigationLabel = 'Tỷ lệ khai thác kho';
+    protected static ?string $navigationLabel = 'Sử dụng tài sản';
 
-    protected static ?string $title = 'Báo Cáo Tỷ Lệ Khai Thác Kho & Vòng Đời Thiết Bị';
+    protected static ?string $title = 'Báo Cáo Sử Dụng Tài Sản & Vòng Đời Thiết Bị';
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedSquare3Stack3d;
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-chart-bar';
+
+    protected static ?int $navigationSort = 2;
 
     protected string $view = 'filament.pages.asset-utilization-report';
 
     public function getStats(): array
     {
-        $total = Asset::count();
-        $ready = Asset::where('current_status', AssetStatus::Ready)->count();
-        $inEvent = Asset::whereIn('current_status', [AssetStatus::InEvent, AssetStatus::InTransit])->count();
-        $repairing = Asset::where('current_status', AssetStatus::Repairing)->count();
-        $missing = Asset::where('current_status', AssetStatus::Missing)->count();
-        $disposed = Asset::where('current_status', AssetStatus::Disposed)->count();
+        $whId = auth()->user()?->getScopedWarehouseId();
+        $base = Asset::query();
+        if ($whId) {
+            $base->where('current_warehouse_id', $whId);
+        }
+
+        $total = (clone $base)->count();
+        $ready = (clone $base)->where('current_status', AssetStatus::Ready)->count();
+        $inEvent = (clone $base)->whereIn('current_status', [AssetStatus::InEvent, AssetStatus::InTransit])->count();
+        $repairing = (clone $base)->where('current_status', AssetStatus::Repairing)->count();
+        $missing = (clone $base)->where('current_status', AssetStatus::Missing)->count();
+        $disposed = (clone $base)->where('current_status', AssetStatus::Disposed)->count();
         $rate = $total > 0 ? round(($inEvent / $total) * 100, 1) : 0;
         $readyRate = $total > 0 ? round(($ready / $total) * 100, 1) : 0;
         $repairingRate = $total > 0 ? round(($repairing / $total) * 100, 1) : 0;
@@ -60,7 +68,12 @@ class AssetUtilizationReport extends Page implements HasTable
 
     public function getProductLineStats(): array
     {
-        $lines = ProductLine::with(['assets.currentWarehouse'])->get();
+        $whId = auth()->user()?->getScopedWarehouseId();
+        $lines = ProductLine::with(['assets' => function ($q) use ($whId) {
+            if ($whId) {
+                $q->where('current_warehouse_id', $whId);
+            }
+        }, 'assets.currentWarehouse'])->get();
 
         return $lines->map(function ($line) {
             $assets = $line->assets;
@@ -71,29 +84,32 @@ class AssetUtilizationReport extends Page implements HasTable
             $missing = $assets->where('current_status', AssetStatus::Missing)->count();
             $disposed = $assets->where('current_status', AssetStatus::Disposed)->count();
 
-            $rate = $total > 0 ? round(($inEvent / $total) * 100, 1) : 0;
+            $utilizationRate = $total > 0 ? round(($inEvent / $total) * 100, 1) : 0;
             $readyRate = $total > 0 ? round(($ready / $total) * 100, 1) : 0;
             $repairingRate = $total > 0 ? round(($repairing / $total) * 100, 1) : 0;
 
-            $warehouseDistribution = $assets->groupBy(fn ($a) => $a->currentWarehouse?->name ?? 'Chưa gán kho')
+            $warehouseDistribution = $assets->groupBy(fn ($a) => $a->currentWarehouse?->name ?? 'Chưa gán')
                 ->map(fn ($group) => $group->count());
 
             return [
                 'id' => $line->id,
                 'name' => $line->name,
                 'code' => $line->code,
+                'pitch' => $line->pitch ?? '—',
+                'pixel_pitch' => $line->pixel_pitch_mm ?? $line->pixel_pitch ?? ($line->pitch ?? '—'),
+                'cabinet_size' => ($line->cabinet_width_mm && $line->cabinet_height_mm) ? "{$line->cabinet_width_mm}x{$line->cabinet_height_mm}mm" : (($line->module_width_mm && $line->module_height_mm) ? "{$line->module_width_mm}x{$line->module_height_mm}mm" : '500x500mm'),
                 'environment' => $line->environment?->value ?? 'indoor',
-                'pixel_pitch' => $line->pixel_pitch_mm ?? $line->pixel_pitch ?? '—',
-                'cabinet_size' => ($line->cabinet_width_mm && $line->cabinet_height_mm) ? "{$line->cabinet_width_mm}x{$line->cabinet_height_mm}mm" : '500x500mm',
+                'module_size' => ($line->module_width_mm && $line->module_height_mm) ? $line->module_width_mm.'×'.$line->module_height_mm.' mm' : '—',
                 'total' => $total,
                 'ready' => $ready,
                 'ready_rate' => $readyRate,
                 'in_event' => $inEvent,
+                'utilization_rate' => $utilizationRate,
+                'rate' => $utilizationRate,
                 'repairing' => $repairing,
                 'repairing_rate' => $repairingRate,
                 'missing' => $missing,
                 'disposed' => $disposed,
-                'rate' => $rate,
                 'warehouses' => $warehouseDistribution,
             ];
         })->toArray();
@@ -101,7 +117,18 @@ class AssetUtilizationReport extends Page implements HasTable
 
     public function getWarehouseStats(): array
     {
-        $warehouses = Warehouse::with(['assets.productLine'])->get();
+        $whId = auth()->user()?->getScopedWarehouseId();
+        $query = Warehouse::with(['assets' => function ($q) use ($whId) {
+            if ($whId) {
+                $q->where('current_warehouse_id', $whId);
+            }
+        }, 'assets.productLine']);
+
+        if ($whId) {
+            $query->where('id', $whId);
+        }
+
+        $warehouses = $query->get();
 
         return $warehouses->map(function ($warehouse) {
             $assets = $warehouse->assets;
@@ -159,32 +186,64 @@ class AssetUtilizationReport extends Page implements HasTable
                 TextColumn::make('total_cabinets')
                     ->label('Tổng số lượng kho')
                     ->numeric()
-                    ->state(fn ($record) => $record->assets()->count()),
+                    ->state(function ($record) {
+                        $q = $record->assets();
+                        if ($whId = auth()->user()?->getScopedWarehouseId()) {
+                            $q->where('current_warehouse_id', $whId);
+                        }
+
+                        return $q->count();
+                    }),
                 TextColumn::make('ready_count')
                     ->label('Sẵn sàng')
                     ->badge()
                     ->color('success')
-                    ->state(fn ($record) => $record->assets()->where('current_status', AssetStatus::Ready)->count()),
+                    ->state(function ($record) {
+                        $q = $record->assets()->where('current_status', AssetStatus::Ready);
+                        if ($whId = auth()->user()?->getScopedWarehouseId()) {
+                            $q->where('current_warehouse_id', $whId);
+                        }
+
+                        return $q->count();
+                    }),
                 TextColumn::make('in_event_count')
                     ->label('Đang đi sự kiện')
                     ->badge()
                     ->color('info')
-                    ->state(fn ($record) => $record->assets()->whereIn('current_status', [AssetStatus::InEvent, AssetStatus::InTransit])->count()),
+                    ->state(function ($record) {
+                        $q = $record->assets()->whereIn('current_status', [AssetStatus::InEvent, AssetStatus::InTransit]);
+                        if ($whId = auth()->user()?->getScopedWarehouseId()) {
+                            $q->where('current_warehouse_id', $whId);
+                        }
+
+                        return $q->count();
+                    }),
                 TextColumn::make('repairing_count')
                     ->label('Đang bảo trì')
                     ->badge()
                     ->color('danger')
-                    ->state(fn ($record) => $record->assets()->where('current_status', AssetStatus::Repairing)->count()),
+                    ->state(function ($record) {
+                        $q = $record->assets()->where('current_status', AssetStatus::Repairing);
+                        if ($whId = auth()->user()?->getScopedWarehouseId()) {
+                            $q->where('current_warehouse_id', $whId);
+                        }
+
+                        return $q->count();
+                    }),
                 TextColumn::make('utilization_rate')
                     ->label('Tỷ lệ khai thác (%)')
                     ->badge()
                     ->color(fn ($state) => (float) $state > 70 ? 'danger' : ((float) $state > 40 ? 'warning' : 'success'))
                     ->state(function ($record) {
-                        $total = $record->assets()->count();
+                        $base = $record->assets();
+                        if ($whId = auth()->user()?->getScopedWarehouseId()) {
+                            $base->where('current_warehouse_id', $whId);
+                        }
+                        $total = (clone $base)->count();
                         if ($total === 0) {
                             return '0%';
                         }
-                        $active = $record->assets()->whereIn('current_status', [AssetStatus::InEvent, AssetStatus::InTransit])->count();
+                        $active = (clone $base)->whereIn('current_status', [AssetStatus::InEvent, AssetStatus::InTransit])->count();
 
                         return round(($active / $total) * 100, 1).'%';
                     }),

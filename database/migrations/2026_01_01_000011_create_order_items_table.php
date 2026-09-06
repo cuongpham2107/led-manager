@@ -12,7 +12,7 @@ return new class extends Migration
         Schema::create('order_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('order_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('device_type_id')->constrained()->restrictOnDelete();
+            $table->foreignId('product_line_id')->nullable()->constrained()->nullOnDelete();
             $table->unsignedInteger('quantity_required')->default(1);
             $table->decimal('unit_price', 14, 2)->default(0);
             $table->text('note')->nullable();

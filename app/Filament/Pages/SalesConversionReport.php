@@ -14,6 +14,7 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
+use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -25,7 +26,9 @@ class SalesConversionReport extends Page implements HasTable
     use HasPageShield;
     use InteractsWithTable;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Báo cáo & Thống kê';
+    protected static bool $shouldRegisterNavigation = false;
+
+    protected static string|UnitEnum|null $navigationGroup = 'Báo cáo';
 
     protected static ?string $navigationLabel = 'Tỷ lệ chuyển đổi Sales';
 
@@ -180,7 +183,8 @@ class SalesConversionReport extends Page implements HasTable
                     ->query(function (Builder $query, array $data): Builder {
                         return $query;
                     }),
-            ])
+            ], layout: FiltersLayout::AboveContent)
+            ->deferFilters(false)
             ->headerActions([
                 Action::make('export_csv')
                     ->label('Xuất CSV')

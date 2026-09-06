@@ -9,7 +9,6 @@ use App\Enums\ReturnGrade;
 use App\Models\Asset;
 use App\Models\CheckoutBatch;
 use App\Models\Customer;
-use App\Models\DeviceType;
 use App\Models\Order;
 use App\Models\ProductLine;
 use App\Models\ReturnBatch;
@@ -72,16 +71,9 @@ beforeEach(function () {
         'pitch' => 4.8,
     ]);
 
-    $this->deviceType = DeviceType::create([
-        'code' => 'CAB-P48',
-        'name' => 'Cabinet P4.8',
-        'category' => 'led_screen',
-    ]);
-
     $this->normalAsset = Asset::create([
         'serial_no' => 'CAB-NORMAL-01',
         'product_line_id' => $this->productLine->id,
-        'device_type_id' => $this->deviceType->id,
         'current_warehouse_id' => $this->warehouse->id,
         'current_status' => AssetStatus::InEvent,
         'size' => '0.5x0.5',
@@ -90,7 +82,6 @@ beforeEach(function () {
     $this->damagedAsset = Asset::create([
         'serial_no' => 'CAB-DAMAGED-01',
         'product_line_id' => $this->productLine->id,
-        'device_type_id' => $this->deviceType->id,
         'current_warehouse_id' => $this->warehouse->id,
         'current_status' => AssetStatus::InEvent,
         'size' => '0.5x0.5',

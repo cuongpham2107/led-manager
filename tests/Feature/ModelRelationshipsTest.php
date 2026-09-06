@@ -5,7 +5,6 @@ use App\Models\AssetStatusLog;
 use App\Models\CheckoutBatch;
 use App\Models\CheckoutBatchItem;
 use App\Models\Customer;
-use App\Models\DeviceType;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\ProductLine;
@@ -32,13 +31,6 @@ test('models and basic relationships can be instantiated', function () {
         'is_active' => true,
     ]);
 
-    $deviceType = DeviceType::create([
-        'name' => 'Cabinet',
-        'code' => 'CAB',
-        'unit' => 'piece',
-        'requires_serial' => true,
-    ]);
-
     $customer = Customer::create([
         'name' => 'Công ty ABC',
         'code' => 'CUS-001',
@@ -48,13 +40,11 @@ test('models and basic relationships can be instantiated', function () {
     $asset = Asset::create([
         'serial_no' => 'LED-0001',
         'product_line_id' => $productLine->id,
-        'device_type_id' => $deviceType->id,
         'current_warehouse_id' => $warehouse->id,
         'current_status' => 'ready',
     ]);
 
     expect($asset->productLine->id)->toBe($productLine->id)
-        ->and($asset->deviceType->id)->toBe($deviceType->id)
         ->and($asset->currentWarehouse->id)->toBe($warehouse->id);
 
     $quotation = Quotation::create([
@@ -67,7 +57,7 @@ test('models and basic relationships can be instantiated', function () {
 
     $quotationItem = QuotationItem::create([
         'quotation_id' => $quotation->id,
-        'device_type_id' => $deviceType->id,
+        'product_line_id' => $productLine->id,
         'description' => 'Cabinets 500x500',
         'quantity' => 10,
     ]);
@@ -80,13 +70,14 @@ test('models and basic relationships can be instantiated', function () {
         'warehouse_id' => $warehouse->id,
         'customer_id' => $customer->id,
         'quotation_id' => $quotation->id,
+        'product_line_id' => $productLine->id,
         'request_date' => now()->toDateString(),
         'status' => 'draft',
     ]);
 
     $orderItem = OrderItem::create([
         'order_id' => $order->id,
-        'device_type_id' => $deviceType->id,
+        'product_line_id' => $productLine->id,
         'quantity_required' => 10,
     ]);
 

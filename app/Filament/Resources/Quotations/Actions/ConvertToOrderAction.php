@@ -36,8 +36,8 @@ class ConvertToOrderAction extends Action
                 QuotationStatus::Draft,
                 QuotationStatus::Sent,
                 QuotationStatus::Approved,
-            ]) && ! $record->converted_order_id)
-            ->form([
+            ]) && ! $record->converted_order_id && ! $record->orders()->exists())
+            ->schema([
                 Select::make('warehouse_id')
                     ->label('Kho xuất hàng thực hiện')
                     ->options(Warehouse::query()->where('is_active', true)->pluck('name', 'id'))
@@ -47,9 +47,9 @@ class ConvertToOrderAction extends Action
             ->action(function (Quotation $record, array $data): void {
                 // Availability guard: block conversion when requested devices exceed stock
                 $bom = $record->items
-                    ->filter(fn ($item) => $item->device_type_id)
+                    ->filter(fn ($item) => $item->product_line_id)
                     ->map(fn ($item) => [
-                        'device_type_id' => (int) $item->device_type_id,
+                        'product_line_id' => (int) $item->product_line_id,
                         'quantity' => (int) $item->quantity,
                     ])
                     ->toArray();
@@ -64,7 +64,7 @@ class ConvertToOrderAction extends Action
 
                     if ($result['has_conflicts']) {
                         $messages = collect($result['conflicts'])
-                            ->map(fn (array $c): string => "• {$c['device_type_name']}: cần {$c['requested']}, chỉ còn {$c['available']} (thiếu {$c['shortage']})")
+                            ->map(fn (array $c): string => "• {$c['product_line_name']}: cần {$c['requested']}, chỉ còn {$c['available']} (thiếu {$c['shortage']})")
                             ->implode("\n");
 
                         Notification::make()
@@ -86,7 +86,7 @@ class ConvertToOrderAction extends Action
                     'customer_id' => $record->customer_id,
                     'warehouse_id' => $warehouseId,
                     'quotation_id' => $record->id,
-                    'device_type_id' => $record->device_type_id,
+                    'product_line_id' => $record->product_line_id,
                     'request_date' => $record->event_start_date ?? now()->toDateString(),
                     'expected_return_date' => $record->event_end_date ?? now()->addDays(max(1, $record->rental_days ?? 3))->toDateString(),
                     'area_m2' => $record->screen_area_m2,
@@ -99,15 +99,13 @@ class ConvertToOrderAction extends Action
 
                 // Copy BOM items to Order items
                 foreach ($record->items as $item) {
-                    if ($item->device_type_id) {
-                        OrderItem::create([
-                            'order_id' => $order->id,
-                            'device_type_id' => $item->device_type_id,
-                            'quantity_required' => (int) $item->quantity,
-                            'unit_price' => $item->unit_cost,
-                            'note' => $item->description,
-                        ]);
-                    }
+                    OrderItem::create([
+                        'order_id' => $order->id,
+                        'product_line_id' => $item->product_line_id,
+                        'quantity_required' => (int) $item->quantity,
+                        'unit_price' => $item->unit_cost,
+                        'note' => $item->description,
+                    ]);
                 }
 
                 $record->update([

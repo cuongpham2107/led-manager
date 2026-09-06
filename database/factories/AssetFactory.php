@@ -25,9 +25,10 @@ class AssetFactory extends Factory
         return [
             'serial_no' => 'SN-'.$tag,
             'qr_code' => 'QR-'.$tag,
-            'product_line_id' => fake()->optional()->numberBetween(1, 20),
-            'device_type_id' => fake()->optional()->numberBetween(1, 30),
+            'product_line_id' => null,
             'size' => fake()->randomElement(['P1.5', 'P2', 'P2.5', 'P3', 'P3.9', 'P4', 'P5', 'P6']),
+            'operating_hours' => fake()->numberBetween(0, 1500),
+            'rental_count' => fake()->numberBetween(0, 35),
             'manufactured_date' => fake()->dateTimeBetween('-5 years', '-1 month'),
             'purchase_cost' => fake()->randomFloat(2, 15_000_000, 180_000_000),
             'accumulated_depreciation' => fake()->randomFloat(2, 1_000_000, 80_000_000),
@@ -43,7 +44,8 @@ class AssetFactory extends Factory
                 AssetStatus::Missing,
                 AssetStatus::Disposed,
             ]),
-            'current_warehouse_id' => fake()->numberBetween(1, 20),
+            'current_warehouse_id' => null,
+            'warehouse_location_id' => null,
             'note' => fake()->optional()->sentence(),
         ];
     }

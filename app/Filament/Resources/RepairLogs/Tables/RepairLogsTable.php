@@ -9,6 +9,7 @@ use Filament\Actions\EditAction;
 use Filament\Support\Enums\Width;
 use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Enums\RecordActionsPosition;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -53,6 +54,20 @@ class RepairLogsTable
                 TextColumn::make('result_status')
                     ->label('Kết quả')
                     ->badge()
+                    ->sortable(query: function ($query, string $direction) {
+                        return $query->orderByRaw(
+                            "CASE result_status
+                                WHEN 'pending' THEN 1
+                                WHEN 'fixed' THEN 2
+                                WHEN 'disposed' THEN 3
+                                ELSE 4
+                            END {$direction}"
+                        );
+                    }),
+                TextColumn::make('asset.currentWarehouse.name')
+                    ->label('Kho hàng')
+                    ->badge()
+                    ->color('info')
                     ->sortable(),
                 TextColumn::make('creator.name')
                     ->label('Kỹ thuật viên')
@@ -60,10 +75,15 @@ class RepairLogsTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                SelectFilter::make('warehouse_id')
+                    ->label('Kho hàng')
+                    ->relationship('asset.currentWarehouse', 'name')
+                    ->hidden(fn (): bool => (bool) auth()->user()?->getScopedWarehouseId()),
                 SelectFilter::make('result_status')
                     ->label('Kết quả xử lý')
                     ->options(RepairResultStatus::class),
-            ])
+            ], layout: FiltersLayout::AboveContent)
+            ->deferFilters(false)
             ->recordActions([
                 EditAction::make()
                     ->modalHeading('Cập nhật phiếu sửa chữa')
@@ -74,6 +94,7 @@ class RepairLogsTable
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->defaultSort('result_status', 'asc');
     }
 }

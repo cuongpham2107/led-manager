@@ -1,10 +1,8 @@
 <?php
 
-use App\Enums\DeviceUnit;
 use App\Enums\OrderStatus;
 use App\Enums\QuotationStatus;
 use App\Models\Customer;
-use App\Models\DeviceType;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\ProductLine;
@@ -41,13 +39,6 @@ test('converting quotation to order copies BOM items to order items and assigns 
         'is_active' => true,
     ]);
 
-    $dt = DeviceType::create([
-        'name' => 'Cabinet LED Module',
-        'code' => 'CAB-TEST',
-        'unit' => DeviceUnit::Piece,
-        'requires_serial' => true,
-    ]);
-
     $quotation = Quotation::create([
         'code' => 'QUO-TEST-001',
         'customer_id' => $customer->id,
@@ -64,7 +55,7 @@ test('converting quotation to order copies BOM items to order items and assigns 
 
     $quotationItem = QuotationItem::create([
         'quotation_id' => $quotation->id,
-        'device_type_id' => $dt->id,
+        'product_line_id' => $pl->id,
         'description' => 'Cabinet P2.6 LED',
         'quantity' => 84,
         'unit_cost' => 400000,
@@ -88,7 +79,7 @@ test('converting quotation to order copies BOM items to order items and assigns 
     foreach ($quotation->items as $item) {
         OrderItem::create([
             'order_id' => $order->id,
-            'device_type_id' => $item->device_type_id,
+            'product_line_id' => $item->product_line_id,
             'quantity_required' => (int) $item->quantity,
             'unit_price' => $item->unit_cost,
             'note' => $item->description,
@@ -102,7 +93,7 @@ test('converting quotation to order copies BOM items to order items and assigns 
 
     expect($order->items()->count())->toBe(1)
         ->and($order->items()->first()->quantity_required)->toBe(84)
-        ->and($order->items()->first()->device_type_id)->toBe($dt->id)
+        ->and($order->items()->first()->product_line_id)->toBe($pl->id)
         ->and($order->warehouse_id)->toBe($warehouse->id)
         ->and($quotation->status)->toBe(QuotationStatus::Converted);
 });

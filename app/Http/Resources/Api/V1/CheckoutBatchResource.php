@@ -55,10 +55,6 @@ class CheckoutBatchResource extends JsonResource
                 'code' => $this->warehouse->code,
                 'name' => $this->warehouse->name,
             ] : null,
-            'device_type' => $this->deviceType ? [
-                'id' => $this->deviceType->id,
-                'name' => $this->deviceType->name,
-            ] : null,
             'items' => CheckoutBatchItemResource::collection($this->whenLoaded('items')),
             'created_by' => $this->creator ? [
                 'id' => $this->creator->id,

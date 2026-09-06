@@ -96,13 +96,12 @@ class CheckoutBatchForm
                                             ->relationship('items')
                                             ->label('Thiết bị quét xuất')
                                             ->table([
-                                                TableColumn::make('Mã Serial / Thiết bị'),
-                                                TableColumn::make('Đã quét'),
-                                                TableColumn::make('Độ sáng'),
-                                                TableColumn::make('Điểm LED'),
-                                                TableColumn::make('Màu sắc'),
-                                                TableColumn::make('Nguồn điện'),
-                                                TableColumn::make('Ghi chú kiểm tra'),
+                                                TableColumn::make('Mã Serial / Thiết bị')
+                                                    ->width('50%'),
+                                                TableColumn::make('Đã quét')
+                                                    ->width('15%'),
+                                                TableColumn::make('Ghi chú')
+                                                    ->width('35%'),
                                             ])
                                             ->schema([
                                                 Select::make('asset_id')
@@ -114,21 +113,9 @@ class CheckoutBatchForm
                                                 Toggle::make('is_dispatched')
                                                     ->label('Đã quét')
                                                     ->default(true),
-                                                Toggle::make('checked_brightness')
-                                                    ->label('Độ sáng')
-                                                    ->default(true),
-                                                Toggle::make('checked_dead_pixels')
-                                                    ->label('Điểm LED')
-                                                    ->default(true),
-                                                Toggle::make('checked_color')
-                                                    ->label('Màu sắc')
-                                                    ->default(true),
-                                                Toggle::make('checked_power')
-                                                    ->label('Nguồn')
-                                                    ->default(true),
-                                                TextInput::make('checklist_note')
+                                                TextInput::make('note')
                                                     ->label('Ghi chú')
-                                                    ->placeholder('Ghi chú tình trạng...'),
+                                                    ->placeholder('Ghi chú nếu có...'),
                                             ])
                                             ->addActionLabel('+ Quét / Thêm thiết bị vào đợt xuất')
                                             ->collapsible(false)

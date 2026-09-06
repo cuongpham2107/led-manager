@@ -51,10 +51,6 @@ class CheckinBatchResource extends JsonResource
                 'code' => $this->productLine->code,
                 'name' => $this->productLine->name,
             ] : null,
-            'device_type' => $this->deviceType ? [
-                'id' => $this->deviceType->id,
-                'name' => $this->deviceType->name,
-            ] : null,
             'items' => CheckinBatchItemResource::collection($this->whenLoaded('items')),
             'created_by' => $this->creator ? [
                 'id' => $this->creator->id,

@@ -7,7 +7,6 @@ use App\Models\Asset;
 use App\Models\AssetStatusLog;
 use App\Models\CheckinBatch;
 use App\Models\CheckinBatchItem;
-use App\Models\DeviceType;
 use App\Models\ProductLine;
 use App\Models\User;
 use App\Models\Warehouse;
@@ -34,18 +33,11 @@ beforeEach(function () {
         'pitch' => 2.6,
     ]);
 
-    $this->deviceType = DeviceType::create([
-        'code' => 'CAB-P26',
-        'name' => 'Cabinet P2.6',
-        'category' => 'led_screen',
-    ]);
-
     $this->batch = CheckinBatch::create([
         'code' => 'IN-TEST-01',
         'warehouse_id' => $this->warehouse->id,
         'batch_type' => CheckinBatchType::Production,
         'product_line_id' => $this->productLine->id,
-        'device_type_id' => $this->deviceType->id,
         'quantity' => 5,
         'status' => BatchStatus::Pending,
         'production_note' => 'Lô test nhập kho',
@@ -57,7 +49,6 @@ beforeEach(function () {
         'serial_no' => 'P26-260829-001',
         'qr_code' => 'P26-260829-001',
         'product_line_id' => $this->productLine->id,
-        'device_type_id' => $this->deviceType->id,
         'current_warehouse_id' => null,
         'current_status' => AssetStatus::Repairing,
         'size' => '0.5x0.5',
@@ -71,7 +62,7 @@ test('can list check-in batches and get details via API', function () {
         ->assertJsonStructure([
             'success',
             'data' => [
-                '*' => ['id', 'code', 'status', 'batch_type', 'quantity', 'warehouse', 'product_line', 'device_type'],
+                '*' => ['id', 'code', 'status', 'batch_type', 'quantity', 'warehouse', 'product_line'],
             ],
             'pagination' => ['current_page', 'last_page', 'per_page', 'total'],
         ])

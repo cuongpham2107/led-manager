@@ -2,6 +2,10 @@
 
 namespace App\Filament\Resources\Quotations\Pages;
 
+use App\Filament\Resources\Quotations\Actions\ConvertToOrderAction;
+use App\Filament\Resources\Quotations\Actions\DownloadPdfAction;
+use App\Filament\Resources\Quotations\Actions\MarkRejectedAction;
+use App\Filament\Resources\Quotations\Actions\ViewOrderAction;
 use App\Filament\Resources\Quotations\QuotationResource;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
@@ -24,6 +28,10 @@ class EditQuotation extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
+            ConvertToOrderAction::make(),
+            ViewOrderAction::make(),
+            DownloadPdfAction::make(),
+            MarkRejectedAction::make(),
             DeleteAction::make(),
         ];
     }

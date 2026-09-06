@@ -11,6 +11,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Enums\RecordActionsPosition;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -23,6 +24,7 @@ class CheckoutBatchesTable
             ->modifyQueryUsing(fn ($query) => $query->with(['order', 'customer', 'warehouse', 'returnBatches']))
             ->columns([
                 TextColumn::make('code')
+                    ->color('primary')
                     ->label('Mã đợt xuất')
                     ->searchable()
                     ->sortable()
@@ -57,7 +59,16 @@ class CheckoutBatchesTable
                 TextColumn::make('status')
                     ->label('Trạng thái')
                     ->badge()
-                    ->sortable(),
+                    ->sortable(query: function ($query, string $direction) {
+                        return $query->orderByRaw("CASE checkout_batches.status
+                            WHEN 'pending' THEN 1
+                            WHEN 'in_progress' THEN 2
+                            WHEN 'dispatched' THEN 3
+                            WHEN 'completed' THEN 4
+                            WHEN 'cancelled' THEN 5
+                            ELSE 6
+                        END {$direction}");
+                    }),
                 TextColumn::make('dispatched_at')
                     ->label('Thời gian xuất')
                     ->dateTime('d/m/Y H:i')
@@ -70,11 +81,13 @@ class CheckoutBatchesTable
                     ->options(BatchStatus::class),
                 SelectFilter::make('warehouse_id')
                     ->label('Kho hàng')
-                    ->relationship('warehouse', 'name'),
-            ])
+                    ->relationship('warehouse', 'name')
+                    ->hidden(fn (): bool => (bool) auth()->user()?->getScopedWarehouseId()),
+            ], layout: FiltersLayout::AboveContent)
+            ->deferFilters(false)
             ->recordActions([
+                EditAction::make(),
                 ActionGroup::make([
-                    EditAction::make(),
                     CreateReturnBatchAction::make(),
                     ViewReturnBatchAction::make(),
                 ]),
@@ -83,6 +96,7 @@ class CheckoutBatchesTable
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->defaultSort('status', 'asc');
     }
 }

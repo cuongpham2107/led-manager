@@ -336,3 +336,36 @@ html.dark .fi-sidebar-item-btn:hover > svg {
     background-color: var(--sidebar-item-hover);
     color: #0f172a;
 }
+
+/* ==========================================================================
+   Page Sub-Navigation Sidebar (Card style matching Table container)
+   ========================================================================== */
+.fi-page-sub-navigation-sidebar-ctn {
+    background-color: #ffffff;
+    border-radius: 0.75rem; /* rounded-xl */
+    padding: 1.25rem 0.875rem;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
+    border: 1px solid var(--sidebar-border, #e2e8f0);
+    overflow: hidden;
+    width: 20rem;
+    flex-shrink: 0;
+}
+
+:is(.fi-page-sub-navigation-sidebar-ctn):where(.dark, .dark *),
+html.dark .fi-page-sub-navigation-sidebar-ctn {
+    background-color: #0f172a;
+    border-color: #1e293b;
+    box-shadow: none;
+}
+
+.fi-page-sub-navigation-sidebar-ctn .fi-page-sub-navigation-sidebar {
+    gap: 1.25rem;
+}
+
+.fi-page-sub-navigation-sidebar-ctn .fi-sidebar-item-btn {
+    border-radius: 0.5rem;
+    padding-inline: 0.625rem;
+    padding-block: 0.45rem;
+    min-height: 2.125rem;
+}
+

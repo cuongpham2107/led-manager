@@ -22,7 +22,7 @@ return new class extends Migration
 
             $table->decimal('area_m2', 10, 2)->nullable();
             $table->string('event')->nullable(); // event name/description
-            $table->foreignId('device_type_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('product_line_id')->nullable()->constrained()->nullOnDelete();
 
             $table->decimal('value', 14, 2)->default(0); // contract/order value
 

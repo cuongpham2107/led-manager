@@ -62,8 +62,8 @@ class ReturnOrderAction extends Action
                             'asset_id' => $cbItem->asset_id,
                             'asset_name' => $asset ? "{$asset->serial_no} — ".($asset->productLine?->name ?? 'Cabin LED') : "Thiết bị #{$cbItem->asset_id}",
                             'checkout_batch_item_id' => $cbItem->id,
-                            'is_received' => true,
-                            'grade' => ReturnGrade::Normal->value,
+                            'is_received' => false,
+                            'grade' => null,
                             'grade_note' => null,
                         ];
                     }
@@ -117,11 +117,10 @@ class ReturnOrderAction extends Action
                                     ->dehydrated(false),
                                 Toggle::make('is_received')
                                     ->label('Đã nhận')
-                                    ->default(true),
+                                    ->default(false),
                                 Select::make('grade')
                                     ->label('Phân loại')
                                     ->options(ReturnGrade::class)
-                                    ->default(ReturnGrade::Normal)
                                     ->required(),
                                 TextInput::make('grade_note')
                                     ->label('Ghi chú lỗi')

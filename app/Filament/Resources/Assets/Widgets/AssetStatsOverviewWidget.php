@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Assets\Widgets;
 
 use App\Enums\AssetStatus;
 use App\Models\Asset;
+use App\Models\User;
 use Carbon\Carbon;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
@@ -12,36 +13,45 @@ class AssetStatsOverviewWidget extends BaseWidget
 {
     protected function getStats(): array
     {
-        $totalAssets = Asset::count();
-        $totalCost = (float) Asset::sum('purchase_cost');
+        /** @var User|null $user */
+        $user = auth()->user();
+        $whId = $user?->getScopedWarehouseId();
 
-        $readyCount = Asset::where('current_status', AssetStatus::Ready)->count();
+        $base = Asset::query();
+        if ($whId) {
+            $base->where('current_warehouse_id', $whId);
+        }
+
+        $totalAssets = (clone $base)->count();
+        $totalCost = (float) (clone $base)->sum('purchase_cost');
+
+        $readyCount = (clone $base)->where('current_status', AssetStatus::Ready)->count();
         $readyPercent = $totalAssets > 0 ? round(($readyCount / $totalAssets) * 100, 1) : 0;
 
-        $inEventCount = Asset::where('current_status', AssetStatus::InEvent)->count();
-        $inTransitCount = Asset::where('current_status', AssetStatus::InTransit)->count();
+        $inEventCount = (clone $base)->where('current_status', AssetStatus::InEvent)->count();
+        $inTransitCount = (clone $base)->where('current_status', AssetStatus::InTransit)->count();
         $busyCount = $inEventCount + $inTransitCount;
 
-        $repairingCount = Asset::where('current_status', AssetStatus::Repairing)->count();
-        $disposedCount = Asset::where('current_status', AssetStatus::Disposed)->count();
+        $repairingCount = (clone $base)->where('current_status', AssetStatus::Repairing)->count();
+        $disposedCount = (clone $base)->where('current_status', AssetStatus::Disposed)->count();
 
         // Sparkline: Monthly new assets added to stock (6 months)
         $newAssetsTrend = $this->getMonthlyTrend(
-            fn (Carbon $month) => Asset::whereYear('created_at', $month->year)
+            fn (Carbon $month) => (clone $base)->whereYear('created_at', $month->year)
                 ->whereMonth('created_at', $month->month)
                 ->count()
         );
 
         // Sparkline: Monthly assets out of warehouse (InEvent + InTransit snapshot)
         $busyAssetsTrend = $this->getMonthlyTrend(
-            fn (Carbon $month) => Asset::whereIn('current_status', [AssetStatus::InEvent, AssetStatus::InTransit])
+            fn (Carbon $month) => (clone $base)->whereIn('current_status', [AssetStatus::InEvent, AssetStatus::InTransit])
                 ->whereDate('created_at', '<=', $month->endOfMonth())
                 ->count()
         );
 
         // Sparkline: Monthly repair count trend
         $repairTrend = $this->getMonthlyTrend(
-            fn (Carbon $month) => Asset::where('current_status', AssetStatus::Repairing)
+            fn (Carbon $month) => (clone $base)->where('current_status', AssetStatus::Repairing)
                 ->whereDate('created_at', '<=', $month->endOfMonth())
                 ->count()
         );

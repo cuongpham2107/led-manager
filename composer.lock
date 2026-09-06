@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "83dcbc60f679c12e522d60637b6238e8",
+    "content-hash": "ed037dab753a9c671a16b4e2009d26b1",
     "packages": [
         {
             "name": "anourvalar/eloquent-serialize",
@@ -2823,6 +2823,80 @@
                 "source": "https://github.com/kirschbaum-development/eloquent-power-joins/tree/4.3.3"
             },
             "time": "2026-07-23T11:41:37+00:00"
+        },
+        {
+            "name": "kisame76/filament-tree-table",
+            "version": "v1.3.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/Kisame76/filament-tree-table.git",
+                "reference": "43272c8c434c0f8f231ce34577f69a4435c60672"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Kisame76/filament-tree-table/zipball/43272c8c434c0f8f231ce34577f69a4435c60672",
+                "reference": "43272c8c434c0f8f231ce34577f69a4435c60672",
+                "shasum": ""
+            },
+            "require": {
+                "filament/actions": "^4.0||^5.0",
+                "filament/support": "^4.0||^5.0",
+                "filament/tables": "^4.0||^5.0",
+                "illuminate/contracts": "^11.0||^12.0||^13.0",
+                "illuminate/database": "^11.0||^12.0||^13.0",
+                "illuminate/support": "^11.0||^12.0||^13.0",
+                "php": "^8.2",
+                "spatie/laravel-package-tools": "^1.16"
+            },
+            "require-dev": {
+                "filament/filament": "^4.0||^5.0",
+                "larastan/larastan": "^3.0",
+                "laravel/pint": "^1.0",
+                "orchestra/testbench": "^9.0||^10.0||^11.0",
+                "pestphp/pest": "^3.0||^4.0",
+                "pestphp/pest-plugin-laravel": "^3.0||^4.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Kisame76\\FilamentTreeTable\\FilamentTreeTableServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Kisame76\\FilamentTreeTable\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Kiyan Doguc",
+                    "email": "k.doguc@kisame-labs.com",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Expandable parent/child tree rows for Filament v4 & v5 tables — inline sub-rows, search/filter aware, expand & collapse all.",
+            "homepage": "https://github.com/Kisame76/filament-tree-table",
+            "keywords": [
+                "expandable",
+                "filament",
+                "filamentphp",
+                "hierarchy",
+                "laravel",
+                "nested",
+                "table",
+                "tree"
+            ],
+            "support": {
+                "issues": "https://github.com/Kisame76/filament-tree-table/issues",
+                "source": "https://github.com/Kisame76/filament-tree-table"
+            },
+            "time": "2026-06-18T10:57:05+00:00"
         },
         {
             "name": "laravel/framework",
@@ -5781,6 +5855,69 @@
                 "source": "https://github.com/bobthecow/psysh/tree/v0.12.24"
             },
             "time": "2026-06-29T15:41:09+00:00"
+        },
+        {
+            "name": "qalainau/filament-univer-sheet",
+            "version": "v1.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/qalainau/filament-univer-sheet.git",
+                "reference": "a5677be822882e82f36b9433abfca4d761c6c2ef"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/qalainau/filament-univer-sheet/zipball/a5677be822882e82f36b9433abfca4d761c6c2ef",
+                "reference": "a5677be822882e82f36b9433abfca4d761c6c2ef",
+                "shasum": ""
+            },
+            "require": {
+                "filament/filament": "^5.0",
+                "php": "^8.3",
+                "spatie/laravel-package-tools": "^1.15 || ^2.0"
+            },
+            "require-dev": {
+                "laravel/pint": "^1.0",
+                "orchestra/testbench": "^10.0",
+                "pestphp/pest": "^4.0",
+                "pestphp/pest-plugin-laravel": "^4.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Qalainau\\UniverSheet\\UniverSheetServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Qalainau\\UniverSheet\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Because",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Univer Sheet spreadsheet components for Filament",
+            "homepage": "https://github.com/qalainau/filament-univer-sheet",
+            "keywords": [
+                "excel",
+                "filament",
+                "laravel",
+                "spreadsheet",
+                "univer"
+            ],
+            "support": {
+                "issues": "https://github.com/qalainau/filament-univer-sheet/issues",
+                "source": "https://github.com/qalainau/filament-univer-sheet/tree/v1.1.0"
+            },
+            "time": "2026-04-20T07:55:30+00:00"
         },
         {
             "name": "ramsey/collection",

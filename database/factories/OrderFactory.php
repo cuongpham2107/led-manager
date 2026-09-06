@@ -25,7 +25,7 @@ class OrderFactory extends Factory
             'expected_return_date' => fake()->optional(0.7)->dateTimeBetween($requestDate, '+20 days'),
             'area_m2' => fake()->randomFloat(2, 10, 180),
             'event' => fake()->words(3, true).' Event',
-            'device_type_id' => fake()->optional()->numberBetween(1, 30),
+            'product_line_id' => fake()->optional()->numberBetween(1, 20),
             'value' => fake()->randomFloat(2, 50_000_000, 500_000_000),
             'deposit_paid' => 0,
             'total_paid' => 0,

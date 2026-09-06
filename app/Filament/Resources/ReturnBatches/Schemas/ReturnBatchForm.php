@@ -149,11 +149,10 @@ class ReturnBatchForm
                                                 Select::make('grade')
                                                     ->label('Phân loại')
                                                     ->options(ReturnGrade::class)
-                                                    ->default(ReturnGrade::Normal)
                                                     ->required(),
                                                 Toggle::make('is_received')
                                                     ->label('Đã nhận')
-                                                    ->default(true),
+                                                    ->default(false),
                                                 TextInput::make('grade_note')
                                                     ->label('Ghi chú')
                                                     ->placeholder('Mô tả hỏng hóc nếu có...'),

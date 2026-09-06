@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('quotation_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('quotation_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('device_type_id')->constrained()->restrictOnDelete();
+            $table->foreignId('product_line_id')->nullable()->constrained()->nullOnDelete();
             $table->decimal('quantity', 10, 2)->default(1);
             $table->decimal('unit_cost', 14, 2)->default(0);
             $table->decimal('line_total', 14, 2)->default(0);

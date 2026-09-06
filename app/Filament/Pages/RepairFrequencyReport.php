@@ -13,6 +13,7 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
+use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -23,7 +24,9 @@ class RepairFrequencyReport extends Page implements HasTable
     use HasPageShield;
     use InteractsWithTable;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Báo cáo & Thống kê';
+    protected static bool $shouldRegisterNavigation = false;
+
+    protected static string|UnitEnum|null $navigationGroup = 'Báo cáo';
 
     protected static ?string $navigationLabel = 'Báo cáo bảo trì & Sự cố';
 
@@ -35,7 +38,12 @@ class RepairFrequencyReport extends Page implements HasTable
 
     public function getStats(): array
     {
-        $logs = RepairLog::all();
+        $whId = auth()->user()?->getScopedWarehouseId();
+        $query = RepairLog::query();
+        if ($whId) {
+            $query->whereHas('asset', fn ($q) => $q->where('current_warehouse_id', $whId));
+        }
+        $logs = $query->get();
         $total = $logs->count();
         $pending = $logs->where('result_status', RepairResultStatus::Pending)->count();
         $fixed = $logs->where('result_status', RepairResultStatus::Fixed)->count();
@@ -55,7 +63,13 @@ class RepairFrequencyReport extends Page implements HasTable
 
     public function getProductLineFailureStats(): array
     {
-        return ProductLine::with(['assets.repairLogs'])
+        $whId = auth()->user()?->getScopedWarehouseId();
+
+        return ProductLine::with(['assets' => function ($q) use ($whId) {
+            if ($whId) {
+                $q->where('current_warehouse_id', $whId);
+            }
+        }, 'assets.repairLogs'])
             ->get()
             ->map(function ($line) {
                 $logs = $line->assets->flatMap->repairLogs;
@@ -82,10 +96,13 @@ class RepairFrequencyReport extends Page implements HasTable
 
     public function table(Table $table): Table
     {
+        $query = RepairLog::query()->with(['asset.productLine', 'creator']);
+        if ($whId = auth()->user()?->getScopedWarehouseId()) {
+            $query->whereHas('asset', fn ($q) => $q->where('current_warehouse_id', $whId));
+        }
+
         return $table
-            ->query(
-                RepairLog::query()->with(['asset.productLine', 'creator'])
-            )
+            ->query($query)
             ->columns([
                 TextColumn::make('asset.serial_no')
                     ->label('Mã Serial Thiết bị')
@@ -121,7 +138,8 @@ class RepairFrequencyReport extends Page implements HasTable
                 SelectFilter::make('result_status')
                     ->label('Kết quả xử lý')
                     ->options(RepairResultStatus::class),
-            ])
+            ], layout: FiltersLayout::AboveContent)
+            ->deferFilters(false)
             ->headerActions([
                 Action::make('export_csv')
                     ->label('Xuất CSV')

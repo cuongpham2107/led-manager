@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AssetStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -29,11 +30,43 @@ class Warehouse extends Model
     }
 
     /**
+     * @return HasMany<WarehouseLocation, $this>
+     */
+    public function locations(): HasMany
+    {
+        return $this->hasMany(WarehouseLocation::class);
+    }
+
+    /**
      * @return HasMany<Asset, $this>
      */
     public function assets(): HasMany
     {
         return $this->hasMany(Asset::class, 'current_warehouse_id');
+    }
+
+    /**
+     * @return HasMany<Asset, $this>
+     */
+    public function readyAssets(): HasMany
+    {
+        return $this->hasMany(Asset::class, 'current_warehouse_id')->where('status', AssetStatus::Ready);
+    }
+
+    /**
+     * @return HasMany<Asset, $this>
+     */
+    public function inEventAssets(): HasMany
+    {
+        return $this->hasMany(Asset::class, 'current_warehouse_id')->where('status', AssetStatus::InEvent);
+    }
+
+    /**
+     * @return HasMany<Asset, $this>
+     */
+    public function repairingAssets(): HasMany
+    {
+        return $this->hasMany(Asset::class, 'current_warehouse_id')->where('status', AssetStatus::Repairing);
     }
 
     /**

@@ -205,12 +205,12 @@
                 <tr>
                     <td class="text-center">{{ $index + 1 }}</td>
                     <td>
-                        <strong>{{ $item->deviceType?->name }}</strong>
-                        @if($item->description)
+                        <strong>{{ $item->productLine?->name ?? $item->description ?? 'Thiết bị LED' }}</strong>
+                        @if($item->productLine && $item->description)
                             <div style="font-size: 8.5pt; color: #64748b;">{{ $item->description }}</div>
                         @endif
                     </td>
-                    <td class="text-center">{{ $item->deviceType?->unit?->getLabel() ?? 'Cái' }}</td>
+                    <td class="text-center">Tấm / Bộ</td>
                     <td class="text-center font-bold">{{ (int) $item->quantity }}</td>
                     <td class="text-right">{{ number_format($item->unit_cost, 0, ',', '.') }}</td>
                     <td class="text-right font-bold">{{ number_format($item->line_total, 0, ',', '.') }}</td>

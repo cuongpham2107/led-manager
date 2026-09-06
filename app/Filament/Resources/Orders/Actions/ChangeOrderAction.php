@@ -28,7 +28,7 @@ class ChangeOrderAction extends Action
             ->label('Thay đổi đơn hàng')
             ->icon('heroicon-o-pencil-square')
             ->color('gray')
-            ->visible(fn (Order $record): bool => ! in_array($record->status, [OrderStatus::Cancelled, OrderStatus::Completed]))
+            ->visible(fn (Order $record): bool => ! in_array($record->status, [OrderStatus::Draft, OrderStatus::Cancelled, OrderStatus::Completed]))
             ->modalHeading(fn (Order $record) => 'Phụ lục thay đổi đơn hàng: '.$record->order_no)
             ->modalDescription('Ghi nhận thay đổi phát sinh (gia hạn ngày trả, ghi chú, điều chỉnh). Hệ thống sẽ lưu lịch sử phụ lục và cập nhật đơn hàng.')
             ->modalSubmitActionLabel('Lưu thay đổi')

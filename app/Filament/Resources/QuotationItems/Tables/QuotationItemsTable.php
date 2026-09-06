@@ -20,8 +20,8 @@ class QuotationItemsTable
                     ->label('Mã báo giá')
                     ->searchable()
                     ->sortable(),
-                TextColumn::make('deviceType.name')
-                    ->label('Thiết bị / Vật tư')
+                TextColumn::make('productLine.name')
+                    ->label('Dòng SP / Thiết bị')
                     ->searchable()
                     ->sortable()
                     ->weight('bold'),
@@ -33,9 +33,6 @@ class QuotationItemsTable
                         Sum::make()
                             ->label('Tổng SL'),
                     ),
-                TextColumn::make('deviceType.unit')
-                    ->label('ĐVT')
-                    ->badge(),
                 TextColumn::make('unit_cost')
                     ->label('Đơn giá')
                     ->money('VND')

@@ -7,7 +7,7 @@ use Database\Seeders\LedOsDataSeeder;
 test('quotation pdf service generates valid pdf download response', function () {
     (new LedOsDataSeeder)->run();
 
-    $quotation = Quotation::with(['customer', 'items.deviceType', 'productLine'])->first();
+    $quotation = Quotation::with(['customer', 'items.productLine', 'productLine'])->first();
     expect($quotation)->not->toBeNull();
 
     $pdfService = new QuotationPdfService;

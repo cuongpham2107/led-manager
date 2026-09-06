@@ -36,7 +36,7 @@ class CheckMaintenanceReminders extends Command
         $this->info("Đang quét thiết bị cần bảo trì (Ngưỡng: {$eventThreshold} sự kiện hoặc không bảo trì > {$daysThreshold} ngày)...");
 
         $assets = Asset::where('current_status', '!=', AssetStatus::Disposed)
-            ->with(['productLine', 'deviceType'])
+            ->with(['productLine'])
             ->get();
 
         $flaggedCount = 0;
@@ -78,7 +78,7 @@ class CheckMaintenanceReminders extends Command
                         'created_by' => null,
                     ]);
                     $flaggedCount++;
-                    $this->line("⚠️ Thiết bị [{$asset->serial_no}] ({$asset->deviceType?->name}): ".implode('; ', $reasons));
+                    $this->line("⚠️ Thiết bị [{$asset->serial_no}] ({$asset->productLine?->name}): ".implode('; ', $reasons));
                 }
             }
         }

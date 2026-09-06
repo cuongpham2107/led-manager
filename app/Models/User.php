@@ -47,6 +47,27 @@ class User extends Authenticatable implements FilamentUser
     }
 
     /**
+     * Get the warehouse ID that scopes the user's data access.
+     * Super admins and Admins are global and never scoped to a specific warehouse.
+     */
+    public function getScopedWarehouseId(): ?int
+    {
+        if ($this->hasRole(['super_admin', 'admin'])) {
+            return null;
+        }
+
+        return $this->warehouse_id ? (int) $this->warehouse_id : null;
+    }
+
+    /**
+     * Determine if the user is scoped to a specific warehouse.
+     */
+    public function isWarehouseScoped(): bool
+    {
+        return ! is_null($this->getScopedWarehouseId());
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array

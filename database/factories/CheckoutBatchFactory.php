@@ -22,7 +22,6 @@ class CheckoutBatchFactory extends Factory
             'customer_id' => fake()->numberBetween(1, 50),
             'warehouse_id' => fake()->numberBetween(1, 20),
             'required_area_m2' => fake()->randomFloat(2, 10, 120),
-            'device_type_id' => fake()->optional()->numberBetween(1, 30),
             'expected_return_date' => $expectedReturn,
             'status' => $status,
             'created_by' => fake()->numberBetween(1, 10),

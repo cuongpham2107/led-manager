@@ -26,9 +26,9 @@ test('led calculation service computes derived configuration and BOM accurately'
     $bom = $service->generateBom(6.0, 3.5, $p26);
 
     expect($bom)->toBeArray()
-        ->and(count($bom))->toBe(11)
+        ->and(count($bom))->toBe(1)
         ->and($bom[0]['qty'])->toBe(84)
-        ->and($bom[0]['device_type_id'])->not->toBeNull()
+        ->and($bom[0]['product_line_id'])->not->toBeNull()
         ->and($bom[0]['unit_cost'])->toBeGreaterThan(0);
 
     $pricing = $service->calculatePricing(6.0, 3.5, $p26, rentalDays: 3, crewSize: 4, transportDistanceKm: 45.0);

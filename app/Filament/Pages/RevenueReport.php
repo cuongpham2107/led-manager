@@ -12,6 +12,7 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
+use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -24,19 +25,26 @@ class RevenueReport extends Page implements HasTable
     use HasPageShield;
     use InteractsWithTable;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Báo cáo & Thống kê';
+    protected static string|UnitEnum|null $navigationGroup = 'Báo cáo';
 
-    protected static ?string $navigationLabel = 'Báo cáo doanh thu & Lãi lỗ';
+    protected static ?string $navigationLabel = 'Doanh thu';
 
     protected static ?string $title = 'Báo Cáo Doanh Thu & Lợi Nhuận Từng Dự Án (Event P&L)';
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedChartPie;
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-chart-bar';
+
+    protected static ?int $navigationSort = 4;
 
     protected string $view = 'filament.pages.revenue-report';
 
     public function getStats(): array
     {
-        $orders = Order::with('quotation')->get();
+        $whId = auth()->user()?->getScopedWarehouseId();
+        $query = Order::with('quotation');
+        if ($whId) {
+            $query->where('warehouse_id', $whId);
+        }
+        $orders = $query->get();
         $totalRevenue = $orders->sum('value');
         $totalCogs = $orders->sum(fn ($o) => (float) ($o->quotation?->total_cost ?? 0));
         $grossProfit = $totalRevenue - $totalCogs;
@@ -54,7 +62,13 @@ class RevenueReport extends Page implements HasTable
 
     public function getTopProjects(): array
     {
-        return Order::with(['customer', 'quotation', 'salesUser'])
+        $whId = auth()->user()?->getScopedWarehouseId();
+        $query = Order::with(['customer', 'quotation', 'salesUser']);
+        if ($whId) {
+            $query->where('warehouse_id', $whId);
+        }
+
+        return $query
             ->orderByDesc('value')
             ->take(5)
             ->get()
@@ -80,10 +94,13 @@ class RevenueReport extends Page implements HasTable
 
     public function table(Table $table): Table
     {
+        $query = Order::query()->with(['customer', 'quotation', 'salesUser', 'contracts']);
+        if ($whId = auth()->user()?->getScopedWarehouseId()) {
+            $query->where('warehouse_id', $whId);
+        }
+
         return $table
-            ->query(
-                Order::query()->with(['customer', 'quotation', 'salesUser', 'contracts'])
-            )
+            ->query($query)
             ->columns([
                 TextColumn::make('order_no')
                     ->label('Mã đơn')
@@ -143,7 +160,8 @@ class RevenueReport extends Page implements HasTable
                                 fn (Builder $query, $date): Builder => $query->whereDate('request_date', '<=', $date),
                             );
                     }),
-            ])
+            ], layout: FiltersLayout::AboveContent)
+            ->deferFilters(false)
             ->headerActions([
                 Action::make('export_csv')
                     ->label('Xuất CSV')

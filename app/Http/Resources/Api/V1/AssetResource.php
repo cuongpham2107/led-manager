@@ -34,11 +34,6 @@ class AssetResource extends JsonResource
                 'pitch' => $this->productLine->pitch,
                 'environment' => $this->productLine->environment?->value,
             ] : null,
-            'device_type' => $this->deviceType ? [
-                'id' => $this->deviceType->id,
-                'name' => $this->deviceType->name,
-                'category' => $this->deviceType->category?->value,
-            ] : null,
             'current_warehouse' => $this->currentWarehouse ? [
                 'id' => $this->currentWarehouse->id,
                 'code' => $this->currentWarehouse->code,

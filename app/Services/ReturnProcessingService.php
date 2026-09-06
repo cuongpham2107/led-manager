@@ -82,11 +82,10 @@ class ReturnProcessingService
                                 ->dehydrated(false),
                             Toggle::make('is_received')
                                 ->label('Đã nhận')
-                                ->default(true),
+                                ->default(false),
                             Select::make('grade')
                                 ->label('Phân loại')
                                 ->options(ReturnGrade::class)
-                                ->default(ReturnGrade::Normal)
                                 ->required(),
                             TextInput::make('grade_note')
                                 ->label('Ghi chú lỗi')

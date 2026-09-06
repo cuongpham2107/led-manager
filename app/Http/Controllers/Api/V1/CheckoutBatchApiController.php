@@ -24,7 +24,7 @@ class CheckoutBatchApiController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = CheckoutBatch::with(['order', 'customer', 'warehouse', 'deviceType', 'creator', 'items.asset.productLine'])
+        $query = CheckoutBatch::with(['order', 'customer', 'warehouse', 'creator', 'items.asset.productLine'])
             ->latest();
 
         if ($warehouseId = $request->input('warehouse_id')) {
@@ -66,7 +66,6 @@ class CheckoutBatchApiController extends Controller
             'order',
             'customer',
             'warehouse',
-            'deviceType',
             'creator',
             'items.asset.productLine',
             'items.dispatchedBy',

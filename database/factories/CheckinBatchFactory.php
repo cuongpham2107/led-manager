@@ -24,7 +24,6 @@ class CheckinBatchFactory extends Factory
             'expected_date' => $expectedDate,
             'batch_type' => fake()->randomElement([CheckinBatchType::Production, CheckinBatchType::Purchase, CheckinBatchType::Transfer]),
             'product_line_id' => fake()->optional()->numberBetween(1, 20),
-            'device_type_id' => fake()->optional()->numberBetween(1, 30),
             'quantity' => fake()->numberBetween(5, 40),
             'production_note' => fake()->optional()->sentence(),
             'status' => $status,

@@ -28,6 +28,7 @@ use Illuminate\View\Middleware\ShareErrorsFromSession;
 use JohnRivera7\FilamentWidgetGrid\FilamentWidgetGridPlugin;
 use Leek\FilamentRightClick\FilamentRightClickPlugin;
 use Packstub\AccountSwitcher\AccountSwitcherPlugin;
+use Qalainau\UniverSheet\UniverSheetPlugin;
 use Saade\FilamentFullCalendar\FilamentFullCalendarPlugin;
 use Zvizvi\FilamentColumnFilters\FilamentColumnFiltersPlugin;
 use Zvizvi\FilamentNotificationsTabs\FilamentNotificationsTabsPlugin;
@@ -70,7 +71,7 @@ class AdminPanelProvider extends PanelProvider
                 'Bán hàng & Dự án',
                 'Quản lý kho',
                 'Dữ liệu gốc',
-                'Báo cáo & Thống kê',
+                'Báo cáo',
                 'Hệ thống',
             ])
             ->userMenu(position: UserMenuPosition::Sidebar)
@@ -132,6 +133,7 @@ class AdminPanelProvider extends PanelProvider
                     ->confirmDelete(),
                 FilamentColumnFiltersPlugin::make(),
                 FilamentRightClickPlugin::make(),
+                UniverSheetPlugin::make(),
             ])
             ->authMiddleware([
                 Authenticate::class,

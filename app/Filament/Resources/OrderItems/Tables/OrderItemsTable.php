@@ -20,8 +20,6 @@ class OrderItemsTable
                     ->searchable(),
                 TextColumn::make('productLine.name')
                     ->searchable(),
-                TextColumn::make('deviceType.name')
-                    ->searchable(),
                 TextColumn::make('quantity_required')
                     ->numeric()
                     ->sortable()

@@ -6,6 +6,7 @@ use App\Enums\QuotationStatus;
 use App\Filament\Resources\Quotations\Actions\ConvertToOrderAction;
 use App\Filament\Resources\Quotations\Actions\DownloadPdfAction;
 use App\Filament\Resources\Quotations\Actions\MarkRejectedAction;
+use App\Filament\Resources\Quotations\Actions\ViewOrderAction;
 use App\Models\Quotation;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
@@ -13,6 +14,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Enums\RecordActionsPosition;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -27,57 +29,71 @@ class QuotationsTable
                     ->label('Mã Báo Giá')
                     ->searchable()
                     ->sortable()
-                    ->weight('bold'),
-                TextColumn::make('customer.name')
-                    ->label('Khách hàng')
+                    ->weight('bold')
+                    ->color('primary')
+                    ->copyable(),
+                TextColumn::make('customer.company_name')
+                    ->label('Khách Hàng')
                     ->searchable()
                     ->sortable()
-                    ->wrap(),
+                    ->limit(25),
                 TextColumn::make('event_name')
-                    ->label('Sự kiện')
+                    ->label('Sự Kiện')
                     ->searchable()
-                    ->placeholder('—')
-                    ->wrap(),
+                    ->limit(25)
+                    ->toggleable(),
                 TextColumn::make('productLine.name')
                     ->label('Dòng LED')
                     ->badge()
-                    ->color('primary')
-                    ->placeholder('N/A')
+                    ->color('gray')
                     ->sortable(),
                 TextColumn::make('screen_area_m2')
-                    ->label('Diện tích')
+                    ->label('Diện Tích')
                     ->suffix(' m²')
-                    ->numeric(2)
-                    ->sortable()
-                    ->summarize(
-                        Sum::make()
-                            ->label('Tổng diện tích')
-                            ->suffix(' m²')
-                            ->numeric(2),
-                    ),
+                    ->numeric(decimalPlaces: 2)
+                    ->sortable(),
                 TextColumn::make('rental_days')
-                    ->label('Số ngày')
+                    ->label('Ngày Thuê')
                     ->suffix(' ngày')
                     ->sortable(),
-                TextColumn::make('total_price')
-                    ->label('Tổng giá trị')
+                TextColumn::make('event_start_date')
+                    ->label('Ngày Bắt Đầu')
+                    ->date('d/m/Y')
+                    ->sortable(),
+                TextColumn::make('event_end_date')
+                    ->label('Ngày Kết Thúc')
+                    ->date('d/m/Y')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('total_cost')
+                    ->label('Dự Toán Chi Phí')
                     ->money('VND')
                     ->sortable()
-                    ->weight('bold')
-                    ->summarize(
-                        Sum::make()
-                            ->label('Tổng tiền báo giá')
-                            ->money('VND'),
-                    ),
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('total_price')
+                    ->label('Tổng Giá')
+                    ->money('VND')
+                    ->sortable()
+                    ->summarize(Sum::make()->money('VND')->label('Tổng Doanh Thu')),
+                TextColumn::make('margin_percent')
+                    ->label('Margin')
+                    ->suffix('%')
+                    ->numeric(decimalPlaces: 1)
+                    ->sortable()
+                    ->color(fn (float $state): string => match (true) {
+                        $state >= 50 => 'success',
+                        $state >= 30 => 'warning',
+                        default => 'danger',
+                    }),
                 TextColumn::make('status')
-                    ->label('Trạng thái')
+                    ->label('Trạng Thái')
                     ->badge()
                     ->sortable(),
                 TextColumn::make('salesUser.name')
-                    ->label('Sales')
+                    ->label('Phụ Trách')
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('created_at')
-                    ->label('Ngày tạo')
+                    ->label('Ngày Tạo')
                     ->dateTime('d/m/Y H:i')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -86,13 +102,13 @@ class QuotationsTable
                 SelectFilter::make('status')
                     ->label('Trạng thái')
                     ->options(QuotationStatus::class),
-                SelectFilter::make('customer_id')
-                    ->label('Khách hàng')
-                    ->relationship('customer', 'name'),
                 SelectFilter::make('product_line_id')
-                    ->label('Dòng sản phẩm')
+                    ->label('Dòng LED')
                     ->relationship('productLine', 'name'),
-            ])
+                SelectFilter::make('sales_user_id')
+                    ->label('Nhân viên sales')
+                    ->relationship('salesUser', 'name'),
+            ], layout: FiltersLayout::AboveContentCollapsible)
             ->recordActions([
                 EditAction::make()
                     ->visible(fn (Quotation $record): bool => in_array($record->status, [
@@ -101,8 +117,8 @@ class QuotationsTable
                         QuotationStatus::Approved,
                     ])),
                 ActionGroup::make([
-
                     ConvertToOrderAction::make(),
+                    ViewOrderAction::make(),
                     DownloadPdfAction::make(),
                     MarkRejectedAction::make(),
                 ]),
@@ -111,6 +127,7 @@ class QuotationsTable
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->defaultSort('status', 'asc');
     }
 }

@@ -13,7 +13,7 @@ class QuotationPdfService
      */
     public function downloadPdf(Quotation $quotation): Response
     {
-        $quotation->load(['customer', 'salesUser', 'productLine', 'items.deviceType']);
+        $quotation->load(['customer', 'salesUser', 'productLine', 'items.productLine']);
 
         $pdf = Pdf::loadView('pdf.quotation', [
             'quotation' => $quotation,

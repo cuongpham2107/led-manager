@@ -19,7 +19,6 @@ return new class extends Migration
             // Production vs Purchase vs Transfer — drives how the batch is created
             $table->string('batch_type')->default('production'); // production | purchase | transfer
             $table->foreignId('product_line_id')->nullable()->constrained()->nullOnDelete();
-            $table->foreignId('device_type_id')->nullable()->constrained()->nullOnDelete();
             $table->unsignedInteger('quantity')->nullable();
             $table->text('production_note')->nullable();
 

@@ -46,7 +46,7 @@ class CreateQuotation extends CreateRecord
         $items = [];
         foreach ($bom as $item) {
             $items[] = [
-                'device_type_id' => $item['device_type_id'],
+                'product_line_id' => $item['product_line_id'],
                 'description' => $item['item'],
                 'quantity' => $item['qty'],
                 'unit_cost' => $item['unit_cost'],

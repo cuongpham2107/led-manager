@@ -2,17 +2,17 @@
 
 namespace App\Filament\Resources\CheckinBatches;
 
-use App\Filament\Resources\CheckinBatches\Pages\CreateCheckinBatch;
-use App\Filament\Resources\CheckinBatches\Pages\EditCheckinBatch;
 use App\Filament\Resources\CheckinBatches\Pages\ListCheckinBatches;
 use App\Filament\Resources\CheckinBatches\Schemas\CheckinBatchForm;
 use App\Filament\Resources\CheckinBatches\Tables\CheckinBatchesTable;
 use App\Models\CheckinBatch;
+use App\Models\User;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use UnitEnum;
 
 class CheckinBatchResource extends Resource
@@ -27,9 +27,23 @@ class CheckinBatchResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Danh sách nhập kho';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 3;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedArrowDownTray;
+
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+
+        /** @var User|null $user */
+        $user = auth()->user();
+
+        if ($whId = $user?->getScopedWarehouseId()) {
+            $query->where('checkin_batches.warehouse_id', $whId);
+        }
+
+        return $query;
+    }
 
     public static function form(Schema $schema): Schema
     {
@@ -52,8 +66,6 @@ class CheckinBatchResource extends Resource
     {
         return [
             'index' => ListCheckinBatches::route('/'),
-            'create' => CreateCheckinBatch::route('/create'),
-            'edit' => EditCheckinBatch::route('/{record}/edit'),
         ];
     }
 }

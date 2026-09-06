@@ -19,12 +19,12 @@ class QuotationItemForm
                     ->searchable()
                     ->preload()
                     ->required(),
-                Select::make('device_type_id')
-                    ->label('Thiết bị / Vật tư')
-                    ->relationship('deviceType', 'name')
+                Select::make('product_line_id')
+                    ->label('Dòng SP LED')
+                    ->relationship('productLine', 'name')
                     ->searchable()
                     ->preload()
-                    ->required(),
+                    ->nullable(),
                 TextInput::make('quantity')
                     ->label('Số lượng')
                     ->required()

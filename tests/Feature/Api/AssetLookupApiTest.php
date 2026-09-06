@@ -2,7 +2,6 @@
 
 use App\Enums\AssetStatus;
 use App\Models\Asset;
-use App\Models\DeviceType;
 use App\Models\ProductLine;
 use App\Models\User;
 use App\Models\Warehouse;
@@ -30,17 +29,10 @@ beforeEach(function () {
         'module_resolution' => '192x192',
     ]);
 
-    $this->deviceType = DeviceType::create([
-        'code' => 'CAB-P26',
-        'name' => 'Cabinet P2.6',
-        'category' => 'led_screen',
-    ]);
-
     $this->asset = Asset::create([
         'serial_no' => 'LED-P26-001',
         'qr_code' => 'QR-LED-P26-001',
         'product_line_id' => $this->productLine->id,
-        'device_type_id' => $this->deviceType->id,
         'current_warehouse_id' => $this->warehouse->id,
         'current_status' => AssetStatus::Ready,
         'size' => '0.5x0.5',

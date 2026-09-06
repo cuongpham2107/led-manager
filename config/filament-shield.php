@@ -275,6 +275,7 @@ return [
 
         // Quotation Actions
         'ConvertToOrder:Quotation' => 'Chuyển Báo giá thành Đơn hàng',
+        'ViewOrder:Quotation' => 'Xem Đơn hàng (Báo giá)',
         'DownloadPdf:Quotation' => 'Tải Báo giá PDF',
         'MarkRejected:Quotation' => 'Đánh dấu Bị từ chối (Báo giá)',
 

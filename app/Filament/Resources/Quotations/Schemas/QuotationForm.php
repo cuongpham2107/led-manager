@@ -2,11 +2,14 @@
 
 namespace App\Filament\Resources\Quotations\Schemas;
 
+use App\Enums\AssetStatus;
 use App\Enums\QuotationStatus;
 use App\Filament\Resources\Customers\Schemas\CustomerForm;
+use App\Models\Asset;
 use App\Models\Customer;
 use App\Models\ProductLine;
 use App\Models\Quotation;
+use App\Services\AvailabilityService;
 use App\Services\LedCalculationService;
 use Carbon\Carbon;
 use Filament\Forms\Components\DatePicker;
@@ -15,6 +18,7 @@ use Filament\Forms\Components\Repeater\TableColumn;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Group;
@@ -24,6 +28,7 @@ use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Support\Enums\Alignment;
 use Filament\Support\RawJs;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 
 class QuotationForm
@@ -238,6 +243,8 @@ class QuotationForm
                                         Repeater::make('items')
                                             ->relationship('items')
                                             ->label('Danh sách thiết bị & vật tư (BOM)')
+                                            ->live()
+                                            ->afterStateUpdated(fn (Get $get, Set $set) => self::recalculateFromRepeater($get, $set))
                                             ->default(function () {
                                                 $defaultPl = ProductLine::where('code', 'P2.6')->first() ?? ProductLine::first();
                                                 $service = app(LedCalculationService::class);
@@ -245,7 +252,7 @@ class QuotationForm
                                                 $items = [];
                                                 foreach ($bom as $item) {
                                                     $items[] = [
-                                                        'device_type_id' => $item['device_type_id'],
+                                                        'product_line_id' => $item['product_line_id'],
                                                         'description' => $item['item'],
                                                         'quantity' => $item['qty'],
                                                         'unit_cost' => $item['unit_cost'],
@@ -273,12 +280,83 @@ class QuotationForm
                                                     ->width('30%'),
                                             ])
                                             ->schema([
-                                                Select::make('device_type_id')
-                                                    ->label('Thiết bị / Vật tư')
-                                                    ->relationship('deviceType', 'name')
+                                                Select::make('product_line_id')
+                                                    ->label('Dòng SP LED')
+                                                    ->relationship('productLine', 'name')
                                                     ->searchable()
                                                     ->preload()
-                                                    ->required(),
+                                                    ->required()
+                                                    ->live()
+                                                    ->helperText(function ($state, Get $get, ?Model $record) {
+                                                        if (! $state) {
+                                                            return null;
+                                                        }
+                                                        $startDate = $get('../../event_start_date');
+                                                        $endDate = $get('../../event_end_date') ?: $startDate;
+                                                        if (! $startDate) {
+                                                            return null;
+                                                        }
+                                                        $whId = auth()->user()?->getScopedWarehouseId();
+
+                                                        $readyCount = Asset::query()
+                                                            ->where('product_line_id', (int) $state)
+                                                            ->where('current_status', AssetStatus::Ready)
+                                                            ->when($whId, fn ($q) => $q->where('current_warehouse_id', $whId))
+                                                            ->count();
+
+                                                        $convertedOrderId = $get('../../converted_order_id')
+                                                            ?: ($record instanceof Quotation ? $record->converted_order_id : ($record?->quotation?->converted_order_id ?? null));
+
+                                                        $avail = app(AvailabilityService::class)->getAvailableCount(
+                                                            (int) $state,
+                                                            $startDate,
+                                                            $endDate,
+                                                            $whId ? (int) $whId : null,
+                                                            $convertedOrderId ? (int) $convertedOrderId : null,
+                                                        );
+
+                                                        $startFmt = Carbon::parse($startDate)->format('d/m');
+                                                        $endFmt = Carbon::parse($endDate)->format('d/m');
+                                                        $dateLabel = $startFmt === $endFmt ? $startFmt : "{$startFmt}-{$endFmt}";
+
+                                                        if ($avail > 0) {
+                                                            return "Tồn sẵn sàng: {$readyCount} | Khả dụng lịch ({$dateLabel}): {$avail} thiết bị";
+                                                        }
+
+                                                        return "Tồn sẵn sàng: {$readyCount} | Khả dụng lịch ({$dateLabel}): 0 thiết bị (Đã kín lịch thuê)";
+                                                    })
+                                                    ->afterStateUpdated(function ($state, Get $get, Set $set, Component $component) {
+                                                        if (! $state) {
+                                                            return;
+                                                        }
+
+                                                        $productLine = ProductLine::find($state);
+                                                        if (! $productLine) {
+                                                            return;
+                                                        }
+
+                                                        $wMm = (int) ($productLine->module_width_mm ?: 500);
+                                                        $hMm = (int) ($productLine->module_height_mm ?: 500);
+
+                                                        $rentalDays = (int) ($get('../../rental_days') ?: 1);
+                                                        $customerId = $get('../../customer_id');
+                                                        $customer = $customerId ? Customer::find($customerId) : null;
+                                                        $customerType = $customer?->type?->value;
+
+                                                        $rates = app(LedCalculationService::class)->resolvePricing($productLine, $rentalDays, $customerType);
+                                                        $dayRate = (float) ($rates['base_price'] ?? 0);
+                                                        $dayRateFmt = number_format($dayRate, 0, ',', '.');
+                                                        $descNote = $rentalDays > 1 ? " ({$dayRateFmt} đ/ngày × {$rentalDays} ngày)" : ($dayRate > 0 ? " ({$dayRateFmt} đ/ngày)" : '');
+
+                                                        $set('description', "Cabinet LED {$productLine->name} ({$wMm}×{$hMm}mm){$descNote}");
+
+                                                        $currentCost = (float) str_replace(',', '', (string) ($get('unit_cost') ?: 0));
+                                                        if ($currentCost <= 0 && $dayRate > 0) {
+                                                            $unitCost = $dayRate * $rentalDays;
+                                                            $set('unit_cost', $unitCost);
+                                                            self::recalculateLineTotal($get, $set, $component);
+                                                        }
+                                                    }),
                                                 TextInput::make('quantity')
                                                     ->label('Số lượng')
                                                     ->numeric()
@@ -286,7 +364,7 @@ class QuotationForm
                                                     ->default(1)
                                                     ->extraInputAttributes(['class' => 'text-center'])
                                                     ->live(debounce: 300)
-                                                    ->afterStateUpdated(fn (Get $get, Set $set, ?Quotation $record) => self::recalculateLineTotal($get, $set, $record)),
+                                                    ->afterStateUpdated(fn (Get $get, Set $set, Component $component) => self::recalculateLineTotal($get, $set, $component)),
                                                 TextInput::make('unit_cost')
                                                     ->label('Đơn giá')
                                                     ->mask(RawJs::make('$money($input)'))
@@ -295,7 +373,7 @@ class QuotationForm
                                                     ->default(0)
                                                     ->extraInputAttributes(['class' => 'text-center font-mono'])
                                                     ->live(debounce: 300)
-                                                    ->afterStateUpdated(fn (Get $get, Set $set, ?Quotation $record) => self::recalculateLineTotal($get, $set, $record)),
+                                                    ->afterStateUpdated(fn (Get $get, Set $set, Component $component) => self::recalculateLineTotal($get, $set, $component)),
                                                 TextInput::make('line_total')
                                                     ->label('Thành tiền')
                                                     ->mask(RawJs::make('$money($input)'))
@@ -447,25 +525,71 @@ class QuotationForm
             ]);
     }
 
-    public static function recalculateLineTotal(Get $get, Set $set, ?Quotation $record = null): void
+    public static function recalculateLineTotal(Get $get, Set $set, ?Component $component = null): void
     {
-        // ponytail: in edit mode, keep saved line_total unless qty/unit_cost actually changed
-        if ($record !== null) {
-            return;
-        }
-
         $qty = (float) str_replace(',', '', (string) ($get('quantity') ?: 0));
         $cost = (float) str_replace(',', '', (string) ($get('unit_cost') ?: 0));
-        $set('line_total', $qty * $cost);
+        $lineTotal = $qty * $cost;
+        $set('line_total', $lineTotal);
+
+        $currentRowKey = null;
+        if ($component) {
+            $statePath = $component->getStatePath();
+            if (str_contains($statePath, 'items.')) {
+                $currentRowKey = (string) str($statePath)->after('items.')->before('.');
+            }
+        }
+
+        $items = $get('../../items');
+        $totalEquipment = 0;
+        if (is_array($items)) {
+            foreach ($items as $key => $item) {
+                if ($currentRowKey !== null && (string) $key === (string) $currentRowKey) {
+                    $totalEquipment += $lineTotal;
+                } else {
+                    $itemQty = (float) str_replace(',', '', (string) ($item['quantity'] ?? 0));
+                    $itemCost = (float) str_replace(',', '', (string) ($item['unit_cost'] ?? 0));
+                    $totalEquipment += ($itemQty * $itemCost);
+                }
+            }
+        } else {
+            $totalEquipment = $lineTotal;
+        }
+
+        $set('../../equipment_cost', $totalEquipment);
+
+        $labour = (float) str_replace(',', '', (string) ($get('../../labour_cost') ?: 0));
+        $trans = (float) str_replace(',', '', (string) ($get('../../transport_cost') ?: 0));
+        $acc = (float) str_replace(',', '', (string) ($get('../../accessory_cost') ?: 0));
+        $discount = (float) str_replace(',', '', (string) ($get('../../discount_amount') ?: 0));
+
+        $totalCost = ($totalEquipment * 0.4) + ($labour * 0.7) + ($trans * 0.6) + $acc;
+        $totalPrice = max(0, ($totalEquipment + $labour + $trans + $acc) - $discount);
+        $margin = $totalPrice > 0 ? round((($totalPrice - $totalCost) / $totalPrice) * 100, 1) : 0.0;
+
+        $set('../../total_cost', $totalCost);
+        $set('../../total_price', $totalPrice);
+        $set('../../margin_percent', $margin);
+    }
+
+    public static function recalculateFromRepeater(Get $get, Set $set): void
+    {
+        $items = $get('items');
+        $totalEquipment = 0;
+        if (is_array($items)) {
+            foreach ($items as $item) {
+                $itemQty = (float) str_replace(',', '', (string) ($item['quantity'] ?? 0));
+                $itemCost = (float) str_replace(',', '', (string) ($item['unit_cost'] ?? 0));
+                $totalEquipment += ($itemQty * $itemCost);
+            }
+        }
+
+        $set('equipment_cost', $totalEquipment);
+        self::recalculateTotals($get, $set);
     }
 
     public static function recalculateLabourFromRate(Get $get, Set $set, ?Quotation $record = null): void
     {
-        // ponytail: in edit mode, keep saved cost; user edits are blocked via disabled+dehydrated
-        if ($record !== null) {
-            return;
-        }
-
         $crewSize = (float) ($get('crew_size') ?: 0);
         $rentalDays = (float) ($get('rental_days') ?: 1);
         $crewRate = (float) str_replace(',', '', (string) ($get('crew_rate') ?: 0));
@@ -476,11 +600,6 @@ class QuotationForm
 
     public static function recalculateTransportFromRate(Get $get, Set $set, ?Quotation $record = null): void
     {
-        // ponytail: in edit mode, keep saved cost; user edits are blocked via disabled+dehydrated
-        if ($record !== null) {
-            return;
-        }
-
         $dist = (float) ($get('transport_distance_km') ?: 0);
         $transRate = (float) str_replace(',', '', (string) ($get('transport_rate') ?: 0));
         $transportCost = ($dist * 2) * $transRate;
@@ -527,7 +646,7 @@ class QuotationForm
         $equipmentRental = 0;
         foreach ($bom as $item) {
             $items[] = [
-                'device_type_id' => $item['device_type_id'],
+                'product_line_id' => $item['product_line_id'],
                 'description' => $item['item'],
                 'quantity' => $item['qty'],
                 'unit_cost' => $item['unit_cost'],
@@ -568,21 +687,17 @@ class QuotationForm
 
     public static function recalculateTotals(Get $get, Set $set, ?Quotation $record = null): void
     {
-        // ponytail: in edit mode, do not touch total_price; keep DB value intact
-        if ($record !== null) {
-            return;
-        }
-
         $eq = (float) str_replace(',', '', (string) ($get('equipment_cost') ?: 0));
         $labour = (float) str_replace(',', '', (string) ($get('labour_cost') ?: 0));
         $trans = (float) str_replace(',', '', (string) ($get('transport_cost') ?: 0));
         $acc = (float) str_replace(',', '', (string) ($get('accessory_cost') ?: 0));
         $discount = (float) str_replace(',', '', (string) ($get('discount_amount') ?: 0));
 
-        $totalPrice = max(0, ($eq + $labour + $trans + $acc) - $discount);
         $totalCost = ($eq * 0.4) + ($labour * 0.7) + ($trans * 0.6) + $acc;
+        $totalPrice = max(0, ($eq + $labour + $trans + $acc) - $discount);
         $margin = $totalPrice > 0 ? round((($totalPrice - $totalCost) / $totalPrice) * 100, 1) : 0.0;
 
+        $set('total_cost', $totalCost);
         $set('total_price', $totalPrice);
         $set('margin_percent', $margin);
     }

@@ -3,9 +3,11 @@
 namespace App\Filament\Resources\AssetStatusLogs\Tables;
 
 use App\Enums\AssetStatus;
+use App\Models\Warehouse;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
@@ -50,10 +52,16 @@ class AssetStatusLogsTable
                     ->sortable(),
             ])
             ->filters([
+                SelectFilter::make('warehouse_id')
+                    ->label('Kho hàng')
+                    ->options(fn () => Warehouse::query()->pluck('name', 'id')->toArray())
+                    ->query(fn ($query, $data) => filled($data['value'] ?? null) ? $query->where(fn ($q) => $q->where('from_warehouse_id', $data['value'])->orWhere('to_warehouse_id', $data['value'])->orWhereHas('asset', fn ($aq) => $aq->where('current_warehouse_id', $data['value']))) : null)
+                    ->hidden(fn (): bool => (bool) auth()->user()?->getScopedWarehouseId()),
                 SelectFilter::make('to_status')
                     ->label('Trạng thái mới')
                     ->options(AssetStatus::class),
-            ])
+            ], layout: FiltersLayout::AboveContent)
+            ->deferFilters(false)
             ->recordActions([
             ])
             ->toolbarActions([

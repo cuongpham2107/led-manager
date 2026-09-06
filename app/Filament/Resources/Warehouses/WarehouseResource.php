@@ -23,11 +23,11 @@ class WarehouseResource extends Resource
 
     protected static ?string $modelLabel = 'Kho hàng';
 
-    protected static ?string $pluralModelLabel = 'Danh mục kho hàng';
+    protected static ?string $pluralModelLabel = 'Danh sách kho hàng';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 3;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBuildingOffice2;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedHomeModern;
 
     public static function form(Schema $schema): Schema
     {

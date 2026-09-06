@@ -11,6 +11,7 @@ use Filament\Support\Enums\Width;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\Summarizers\Count;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Enums\RecordActionsPosition;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -33,6 +34,7 @@ class ProductLinesTable
                 TextColumn::make('code')
                     ->label('Mã dòng')
                     ->searchable()
+                    ->color('primary')
                     ->sortable(),
                 TextColumn::make('pixel_pitch')
                     ->label('Pixel Pitch')
@@ -65,7 +67,8 @@ class ProductLinesTable
                 SelectFilter::make('environment')
                     ->label('Môi trường sử dụng')
                     ->options(ProductEnvironment::class),
-            ])
+            ], layout: FiltersLayout::AboveContent)
+            ->deferFilters(false)
             ->recordActions([
                 EditAction::make()
                     ->modalHeading('Cập nhật dòng sản phẩm LED')

@@ -8,6 +8,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Enums\RecordActionsPosition;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -22,6 +23,7 @@ class ContractsTable
                     ->label('Số HĐ')
                     ->searchable()
                     ->sortable()
+                    ->color('primary')
                     ->weight('bold'),
                 TextColumn::make('customer.name')
                     ->label('Khách hàng')
@@ -64,7 +66,16 @@ class ContractsTable
                 TextColumn::make('status')
                     ->label('Trạng thái')
                     ->badge()
-                    ->sortable(),
+                    ->sortable(query: function ($query, string $direction) {
+                        return $query->orderByRaw("CASE contracts.status
+                            WHEN 'draft' THEN 1
+                            WHEN 'signed' THEN 2
+                            WHEN 'active' THEN 3
+                            WHEN 'completed' THEN 4
+                            WHEN 'cancelled' THEN 5
+                            ELSE 6
+                        END {$direction}");
+                    }),
                 TextColumn::make('signed_date')
                     ->label('Ngày ký')
                     ->date('d/m/Y')
@@ -82,7 +93,8 @@ class ContractsTable
                 SelectFilter::make('customer_id')
                     ->label('Khách hàng')
                     ->relationship('customer', 'name'),
-            ])
+            ], layout: FiltersLayout::AboveContent)
+            ->deferFilters(false)
             ->recordActions([
                 EditAction::make(),
             ], position: RecordActionsPosition::BeforeCells)
@@ -90,6 +102,7 @@ class ContractsTable
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->defaultSort('status', 'asc');
     }
 }

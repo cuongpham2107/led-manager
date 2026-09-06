@@ -23,7 +23,7 @@ class CheckinBatchApiController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = CheckinBatch::with(['warehouse', 'productLine', 'deviceType', 'creator', 'items.asset'])
+        $query = CheckinBatch::with(['warehouse', 'productLine', 'creator', 'items.asset'])
             ->latest();
 
         if ($warehouseId = $request->input('warehouse_id')) {
@@ -67,7 +67,6 @@ class CheckinBatchApiController extends Controller
         $batch = CheckinBatch::with([
             'warehouse',
             'productLine',
-            'deviceType',
             'creator',
             'items.asset.productLine',
             'items.receivedByUser',
@@ -293,7 +292,7 @@ class CheckinBatchApiController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => "Đợt nhập kho {$batch->code} đã hoàn tất. Tất cả thiết bị đã được chuyển về trạng thái Sẵn sàng.",
-                'data' => new CheckinBatchResource($batch->fresh(['warehouse', 'productLine', 'deviceType', 'items.asset'])),
+                'data' => new CheckinBatchResource($batch->fresh(['warehouse', 'productLine', 'items.asset'])),
             ]);
         });
     }

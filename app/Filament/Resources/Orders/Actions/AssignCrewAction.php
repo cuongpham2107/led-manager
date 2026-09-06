@@ -30,7 +30,7 @@ class AssignCrewAction extends Action
             ->label('Phân công nhân sự')
             ->icon(Heroicon::OutlinedUserGroup)
             ->color('info')
-            ->visible(fn (Order $record): bool => ! in_array($record->status, [OrderStatus::Cancelled, OrderStatus::Completed]))
+            ->visible(fn (Order $record): bool => ! in_array($record->status, [OrderStatus::Draft, OrderStatus::Cancelled, OrderStatus::Completed]))
             ->modalHeading(fn (Order $record): string => "Phân công kỹ thuật viên — Đơn hàng {$record->order_no}")
             ->modalDescription('Chỉ định nhân viên, kỹ thuật viên, tài xế phụ trách sự kiện')
             ->modalSubmitActionLabel('Lưu phân công')

@@ -2,14 +2,17 @@
 
 namespace App\Filament\Resources\Orders\Schemas;
 
+use App\Enums\AssetStatus;
 use App\Enums\AssignmentRole;
 use App\Enums\MilestoneStatus;
 use App\Enums\MilestoneType;
 use App\Enums\OrderStatus;
 use App\Filament\Resources\Customers\Schemas\CustomerForm;
+use App\Models\Asset;
 use App\Models\Order;
 use App\Models\Quotation;
 use App\Services\AvailabilityService;
+use Carbon\Carbon;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Repeater;
@@ -202,13 +205,13 @@ class OrderForm
                                                 TableColumn::make('Ghi chú / Quy cách'),
                                             ])
                                             ->schema([
-                                                Select::make('device_type_id')
-                                                    ->label('Thiết bị / Vật tư')
-                                                    ->relationship('deviceType', 'name')
+                                                Select::make('product_line_id')
+                                                    ->label('Dòng SP LED')
+                                                    ->relationship('productLine', 'name')
                                                     ->searchable()
                                                     ->preload()
                                                     ->live()
-                                                    ->required()
+                                                    ->nullable()
                                                     ->helperText(function ($state, Get $get) {
                                                         if (! $state) {
                                                             return null;
@@ -219,15 +222,31 @@ class OrderForm
                                                         if (! $reqDate) {
                                                             return null;
                                                         }
+                                                        $orderId = $get('../../id');
 
-                                                        $available = app(AvailabilityService::class)->getAvailableCount(
+                                                        $readyCount = Asset::query()
+                                                            ->where('product_line_id', (int) $state)
+                                                            ->where('current_status', AssetStatus::Ready)
+                                                            ->when($whId, fn ($q) => $q->where('current_warehouse_id', $whId))
+                                                            ->count();
+
+                                                        $avail = app(AvailabilityService::class)->getAvailableCount(
                                                             (int) $state,
                                                             $reqDate,
                                                             $retDate,
-                                                            $whId ? (int) $whId : null
+                                                            $whId ? (int) $whId : null,
+                                                            $orderId ? (int) $orderId : null,
                                                         );
 
-                                                        return "Tồn kho khả dụng: {$available}";
+                                                        $reqFmt = Carbon::parse($reqDate)->format('d/m');
+                                                        $retFmt = Carbon::parse($retDate)->format('d/m');
+                                                        $dateLabel = $reqFmt === $retFmt ? $reqFmt : "{$reqFmt}-{$retFmt}";
+
+                                                        if ($avail > 0) {
+                                                            return "Tồn sẵn sàng: {$readyCount} | Khả dụng lịch ({$dateLabel}): {$avail} thiết bị";
+                                                        }
+
+                                                        return "Tồn sẵn sàng: {$readyCount} | Khả dụng lịch ({$dateLabel}): 0 thiết bị (Đã kín lịch thuê)";
                                                     }),
                                                 TextInput::make('quantity_required')
                                                     ->label('SL Cần')
@@ -377,12 +396,12 @@ class OrderForm
         $bom = [];
 
         foreach ($items as $item) {
-            if (empty($item['device_type_id']) || empty($item['quantity_required'])) {
+            if (empty($item['product_line_id']) || empty($item['quantity_required'])) {
                 continue;
             }
 
             $bom[] = [
-                'device_type_id' => (int) $item['device_type_id'],
+                'product_line_id' => (int) $item['product_line_id'],
                 'quantity' => (int) $item['quantity_required'],
             ];
         }
@@ -401,7 +420,7 @@ class OrderForm
 
         if ($result['has_conflicts']) {
             $messages = collect($result['conflicts'])
-                ->map(fn (array $c): string => "• {$c['device_type_name']}: cần {$c['requested']}, chỉ còn {$c['available']} (thiếu {$c['shortage']})")
+                ->map(fn (array $c): string => "• {$c['product_line_name']}: cần {$c['requested']}, chỉ còn {$c['available']} (thiếu {$c['shortage']})")
                 ->implode("\n");
 
             throw ValidationException::withMessages([

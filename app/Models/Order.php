@@ -24,7 +24,6 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $expected_return_date
  * @property string|null $area_m2
  * @property string|null $event
- * @property int|null $device_type_id
  * @property string $value
  * @property OrderStatus $status
  * @property int|null $sales_user_id
@@ -34,7 +33,6 @@ use Illuminate\Support\Carbon;
  * @property-read Warehouse|null $warehouse
  * @property-read Customer|null $customer
  * @property-read Quotation|null $quotation
- * @property-read DeviceType|null $deviceType
  * @property-read User|null $salesUser
  */
 class Order extends Model implements Eventable
@@ -51,7 +49,7 @@ class Order extends Model implements Eventable
         'expected_return_date',
         'area_m2',
         'event',
-        'device_type_id',
+        'product_line_id',
         'value',
         'deposit_paid',
         'total_paid',
@@ -102,11 +100,11 @@ class Order extends Model implements Eventable
     }
 
     /**
-     * @return BelongsTo<DeviceType, $this>
+     * @return BelongsTo<ProductLine, $this>
      */
-    public function deviceType(): BelongsTo
+    public function productLine(): BelongsTo
     {
-        return $this->belongsTo(DeviceType::class);
+        return $this->belongsTo(ProductLine::class);
     }
 
     /**

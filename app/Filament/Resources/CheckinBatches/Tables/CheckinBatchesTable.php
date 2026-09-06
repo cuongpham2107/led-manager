@@ -3,13 +3,21 @@
 namespace App\Filament\Resources\CheckinBatches\Tables;
 
 use App\Enums\BatchStatus;
+use App\Models\Asset;
+use App\Models\CheckinBatch;
+use App\Models\CheckinBatchItem;
 use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Support\Enums\Width;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Enums\RecordActionsPosition;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class CheckinBatchesTable
 {
@@ -18,6 +26,7 @@ class CheckinBatchesTable
         return $table
             ->columns([
                 TextColumn::make('code')
+                    ->color('primary')
                     ->label('Mã đợt nhập')
                     ->searchable()
                     ->sortable()
@@ -81,7 +90,16 @@ class CheckinBatchesTable
                 TextColumn::make('status')
                     ->label('Trạng thái')
                     ->badge()
-                    ->sortable(),
+                    ->sortable(query: function ($query, string $direction) {
+                        return $query->orderByRaw("CASE checkin_batches.status
+                            WHEN 'pending' THEN 1
+                            WHEN 'in_progress' THEN 2
+                            WHEN 'dispatched' THEN 3
+                            WHEN 'completed' THEN 4
+                            WHEN 'cancelled' THEN 5
+                            ELSE 6
+                        END {$direction}");
+                    }),
                 TextColumn::make('creator.name')
                     ->label('Người tạo')
                     ->searchable()
@@ -113,16 +131,72 @@ class CheckinBatchesTable
                     ]),
                 SelectFilter::make('warehouse_id')
                     ->label('Kho hàng')
-                    ->relationship('warehouse', 'name'),
-            ])
+                    ->relationship('warehouse', 'name')
+                    ->hidden(fn (): bool => (bool) auth()->user()?->getScopedWarehouseId()),
+            ], layout: FiltersLayout::AboveContent)
+            ->deferFilters(false)
             ->recordActions([
-                EditAction::make(),
+                EditAction::make()
+                    ->label('Chỉnh sửa')
+                    ->modalHeading('Sửa đợt nhập')
+                    ->modalWidth(Width::FourExtraLarge)
+                    ->modalSubmitActionLabel('Lưu')
+                    ->modalCancelActionLabel('Hủy')
+                    ->mutateRecordDataUsing(function (array $data, CheckinBatch $record): array {
+                        $data['selected_assets'] = $record->items()->pluck('asset_id')->map(fn ($id) => (int) $id)->toArray();
+
+                        return $data;
+                    })
+                    ->using(function (CheckinBatch $record, array $data): CheckinBatch {
+                        return DB::transaction(function () use ($record, $data) {
+                            $selectedAssets = $data['selected_assets'] ?? [];
+                            unset($data['selected_assets']);
+
+                            $record->update([
+                                'code' => $data['code'],
+                                'note' => $data['note'] ?? null,
+                                'warehouse_id' => $data['warehouse_id'],
+                                'expected_date' => $data['expected_date'] ?? null,
+                            ]);
+
+                            $selectedIds = collect($selectedAssets)->map(fn ($id) => (int) $id)->filter()->values();
+                            $currentIds = $record->items()->pluck('asset_id')->map(fn ($id) => (int) $id);
+
+                            $toDelete = $currentIds->diff($selectedIds);
+                            $toAdd = $selectedIds->diff($currentIds);
+
+                            if ($toDelete->isNotEmpty()) {
+                                $record->items()->whereIn('asset_id', $toDelete)->delete();
+                            }
+
+                            foreach ($toAdd as $assetId) {
+                                CheckinBatchItem::create([
+                                    'checkin_batch_id' => $record->id,
+                                    'asset_id' => $assetId,
+                                    'condition' => 'ok',
+                                    'is_received' => true,
+                                    'received_at' => now(),
+                                    'received_by' => Auth::id(),
+                                ]);
+                            }
+
+                            if ($selectedIds->isNotEmpty()) {
+                                Asset::whereIn('id', $selectedIds)->update([
+                                    'current_warehouse_id' => $data['warehouse_id'],
+                                ]);
+                            }
+
+                            return $record;
+                        });
+                    }),
+                DeleteAction::make()
+                    ->label(''),
             ], position: RecordActionsPosition::BeforeCells)
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ]),
             ])
-            ->defaultSort('created_at', 'desc');
+            ->defaultSort('status', 'asc');
     }
 }

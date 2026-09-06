@@ -10,6 +10,7 @@ use Filament\Support\Enums\Width;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\Summarizers\Count;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Enums\RecordActionsPosition;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -24,6 +25,7 @@ class CustomersTable
                     ->label('Mã KH')
                     ->searchable()
                     ->sortable()
+                    ->color('primary')
                     ->weight('bold'),
                 TextColumn::make('name')
                     ->label('Tên khách hàng / Doanh nghiệp')
@@ -59,7 +61,8 @@ class CustomersTable
                 SelectFilter::make('type')
                     ->label('Phân loại khách hàng')
                     ->options(CustomerType::class),
-            ])
+            ], layout: FiltersLayout::AboveContent)
+            ->deferFilters(false)
             ->recordActions([
                 EditAction::make()
                     ->modalHeading('Cập nhật thông tin khách hàng')

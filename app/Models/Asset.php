@@ -16,8 +16,9 @@ class Asset extends Model
         'serial_no',
         'qr_code',
         'product_line_id',
-        'device_type_id',
         'size',
+        'operating_hours',
+        'rental_count',
         'manufactured_date',
         'purchase_cost',
         'accumulated_depreciation',
@@ -27,8 +28,21 @@ class Asset extends Model
         'purchase_date',
         'current_status',
         'current_warehouse_id',
+        'warehouse_location_id',
         'note',
     ];
+
+    /**
+     * The "booted" method of the model.
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (Asset $asset) {
+            if (empty($asset->qr_code) && ! empty($asset->serial_no)) {
+                $asset->qr_code = "LED-{$asset->serial_no}";
+            }
+        });
+    }
 
     /**
      * @return array<string, string>
@@ -36,6 +50,8 @@ class Asset extends Model
     protected function casts(): array
     {
         return [
+            'operating_hours' => 'integer',
+            'rental_count' => 'integer',
             'manufactured_date' => 'date',
             'purchase_date' => 'date',
             'purchase_cost' => 'decimal:2',
@@ -74,6 +90,26 @@ class Asset extends Model
     }
 
     /**
+     * Get location label formatted as 'Warehouse · Location' or 'Repair bay'
+     */
+    public function getLocationLabelAttribute(): string
+    {
+        if ($this->current_status === AssetStatus::Repairing) {
+            return 'Khu sửa chữa';
+        }
+
+        if (! $this->currentWarehouse) {
+            return 'Chưa xác định';
+        }
+
+        if ($this->warehouseLocation) {
+            return "{$this->currentWarehouse->name} · {$this->warehouseLocation->name}";
+        }
+
+        return $this->currentWarehouse->name;
+    }
+
+    /**
      * @return BelongsTo<ProductLine, $this>
      */
     public function productLine(): BelongsTo
@@ -82,19 +118,27 @@ class Asset extends Model
     }
 
     /**
-     * @return BelongsTo<DeviceType, $this>
-     */
-    public function deviceType(): BelongsTo
-    {
-        return $this->belongsTo(DeviceType::class);
-    }
-
-    /**
      * @return BelongsTo<Warehouse, $this>
      */
     public function currentWarehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class, 'current_warehouse_id');
+    }
+
+    /**
+     * @return BelongsTo<WarehouseLocation, $this>
+     */
+    public function warehouseLocation(): BelongsTo
+    {
+        return $this->belongsTo(WarehouseLocation::class, 'warehouse_location_id');
+    }
+
+    /**
+     * @return BelongsTo<WarehouseLocation, $this>
+     */
+    public function location(): BelongsTo
+    {
+        return $this->belongsTo(WarehouseLocation::class, 'warehouse_location_id');
     }
 
     /**

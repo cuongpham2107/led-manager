@@ -18,9 +18,6 @@ class OrderItemForm
                     ->required(),
                 Select::make('product_line_id')
                     ->relationship('productLine', 'name'),
-                Select::make('device_type_id')
-                    ->relationship('deviceType', 'name')
-                    ->required(),
                 TextInput::make('quantity_required')
                     ->required()
                     ->numeric(),

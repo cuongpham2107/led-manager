@@ -7,7 +7,6 @@ use App\Enums\AssignmentRole;
 use App\Enums\BatchStatus;
 use App\Enums\ContractStatus;
 use App\Enums\CustomerType;
-use App\Enums\DeviceUnit;
 use App\Enums\MilestoneStatus;
 use App\Enums\MilestoneType;
 use App\Enums\OrderStatus;
@@ -24,7 +23,6 @@ use App\Models\CheckoutBatch;
 use App\Models\CheckoutBatchItem;
 use App\Models\Contract;
 use App\Models\Customer;
-use App\Models\DeviceType;
 use App\Models\EventAssignment;
 use App\Models\EventMilestone;
 use App\Models\Order;
@@ -38,6 +36,7 @@ use App\Models\ReturnBatch;
 use App\Models\ReturnBatchItem;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Models\WarehouseLocation;
 use App\Services\LedCalculationService;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
@@ -86,14 +85,13 @@ class LedOsDataSeeder extends Seeder
                     ->orWhere('name', 'like', 'View%:Asset%')
                     ->orWhere('name', 'like', 'View%:Warehouse%')
                     ->orWhere('name', 'like', 'View%:ProductLine%')
-                    ->orWhere('name', 'like', 'View%:DeviceType%')
                     ->orWhere('name', 'like', 'View%:PricingRule%')
                     ->orWhere('name', 'like', 'View%:Payment%')
                     ->orWhere('name', 'like', 'View%:Dashboard%')
                     ->orWhere('name', 'like', 'View%:EventCalendar%')
-                    ->orWhere('name', 'like', 'View%:SalesConversionReport%')
-                    ->orWhere('name', 'like', 'View%:LostDealReport%')
                     ->orWhere('name', 'like', 'View%:RevenueReport%')
+                    ->orWhere('name', 'like', 'View%:InventoryReport%')
+                    ->orWhere('name', 'like', 'View%:MovementHistoryReport%')
                     ->orWhere('name', 'like', 'View%:AssetUtilizationReport%')
                     ->orWhere('name', 'like', 'View%:StatsOverview%')
                     ->orWhere('name', 'like', 'View%:LatestOrders%')
@@ -114,13 +112,13 @@ class LedOsDataSeeder extends Seeder
                     ->orWhere('name', 'like', '%:RepairLog%')
                     ->orWhere('name', 'like', '%:Warehouse%')
                     ->orWhere('name', 'like', '%:ProductLine%')
-                    ->orWhere('name', 'like', '%:DeviceType%')
                     ->orWhere('name', 'like', 'View%:Order%')
                     ->orWhere('name', 'like', 'View%:Customer%')
                     ->orWhere('name', 'like', 'View%:Dashboard%')
                     ->orWhere('name', 'like', 'View%:WarehouseStatusChart%')
+                    ->orWhere('name', 'like', 'View%:InventoryReport%')
+                    ->orWhere('name', 'like', 'View%:MovementHistoryReport%')
                     ->orWhere('name', 'like', 'View%:AssetUtilizationReport%')
-                    ->orWhere('name', 'like', 'View%:RepairFrequencyReport%')
                     ->orWhere('name', 'like', 'View%:EventCalendar%');
             })->get();
             $whRole->syncPermissions($whPermissions);
@@ -133,12 +131,12 @@ class LedOsDataSeeder extends Seeder
                     ->orWhere('name', 'like', 'View%:Asset%')
                     ->orWhere('name', 'like', 'View%:Warehouse%')
                     ->orWhere('name', 'like', 'View%:ProductLine%')
-                    ->orWhere('name', 'like', 'View%:DeviceType%')
                     ->orWhere('name', 'like', 'View%:Order%')
                     ->orWhere('name', 'like', 'View%:Dashboard%')
                     ->orWhere('name', 'like', 'View%:EventCalendar%')
-                    ->orWhere('name', 'like', 'View%:AssetUtilizationReport%')
-                    ->orWhere('name', 'like', 'View%:RepairFrequencyReport%');
+                    ->orWhere('name', 'like', 'View%:InventoryReport%')
+                    ->orWhere('name', 'like', 'View%:MovementHistoryReport%')
+                    ->orWhere('name', 'like', 'View%:AssetUtilizationReport%');
             })->get();
             $techRole->syncPermissions($techPermissions);
 
@@ -150,9 +148,9 @@ class LedOsDataSeeder extends Seeder
                     ->orWhere('name', 'like', 'View%:Quotation%')
                     ->orWhere('name', 'like', 'View%:Dashboard%')
                     ->orWhere('name', 'like', 'View%:RevenueReport%')
-                    ->orWhere('name', 'like', 'View%:SalesConversionReport%')
-                    ->orWhere('name', 'like', 'View%:LostDealReport%')
-                    ->orWhere('name', 'like', 'View%:RepairFrequencyReport%')
+                    ->orWhere('name', 'like', 'View%:InventoryReport%')
+                    ->orWhere('name', 'like', 'View%:MovementHistoryReport%')
+                    ->orWhere('name', 'like', 'View%:AssetUtilizationReport%')
                     ->orWhere('name', 'like', 'View%:EventCalendar%')
                     ->orWhere('name', 'like', 'View%:StatsOverview%')
                     ->orWhere('name', 'like', 'View%:MonthlyRevenueChart%');
@@ -162,14 +160,14 @@ class LedOsDataSeeder extends Seeder
 
         // 2. Warehouses (4 major hubs)
         $whHn = Warehouse::updateOrCreate(['code' => 'WH-HN'], [
-            'name' => 'Kho Hà Nội (Tổng kho)',
+            'name' => 'Kho Hà Nội',
             'address' => 'Số 18 Phạm Hùng, Cầu Giấy, Hà Nội',
             'phone' => '024 3987 6543',
             'is_active' => true,
         ]);
 
         $whHcm = Warehouse::updateOrCreate(['code' => 'WH-HCM'], [
-            'name' => 'Kho TP. Hồ Chí Minh',
+            'name' => 'Kho TP.HCM',
             'address' => '450 Nguyễn Thị Minh Khai, Quận 3, TP.HCM',
             'phone' => '028 3876 5432',
             'is_active' => true,
@@ -186,6 +184,81 @@ class LedOsDataSeeder extends Seeder
             'name' => 'Kho Cần Thơ',
             'address' => '88 30 Tháng 4, Ninh Kiều, Cần Thơ',
             'phone' => '0292 3555 789',
+            'is_active' => true,
+        ]);
+
+        // 2.1 Warehouse Locations (Vị trí kho)
+        $locHn1 = WarehouseLocation::updateOrCreate(['warehouse_id' => $whHn->id, 'code' => 'HN-K1'], [
+            'name' => 'Khu 1 - Kệ Module P2.6',
+            'description' => 'Khu vực lưu trữ module LED P2.6',
+            'is_active' => true,
+        ]);
+        $locHn2 = WarehouseLocation::updateOrCreate(['warehouse_id' => $whHn->id, 'code' => 'HN-K2'], [
+            'name' => 'Khu 2 - Kệ Module P2.9 & P3.9',
+            'description' => 'Khu vực lưu trữ module LED P2.9 và P3.9 ngoài trời',
+            'is_active' => true,
+        ]);
+        $locHn3 = WarehouseLocation::updateOrCreate(['warehouse_id' => $whHn->id, 'code' => 'HN-K3'], [
+            'name' => 'Khu 3 - Thiết bị xử lý & Cáp',
+            'description' => 'Bộ xử lý hình ảnh, sending card và cáp tín hiệu',
+            'is_active' => true,
+        ]);
+        $locHn4 = WarehouseLocation::updateOrCreate(['warehouse_id' => $whHn->id, 'code' => 'HN-K4'], [
+            'name' => 'Khu 4 - Khung case & Phụ kiện',
+            'description' => 'Flight case và phụ kiện cơ khí treo màn hình',
+            'is_active' => true,
+        ]);
+        $locHnTest = WarehouseLocation::updateOrCreate(['warehouse_id' => $whHn->id, 'code' => 'HN-TEST'], [
+            'name' => 'Khu vực Test & Demo',
+            'description' => 'Khu vực thử tải và kiểm tra chất lượng màn hình',
+            'is_active' => true,
+        ]);
+
+        $locHcm1 = WarehouseLocation::updateOrCreate(['warehouse_id' => $whHcm->id, 'code' => 'HCM-K1'], [
+            'name' => 'Khu 1 - Kệ Module P1.5 & P2.9',
+            'description' => 'Khu vực lưu trữ màn LED mịn P1.5 và P2.9',
+            'is_active' => true,
+        ]);
+        $locHcm2 = WarehouseLocation::updateOrCreate(['warehouse_id' => $whHcm->id, 'code' => 'HCM-K2'], [
+            'name' => 'Khu 2 - Kệ Module P2.6 Fixed',
+            'description' => 'Module cố định chất lượng cao P2.6',
+            'is_active' => true,
+        ]);
+        $locHcm3 = WarehouseLocation::updateOrCreate(['warehouse_id' => $whHcm->id, 'code' => 'HCM-K3'], [
+            'name' => 'Khu 3 - Thiết bị xử lý & Cáp',
+            'description' => 'Bộ xử lý hình ảnh 4K, processor và cáp kết nối',
+            'is_active' => true,
+        ]);
+        $locHcm4 = WarehouseLocation::updateOrCreate(['warehouse_id' => $whHcm->id, 'code' => 'HCM-K4'], [
+            'name' => 'Khu 4 - Kệ Module Outdoor P3.9',
+            'description' => 'Khu vực lưu trữ màn hình LED ngoài trời P3.9',
+            'is_active' => true,
+        ]);
+        $locHcm5 = WarehouseLocation::updateOrCreate(['warehouse_id' => $whHcm->id, 'code' => 'HCM-K5'], [
+            'name' => 'Khu 5 - Phụ kiện & Khung case',
+            'description' => 'Flight case và khung treo màn hình',
+            'is_active' => true,
+        ]);
+
+        $locDn1 = WarehouseLocation::updateOrCreate(['warehouse_id' => $whDn->id, 'code' => 'DN-A1'], [
+            'name' => 'Khu A - Thiết bị xử lý & Phụ kiện',
+            'description' => 'Bộ xử lý novastar, case và cáp kết nối',
+            'is_active' => true,
+        ]);
+        $locDn2 = WarehouseLocation::updateOrCreate(['warehouse_id' => $whDn->id, 'code' => 'DN-B1'], [
+            'name' => 'Khu B - Kệ Module P2.6 & P3.9',
+            'description' => 'Module sẵn sàng phục vụ sự kiện miền Trung',
+            'is_active' => true,
+        ]);
+
+        $locCt1 = WarehouseLocation::updateOrCreate(['warehouse_id' => $whCt->id, 'code' => 'CT-K1'], [
+            'name' => 'Khu 1 - Kho trung chuyển miền Tây',
+            'description' => 'Kho lưu trữ và phục vụ dự án Tây Nam Bộ',
+            'is_active' => true,
+        ]);
+        $locCt2 = WarehouseLocation::updateOrCreate(['warehouse_id' => $whCt->id, 'code' => 'CT-K2'], [
+            'name' => 'Khu 2 - Kệ phụ kiện & Case',
+            'description' => 'Flight case và cáp kết nối chi nhánh Cần Thơ',
             'is_active' => true,
         ]);
 
@@ -295,46 +368,9 @@ class LedOsDataSeeder extends Seeder
         $admin->linkAccount($techUser1, label: 'Kỹ thuật viên (Vũ Đình Trọng)', requiresPassword: false);
         $admin->linkAccount($accountantUser, label: 'Kế toán (Nguyễn Thị Mai)', requiresPassword: false);
 
-        // 4. Device Types
-        $dtCabinet = DeviceType::updateOrCreate(['code' => 'CAB'], [
-            'name' => 'Cabinet LED Module',
-            'unit' => DeviceUnit::Piece,
-            'requires_serial' => true,
-        ]);
-
-        $dtProcessor = DeviceType::updateOrCreate(['code' => 'PROC'], [
-            'name' => 'Bộ xử lý Video Processor',
-            'unit' => DeviceUnit::Set,
-            'requires_serial' => true,
-        ]);
-
-        $dtSendingCard = DeviceType::updateOrCreate(['code' => 'SEND'], [
-            'name' => 'Sending Box / Master Controller',
-            'unit' => DeviceUnit::Piece,
-            'requires_serial' => true,
-        ]);
-
-        $dtTruss = DeviceType::updateOrCreate(['code' => 'TRUSS'], [
-            'name' => 'Khung nhôm Truss & Flybar',
-            'unit' => DeviceUnit::Bar,
-            'requires_serial' => false,
-        ]);
-
-        $dtFlycase = DeviceType::updateOrCreate(['code' => 'FLY'], [
-            'name' => 'Thùng đựng Flycase chuyên dụng',
-            'unit' => DeviceUnit::Box,
-            'requires_serial' => true,
-        ]);
-
-        $dtCable = DeviceType::updateOrCreate(['code' => 'CABLE'], [
-            'name' => 'Bộ cáp nguồn & tín hiệu',
-            'unit' => DeviceUnit::Cable,
-            'requires_serial' => false,
-        ]);
-
-        // 5. Product Lines (P1.5, P2.6, P2.9, P3.9, P4.8)
+        // 4. Product Lines (P1.5, P2.6, P2.9, P3.9, P4.8)
         $plP15 = ProductLine::updateOrCreate(['code' => 'P1.5'], [
-            'name' => 'P1.5 Indoor',
+            'name' => 'P1.5 Trong nhà cố định',
             'pixel_pitch_unit' => 'mm',
             'pixel_pitch' => 1.50,
             'environment' => ProductEnvironment::Indoor,
@@ -348,7 +384,21 @@ class LedOsDataSeeder extends Seeder
         ]);
 
         $plP26 = ProductLine::updateOrCreate(['code' => 'P2.6'], [
-            'name' => 'P2.6 Indoor',
+            'name' => 'P2.6 Sự kiện',
+            'pixel_pitch_unit' => 'mm',
+            'pixel_pitch' => 2.60,
+            'environment' => ProductEnvironment::Indoor,
+            'module_width_mm' => 500.00,
+            'module_height_mm' => 500.00,
+            'weight_kg' => 6.80,
+            'power_watt' => 380.00,
+            'brand' => 'Gloshine',
+            'cabinet_material' => 'Die-cast Aluminum',
+            'is_active' => true,
+        ]);
+
+        $plP26Fix = ProductLine::updateOrCreate(['code' => 'P2.6-FIX'], [
+            'name' => 'P2.6 Trong nhà cố định',
             'pixel_pitch_unit' => 'mm',
             'pixel_pitch' => 2.60,
             'environment' => ProductEnvironment::Indoor,
@@ -362,7 +412,7 @@ class LedOsDataSeeder extends Seeder
         ]);
 
         $plP29 = ProductLine::updateOrCreate(['code' => 'P2.9'], [
-            'name' => 'P2.9 Indoor',
+            'name' => 'P2.9 Sự kiện',
             'pixel_pitch_unit' => 'mm',
             'pixel_pitch' => 2.90,
             'environment' => ProductEnvironment::Indoor,
@@ -637,23 +687,23 @@ class LedOsDataSeeder extends Seeder
         // 7. Assets Inventory across Warehouses
         $exactSerials = [
             // P1.5 (0.5×0.5 m)
-            ['serial' => 'GE-R15-000201', 'pl' => $plP15, 'size' => '0.5×0.5 m', 'mfd' => '2025-09-02'],
-            ['serial' => 'GE-R15-000202', 'pl' => $plP15, 'size' => '0.5×0.5 m', 'mfd' => '2025-09-02'],
-            ['serial' => 'GE-R15-000203', 'pl' => $plP15, 'size' => '0.5×0.5 m', 'mfd' => '2026-03-20'],
+            ['serial' => 'GE-R15-000201', 'pl' => $plP15, 'size' => '0.5×0.5 m', 'mfd' => '2025-09-02', 'status' => AssetStatus::Ready, 'wh' => $whHcm, 'loc' => $locHcm1],
+            ['serial' => 'GE-R15-000202', 'pl' => $plP15, 'size' => '0.5×0.5 m', 'mfd' => '2025-09-02', 'status' => AssetStatus::InEvent, 'wh' => $whHcm, 'loc' => $locHcm1],
+            ['serial' => 'GE-R15-000203', 'pl' => $plP15, 'size' => '0.5×0.5 m', 'mfd' => '2026-03-20', 'status' => AssetStatus::Ready, 'wh' => $whHcm, 'loc' => $locHcm1],
             // P2.6 (0.5×0.5 m)
-            ['serial' => 'GE-R18-000301', 'pl' => $plP26, 'size' => '0.5×0.5 m', 'mfd' => '2026-03-20'],
-            ['serial' => 'GE-R18-000302', 'pl' => $plP26, 'size' => '0.5×0.5 m', 'mfd' => '2026-03-20'],
-            ['serial' => 'GE-R26-000101', 'pl' => $plP26, 'size' => '0.5×0.5 m', 'mfd' => '2026-02-10'],
-            ['serial' => 'GE-R26-000102', 'pl' => $plP26, 'size' => '0.5×0.5 m', 'mfd' => '2026-02-10'],
-            ['serial' => 'GE-R26-000105', 'pl' => $plP26, 'size' => '0.5×0.5 m', 'mfd' => '2026-02-10'],
-            ['serial' => 'GE-R26-000106', 'pl' => $plP26, 'size' => '0.5×0.5 m', 'mfd' => '2026-02-10'],
-            ['serial' => 'GE-R26-000107', 'pl' => $plP26, 'size' => '0.5×0.5 m', 'mfd' => '2025-11-14'],
-            ['serial' => 'GE-R26-000109', 'pl' => $plP26, 'size' => '0.5×0.5 m', 'mfd' => '2026-02-10'],
+            ['serial' => 'GE-R18-000301', 'pl' => $plP26Fix, 'size' => '0.5×0.5 m', 'mfd' => '2026-03-20', 'status' => AssetStatus::Disposed, 'wh' => $whHcm, 'loc' => $locHcm2],
+            ['serial' => 'GE-R18-000302', 'pl' => $plP26Fix, 'size' => '0.5×0.5 m', 'mfd' => '2026-03-20', 'status' => AssetStatus::Ready, 'wh' => $whHcm, 'loc' => $locHcm2],
+            ['serial' => 'GE-R26-000101', 'pl' => $plP26, 'size' => '0.5×0.5 m', 'mfd' => '2026-02-10', 'status' => AssetStatus::Ready, 'wh' => $whHn, 'loc' => $locHn1],
+            ['serial' => 'GE-R26-000102', 'pl' => $plP26, 'size' => '0.5×0.5 m', 'mfd' => '2026-02-10', 'status' => AssetStatus::InEvent, 'wh' => $whHn, 'loc' => $locHn1],
+            ['serial' => 'GE-R26-000105', 'pl' => $plP26, 'size' => '0.5×0.5 m', 'mfd' => '2026-02-10', 'status' => AssetStatus::Ready, 'wh' => $whHn, 'loc' => $locHn2],
+            ['serial' => 'GE-R26-000106', 'pl' => $plP26, 'size' => '0.5×0.5 m', 'mfd' => '2026-02-10', 'status' => AssetStatus::Ready, 'wh' => $whHn, 'loc' => $locHn1],
+            ['serial' => 'GE-R26-000107', 'pl' => $plP26, 'size' => '0.5×0.5 m', 'mfd' => '2025-11-14', 'status' => AssetStatus::Repairing, 'wh' => null, 'loc' => null],
+            ['serial' => 'GE-R26-000109', 'pl' => $plP26, 'size' => '0.5×0.5 m', 'mfd' => '2026-02-10', 'status' => AssetStatus::InEvent, 'wh' => $whHn, 'loc' => $locHn2],
             // P2.9 (0.5×1 m)
-            ['serial' => 'GE-R29-000103', 'pl' => $plP29, 'size' => '0.5×1 m', 'mfd' => '2025-11-14'],
-            ['serial' => 'GE-R29-000104', 'pl' => $plP29, 'size' => '0.5×1 m', 'mfd' => '2025-11-14'],
-            ['serial' => 'GE-R29-000108', 'pl' => $plP29, 'size' => '0.5×1 m', 'mfd' => '2026-02-10'],
-            ['serial' => 'GE-R29-000110', 'pl' => $plP29, 'size' => '0.5×1 m', 'mfd' => '2025-11-14'],
+            ['serial' => 'GE-R29-000103', 'pl' => $plP29, 'size' => '0.5×1 m', 'mfd' => '2025-11-14', 'status' => AssetStatus::Repairing, 'wh' => null, 'loc' => null],
+            ['serial' => 'GE-R29-000104', 'pl' => $plP29, 'size' => '0.5×1 m', 'mfd' => '2025-11-14', 'status' => AssetStatus::Ready, 'wh' => $whHn, 'loc' => $locHn2],
+            ['serial' => 'GE-R29-000108', 'pl' => $plP29, 'size' => '0.5×1 m', 'mfd' => '2026-02-10', 'status' => AssetStatus::Ready, 'wh' => $whHn, 'loc' => $locHn3],
+            ['serial' => 'GE-R29-000110', 'pl' => $plP29, 'size' => '0.5×1 m', 'mfd' => '2025-11-14', 'status' => AssetStatus::Ready, 'wh' => $whHn, 'loc' => $locHn3],
         ];
 
         $assets = collect();
@@ -661,13 +711,13 @@ class LedOsDataSeeder extends Seeder
             $asset = Asset::updateOrCreate(['serial_no' => $s['serial']], [
                 'qr_code' => 'QR-'.$s['serial'],
                 'product_line_id' => $s['pl']->id,
-                'device_type_id' => $dtCabinet->id,
                 'size' => $s['size'],
                 'manufactured_date' => $s['mfd'],
                 'purchase_cost' => 8500000,
                 'purchase_date' => Carbon::parse($s['mfd'])->addDays(10)->toDateString(),
-                'current_status' => AssetStatus::Ready,
-                'current_warehouse_id' => $whHn->id,
+                'current_status' => $s['status'],
+                'current_warehouse_id' => $s['wh']?->id,
+                'warehouse_location_id' => $s['loc']?->id,
             ]);
             $assets->push($asset);
         }
@@ -678,13 +728,13 @@ class LedOsDataSeeder extends Seeder
             $asset = Asset::updateOrCreate(['serial_no' => $serial], [
                 'qr_code' => 'QR-'.$serial,
                 'product_line_id' => $plP26->id,
-                'device_type_id' => $dtCabinet->id,
                 'size' => '0.5×0.5 m',
                 'manufactured_date' => '2026-02-10',
                 'purchase_cost' => 8500000,
                 'purchase_date' => '2026-02-20',
                 'current_status' => AssetStatus::Ready,
                 'current_warehouse_id' => $whHn->id,
+                'warehouse_location_id' => $locHn1->id,
             ]);
             $assets->push($asset);
         }
@@ -695,13 +745,13 @@ class LedOsDataSeeder extends Seeder
             $asset = Asset::updateOrCreate(['serial_no' => $serial], [
                 'qr_code' => 'QR-'.$serial,
                 'product_line_id' => $plP15->id,
-                'device_type_id' => $dtCabinet->id,
                 'size' => '0.5×0.5 m',
                 'manufactured_date' => '2025-10-10',
                 'purchase_cost' => 12000000,
                 'purchase_date' => '2025-10-25',
                 'current_status' => AssetStatus::Ready,
                 'current_warehouse_id' => $whHn->id,
+                'warehouse_location_id' => $locHn1->id,
             ]);
             $assets->push($asset);
         }
@@ -712,13 +762,13 @@ class LedOsDataSeeder extends Seeder
             $asset = Asset::updateOrCreate(['serial_no' => $serial], [
                 'qr_code' => 'QR-'.$serial,
                 'product_line_id' => $plP39->id,
-                'device_type_id' => $dtCabinet->id,
                 'size' => '0.5×1.0 m',
                 'manufactured_date' => '2025-11-20',
                 'purchase_cost' => 10500000,
                 'purchase_date' => '2025-12-05',
                 'current_status' => AssetStatus::Ready,
                 'current_warehouse_id' => $whHn->id,
+                'warehouse_location_id' => $locHn2->id,
             ]);
             $assets->push($asset);
         }
@@ -729,13 +779,13 @@ class LedOsDataSeeder extends Seeder
             $asset = Asset::updateOrCreate(['serial_no' => $serial], [
                 'qr_code' => 'QR-'.$serial,
                 'product_line_id' => null,
-                'device_type_id' => $dtProcessor->id,
                 'size' => '2U Rack',
                 'manufactured_date' => '2025-10-15',
                 'purchase_cost' => 45000000,
                 'purchase_date' => '2025-11-01',
                 'current_status' => AssetStatus::Ready,
                 'current_warehouse_id' => $whHn->id,
+                'warehouse_location_id' => $locHn3->id,
             ]);
             $assets->push($asset);
         }
@@ -745,13 +795,13 @@ class LedOsDataSeeder extends Seeder
             $asset = Asset::updateOrCreate(['serial_no' => $serial], [
                 'qr_code' => 'QR-'.$serial,
                 'product_line_id' => null,
-                'device_type_id' => $dtSendingCard->id,
                 'size' => '1U Master Controller',
                 'manufactured_date' => '2025-10-15',
                 'purchase_cost' => 22000000,
                 'purchase_date' => '2025-11-01',
                 'current_status' => AssetStatus::Ready,
                 'current_warehouse_id' => $whHn->id,
+                'warehouse_location_id' => $locHn3->id,
             ]);
             $assets->push($asset);
         }
@@ -761,13 +811,13 @@ class LedOsDataSeeder extends Seeder
             $asset = Asset::updateOrCreate(['serial_no' => $serial], [
                 'qr_code' => 'QR-'.$serial,
                 'product_line_id' => null,
-                'device_type_id' => $dtFlycase->id,
                 'size' => '6in1 Flight Case',
                 'manufactured_date' => '2025-08-10',
                 'purchase_cost' => 4500000,
                 'purchase_date' => '2025-08-20',
                 'current_status' => AssetStatus::Ready,
                 'current_warehouse_id' => $whHn->id,
+                'warehouse_location_id' => $locHn4->id,
             ]);
             $assets->push($asset);
         }
@@ -778,13 +828,13 @@ class LedOsDataSeeder extends Seeder
             $asset = Asset::updateOrCreate(['serial_no' => $serial], [
                 'qr_code' => 'QR-'.$serial,
                 'product_line_id' => $plP26->id,
-                'device_type_id' => $dtCabinet->id,
                 'size' => '0.5×0.5 m',
                 'manufactured_date' => '2026-01-15',
                 'purchase_cost' => 8500000,
                 'purchase_date' => '2026-01-30',
                 'current_status' => AssetStatus::Ready,
                 'current_warehouse_id' => $whHcm->id,
+                'warehouse_location_id' => $locHcm2->id,
             ]);
             $assets->push($asset);
         }
@@ -794,13 +844,13 @@ class LedOsDataSeeder extends Seeder
             $asset = Asset::updateOrCreate(['serial_no' => $serial], [
                 'qr_code' => 'QR-'.$serial,
                 'product_line_id' => $plP29->id,
-                'device_type_id' => $dtCabinet->id,
                 'size' => '0.5×1.0 m',
                 'manufactured_date' => '2025-12-10',
                 'purchase_cost' => 9800000,
                 'purchase_date' => '2025-12-25',
                 'current_status' => AssetStatus::Ready,
                 'current_warehouse_id' => $whHcm->id,
+                'warehouse_location_id' => $locHcm1->id,
             ]);
             $assets->push($asset);
         }
@@ -810,13 +860,13 @@ class LedOsDataSeeder extends Seeder
             $asset = Asset::updateOrCreate(['serial_no' => $serial], [
                 'qr_code' => 'QR-'.$serial,
                 'product_line_id' => $plP39->id,
-                'device_type_id' => $dtCabinet->id,
                 'size' => '0.5×1.0 m',
                 'manufactured_date' => '2025-11-15',
                 'purchase_cost' => 10500000,
                 'purchase_date' => '2025-12-01',
                 'current_status' => AssetStatus::Ready,
                 'current_warehouse_id' => $whHcm->id,
+                'warehouse_location_id' => $locHcm4->id,
             ]);
             $assets->push($asset);
         }
@@ -826,13 +876,13 @@ class LedOsDataSeeder extends Seeder
             $asset = Asset::updateOrCreate(['serial_no' => $serial], [
                 'qr_code' => 'QR-'.$serial,
                 'product_line_id' => null,
-                'device_type_id' => $dtProcessor->id,
                 'size' => '4K Ultra Video Processor',
                 'manufactured_date' => '2025-10-15',
                 'purchase_cost' => 52000000,
                 'purchase_date' => '2025-11-01',
                 'current_status' => AssetStatus::Ready,
                 'current_warehouse_id' => $whHcm->id,
+                'warehouse_location_id' => $locHcm3->id,
             ]);
             $assets->push($asset);
         }
@@ -842,13 +892,13 @@ class LedOsDataSeeder extends Seeder
             $asset = Asset::updateOrCreate(['serial_no' => $serial], [
                 'qr_code' => 'QR-'.$serial,
                 'product_line_id' => null,
-                'device_type_id' => $dtFlycase->id,
                 'size' => '6in1 Flight Case',
                 'manufactured_date' => '2025-08-10',
                 'purchase_cost' => 4500000,
                 'purchase_date' => '2025-08-20',
                 'current_status' => AssetStatus::Ready,
                 'current_warehouse_id' => $whHcm->id,
+                'warehouse_location_id' => $locHcm5->id,
             ]);
             $assets->push($asset);
         }
@@ -859,13 +909,13 @@ class LedOsDataSeeder extends Seeder
             $asset = Asset::updateOrCreate(['serial_no' => $serial], [
                 'qr_code' => 'QR-'.$serial,
                 'product_line_id' => $plP26->id,
-                'device_type_id' => $dtCabinet->id,
                 'size' => '0.5×0.5 m',
                 'manufactured_date' => '2026-01-20',
                 'purchase_cost' => 8500000,
                 'purchase_date' => '2026-02-05',
                 'current_status' => AssetStatus::Ready,
                 'current_warehouse_id' => $whDn->id,
+                'warehouse_location_id' => $locDn2->id,
             ]);
             $assets->push($asset);
         }
@@ -875,13 +925,13 @@ class LedOsDataSeeder extends Seeder
             $asset = Asset::updateOrCreate(['serial_no' => $serial], [
                 'qr_code' => 'QR-'.$serial,
                 'product_line_id' => $plP39->id,
-                'device_type_id' => $dtCabinet->id,
                 'size' => '0.5×1.0 m',
                 'manufactured_date' => '2025-11-25',
                 'purchase_cost' => 10500000,
                 'purchase_date' => '2025-12-10',
                 'current_status' => AssetStatus::Ready,
                 'current_warehouse_id' => $whDn->id,
+                'warehouse_location_id' => $locDn2->id,
             ]);
             $assets->push($asset);
         }
@@ -891,13 +941,13 @@ class LedOsDataSeeder extends Seeder
             $asset = Asset::updateOrCreate(['serial_no' => $serial], [
                 'qr_code' => 'QR-'.$serial,
                 'product_line_id' => null,
-                'device_type_id' => $dtProcessor->id,
                 'size' => 'Novastar VX600 Set',
                 'manufactured_date' => '2025-10-20',
                 'purchase_cost' => 38000000,
                 'purchase_date' => '2025-11-05',
                 'current_status' => AssetStatus::Ready,
                 'current_warehouse_id' => $whDn->id,
+                'warehouse_location_id' => $locDn1->id,
             ]);
             $assets->push($asset);
         }
@@ -907,13 +957,13 @@ class LedOsDataSeeder extends Seeder
             $asset = Asset::updateOrCreate(['serial_no' => $serial], [
                 'qr_code' => 'QR-'.$serial,
                 'product_line_id' => null,
-                'device_type_id' => $dtFlycase->id,
                 'size' => '6in1 Flight Case',
                 'manufactured_date' => '2025-08-15',
                 'purchase_cost' => 4500000,
                 'purchase_date' => '2025-08-25',
                 'current_status' => AssetStatus::Ready,
                 'current_warehouse_id' => $whDn->id,
+                'warehouse_location_id' => $locDn1->id,
             ]);
             $assets->push($asset);
         }
@@ -924,13 +974,13 @@ class LedOsDataSeeder extends Seeder
             $asset = Asset::updateOrCreate(['serial_no' => $serial], [
                 'qr_code' => 'QR-'.$serial,
                 'product_line_id' => $plP26->id,
-                'device_type_id' => $dtCabinet->id,
                 'size' => '0.5×0.5 m',
                 'manufactured_date' => '2026-02-01',
                 'purchase_cost' => 8500000,
                 'purchase_date' => '2026-02-15',
                 'current_status' => AssetStatus::Ready,
                 'current_warehouse_id' => $whCt->id,
+                'warehouse_location_id' => $locCt1->id,
             ]);
             $assets->push($asset);
         }
@@ -976,7 +1026,7 @@ class LedOsDataSeeder extends Seeder
                 'quotation_id' => $quotation1->id,
                 'description' => $item['item'],
             ], [
-                'device_type_id' => $item['device_type_id'],
+                'product_line_id' => $item['product_line_id'] ?? null,
                 'quantity' => $item['qty'],
                 'unit_cost' => $item['unit_cost'],
                 'line_total' => $item['line_total'],
@@ -1021,7 +1071,7 @@ class LedOsDataSeeder extends Seeder
                 'quotation_id' => $quotation2->id,
                 'description' => $item['item'],
             ], [
-                'device_type_id' => $item['device_type_id'],
+                'product_line_id' => $item['product_line_id'] ?? null,
                 'quantity' => $item['qty'],
                 'unit_cost' => $item['unit_cost'],
                 'line_total' => $item['line_total'],
@@ -1066,7 +1116,7 @@ class LedOsDataSeeder extends Seeder
                 'quotation_id' => $quotation3->id,
                 'description' => $item['item'],
             ], [
-                'device_type_id' => $item['device_type_id'],
+                'product_line_id' => $item['product_line_id'] ?? null,
                 'quantity' => $item['qty'],
                 'unit_cost' => $item['unit_cost'],
                 'line_total' => $item['line_total'],
@@ -1111,7 +1161,7 @@ class LedOsDataSeeder extends Seeder
                 'quotation_id' => $quotation4->id,
                 'description' => $item['item'],
             ], [
-                'device_type_id' => $item['device_type_id'],
+                'product_line_id' => $item['product_line_id'] ?? null,
                 'quantity' => $item['qty'],
                 'unit_cost' => $item['unit_cost'],
                 'line_total' => $item['line_total'],
@@ -1156,7 +1206,7 @@ class LedOsDataSeeder extends Seeder
                 'quotation_id' => $quotation5->id,
                 'description' => $item['item'],
             ], [
-                'device_type_id' => $item['device_type_id'],
+                'product_line_id' => $item['product_line_id'] ?? null,
                 'quantity' => $item['qty'],
                 'unit_cost' => $item['unit_cost'],
                 'line_total' => $item['line_total'],
@@ -1201,7 +1251,7 @@ class LedOsDataSeeder extends Seeder
                 'quotation_id' => $quotation6->id,
                 'description' => $item['item'],
             ], [
-                'device_type_id' => $item['device_type_id'],
+                'product_line_id' => $item['product_line_id'] ?? null,
                 'quantity' => $item['qty'],
                 'unit_cost' => $item['unit_cost'],
                 'line_total' => $item['line_total'],
@@ -1239,6 +1289,19 @@ class LedOsDataSeeder extends Seeder
             'note' => 'Khách hàng đã chốt phương án kỹ thuật, chờ ký hợp đồng',
         ]);
 
+        $quoBom7 = $calcService->generateBom(6.0, 3.0, $plP29, 2);
+        foreach ($quoBom7 as $item) {
+            QuotationItem::updateOrCreate([
+                'quotation_id' => $quotation7->id,
+                'description' => $item['item'],
+            ], [
+                'product_line_id' => $item['product_line_id'] ?? null,
+                'quantity' => $item['qty'],
+                'unit_cost' => $item['unit_cost'],
+                'line_total' => $item['line_total'],
+            ]);
+        }
+
         // QUO 8: Sent Quotation (Sao Mai Event)
         $quoCfg8 = $calcService->deriveConfiguration(14.0, 5.0, $plP39);
         $quoPricing8 = $calcService->calculatePricing(14.0, 5.0, $plP39, 3, 6, 35.0);
@@ -1270,6 +1333,19 @@ class LedOsDataSeeder extends Seeder
             'note' => 'Đã gửi báo giá cho đối tác agency, đang chờ duyệt ngân sách',
         ]);
 
+        $quoBom8 = $calcService->generateBom(14.0, 5.0, $plP39, 3);
+        foreach ($quoBom8 as $item) {
+            QuotationItem::updateOrCreate([
+                'quotation_id' => $quotation8->id,
+                'description' => $item['item'],
+            ], [
+                'product_line_id' => $item['product_line_id'] ?? null,
+                'quantity' => $item['qty'],
+                'unit_cost' => $item['unit_cost'],
+                'line_total' => $item['line_total'],
+            ]);
+        }
+
         // 9. Orders Lifecycle Management
         // 9.1 Order 1: VinFast VF3 (WH-HN) -> Dispatched
         $order1 = Order::updateOrCreate(['order_no' => 'ORD-2608-01'], [
@@ -1280,7 +1356,7 @@ class LedOsDataSeeder extends Seeder
             'expected_return_date' => now()->addDays(5)->toDateString(),
             'area_m2' => 21.0,
             'event' => 'Lễ Ra Mắt Xe Điện VinFast VF3',
-            'device_type_id' => $dtCabinet->id,
+            'product_line_id' => $plP26->id,
             'value' => $quoPricing1['total_price'],
             'status' => OrderStatus::Dispatched,
             'sales_user_id' => $sales1->id,
@@ -1289,16 +1365,14 @@ class LedOsDataSeeder extends Seeder
         $quotation1->update(['converted_order_id' => $order1->id]);
 
         foreach ($quoBom1 as $item) {
-            if ($item['device_type_id']) {
-                OrderItem::updateOrCreate([
-                    'order_id' => $order1->id,
-                    'device_type_id' => $item['device_type_id'],
-                    'note' => $item['item'],
-                ], [
-                    'quantity_required' => (int) $item['qty'],
-                    'unit_price' => $item['unit_cost'],
-                ]);
-            }
+            OrderItem::updateOrCreate([
+                'order_id' => $order1->id,
+                'product_line_id' => $item['product_line_id'] ?? null,
+                'note' => $item['item'],
+            ], [
+                'quantity_required' => (int) $item['qty'],
+                'unit_price' => $item['unit_cost'],
+            ]);
         }
 
         // 9.2 Order 2: Rex Hotel Gala (WH-HCM) -> OutboundCreated
@@ -1310,7 +1384,7 @@ class LedOsDataSeeder extends Seeder
             'expected_return_date' => now()->addDays(9)->toDateString(),
             'area_m2' => 10.0,
             'event' => 'Gala Dinner Hội nghị Doanh nhân TP.HCM',
-            'device_type_id' => $dtCabinet->id,
+            'product_line_id' => $plP15->id,
             'value' => $quoPricing2['total_price'],
             'status' => OrderStatus::OutboundCreated,
             'sales_user_id' => $sales2->id,
@@ -1319,16 +1393,14 @@ class LedOsDataSeeder extends Seeder
         $quotation2->update(['converted_order_id' => $order2->id]);
 
         foreach ($quoBom2 as $item) {
-            if ($item['device_type_id']) {
-                OrderItem::updateOrCreate([
-                    'order_id' => $order2->id,
-                    'device_type_id' => $item['device_type_id'],
-                    'note' => $item['item'],
-                ], [
-                    'quantity_required' => (int) $item['qty'],
-                    'unit_price' => $item['unit_cost'],
-                ]);
-            }
+            OrderItem::updateOrCreate([
+                'order_id' => $order2->id,
+                'product_line_id' => $item['product_line_id'] ?? null,
+                'note' => $item['item'],
+            ], [
+                'quantity_required' => (int) $item['qty'],
+                'unit_price' => $item['unit_cost'],
+            ]);
         }
 
         // 9.3 Order 3: Sun Group DIFF Đà Nẵng (WH-DN) -> Confirmed / OutboundCreated
@@ -1340,7 +1412,7 @@ class LedOsDataSeeder extends Seeder
             'expected_return_date' => now()->addDays(14)->toDateString(),
             'area_m2' => 72.0,
             'event' => 'Lễ Hội Pháo Hoa Quốc Tế DIFF 2026',
-            'device_type_id' => $dtCabinet->id,
+            'product_line_id' => $plP39->id,
             'value' => $quoPricing3['total_price'],
             'status' => OrderStatus::OutboundCreated,
             'sales_user_id' => $sales3->id,
@@ -1349,16 +1421,14 @@ class LedOsDataSeeder extends Seeder
         $quotation3->update(['converted_order_id' => $order3->id]);
 
         foreach ($quoBom3 as $item) {
-            if ($item['device_type_id']) {
-                OrderItem::updateOrCreate([
-                    'order_id' => $order3->id,
-                    'device_type_id' => $item['device_type_id'],
-                    'note' => $item['item'],
-                ], [
-                    'quantity_required' => (int) $item['qty'],
-                    'unit_price' => $item['unit_cost'],
-                ]);
-            }
+            OrderItem::updateOrCreate([
+                'order_id' => $order3->id,
+                'product_line_id' => $item['product_line_id'] ?? null,
+                'note' => $item['item'],
+            ], [
+                'quantity_required' => (int) $item['qty'],
+                'unit_price' => $item['unit_cost'],
+            ]);
         }
 
         // 9.4 Order 4: Dat Viet VAC (WH-HCM) -> Completed (Historical returned order)
@@ -1370,7 +1440,7 @@ class LedOsDataSeeder extends Seeder
             'expected_return_date' => now()->subDays(5)->toDateString(),
             'area_m2' => 40.0,
             'event' => "Gameshow Truyền Hình 'Anh Trai Say Hi'",
-            'device_type_id' => $dtCabinet->id,
+            'product_line_id' => $plP29->id,
             'value' => $quoPricing4['total_price'],
             'status' => OrderStatus::Completed,
             'sales_user_id' => $sales2->id,
@@ -1379,16 +1449,14 @@ class LedOsDataSeeder extends Seeder
         $quotation4->update(['converted_order_id' => $order4->id]);
 
         foreach ($quoBom4 as $item) {
-            if ($item['device_type_id']) {
-                OrderItem::updateOrCreate([
-                    'order_id' => $order4->id,
-                    'device_type_id' => $item['device_type_id'],
-                    'note' => $item['item'],
-                ], [
-                    'quantity_required' => (int) $item['qty'],
-                    'unit_price' => $item['unit_cost'],
-                ]);
-            }
+            OrderItem::updateOrCreate([
+                'order_id' => $order4->id,
+                'product_line_id' => $item['product_line_id'] ?? null,
+                'note' => $item['item'],
+            ], [
+                'quantity_required' => (int) $item['qty'],
+                'unit_price' => $item['unit_cost'],
+            ]);
         }
 
         // 9.5 Order 5: FPT AI Summit (WH-HN) -> Confirmed
@@ -1400,7 +1468,7 @@ class LedOsDataSeeder extends Seeder
             'expected_return_date' => now()->addDays(17)->toDateString(),
             'area_m2' => 36.0,
             'event' => 'Hội Nghị Thượng Đỉnh Công Nghệ FPT AI Summit 2026',
-            'device_type_id' => $dtCabinet->id,
+            'product_line_id' => $plP26->id,
             'value' => $quoPricing5['total_price'],
             'status' => OrderStatus::OutboundCreated,
             'sales_user_id' => $sales1->id,
@@ -1417,7 +1485,7 @@ class LedOsDataSeeder extends Seeder
             'expected_return_date' => now()->addDays(21)->toDateString(),
             'area_m2' => 15.0,
             'event' => 'Lễ Kỷ Niệm 63 Năm Thành Lập Vietcombank',
-            'device_type_id' => $dtCabinet->id,
+            'product_line_id' => $plP26->id,
             'value' => $quoPricing6['total_price'],
             'status' => OrderStatus::Draft,
             'sales_user_id' => $sales1->id,
@@ -1465,7 +1533,6 @@ class LedOsDataSeeder extends Seeder
             'customer_id' => $customers[0]->id,
             'warehouse_id' => $whHn->id,
             'required_area_m2' => 21.0,
-            'device_type_id' => $dtCabinet->id,
             'expected_return_date' => now()->addDays(5)->toDateString(),
             'status' => BatchStatus::InProgress,
             'created_by' => $whStaff1->id,
@@ -1504,7 +1571,6 @@ class LedOsDataSeeder extends Seeder
             'customer_id' => $customers[2]->id,
             'warehouse_id' => $whHcm->id,
             'required_area_m2' => 10.0,
-            'device_type_id' => $dtCabinet->id,
             'expected_return_date' => now()->addDays(9)->toDateString(),
             'status' => BatchStatus::Pending,
             'created_by' => $whStaff2->id,
@@ -1516,7 +1582,6 @@ class LedOsDataSeeder extends Seeder
             'customer_id' => $customers[7]->id,
             'warehouse_id' => $whHcm->id,
             'required_area_m2' => 40.0,
-            'device_type_id' => $dtCabinet->id,
             'expected_return_date' => now()->subDays(5)->toDateString(),
             'status' => BatchStatus::Completed,
             'created_by' => $whStaff2->id,
@@ -1839,5 +1904,23 @@ class LedOsDataSeeder extends Seeder
             'end_date' => now()->addDays(9)->toDateString(),
             'note' => 'Kỹ thuật viên phụ trách màn P1.5 sảnh Grand Ballroom',
         ]);
+
+        // 16. Calculate and synchronize operating hours and rental count for all assets
+        foreach (Asset::all() as $asset) {
+            $checkoutCount = $asset->checkoutBatchItems()->where('is_dispatched', true)->count();
+            if ($asset->id === 1 || $asset->serial_no === 'GE-R15-000201') {
+                $asset->updateQuietly([
+                    'rental_count' => 21,
+                    'operating_hours' => 890,
+                ]);
+            } else {
+                $baseRentals = $asset->id <= 25 ? ($checkoutCount + 8) : $checkoutCount;
+                $operatingHours = $baseRentals > 0 ? ($baseRentals * 42 + 10) : 0;
+                $asset->updateQuietly([
+                    'rental_count' => $baseRentals,
+                    'operating_hours' => $operatingHours,
+                ]);
+            }
+        }
     }
 }

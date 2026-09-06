@@ -22,7 +22,6 @@ class CheckinBatch extends Model
         'expected_date',
         'batch_type',
         'product_line_id',
-        'device_type_id',
         'quantity',
         'production_note',
         'status',
@@ -65,14 +64,6 @@ class CheckinBatch extends Model
     public function productLine(): BelongsTo
     {
         return $this->belongsTo(ProductLine::class);
-    }
-
-    /**
-     * @return BelongsTo<DeviceType, $this>
-     */
-    public function deviceType(): BelongsTo
-    {
-        return $this->belongsTo(DeviceType::class);
     }
 
     /**

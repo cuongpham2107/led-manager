@@ -34,15 +34,20 @@ class EventCalendarWidget extends FullCalendarWidget
         $events = [];
 
         // 1. Orders (Sự kiện cho thuê màn hình LED)
-        $orders = Order::query()
+        $orderQuery = Order::query()
             ->with(['customer', 'warehouse', 'salesUser', 'milestones'])
             ->where('status', '!=', OrderStatus::Cancelled)
             ->whereDate('request_date', '<=', $info['end'])
             ->where(function ($q) use ($info) {
                 $q->whereNull('expected_return_date')
                     ->orWhereDate('expected_return_date', '>=', $info['start']);
-            })
-            ->get();
+            });
+
+        if ($whId = auth()->user()?->getScopedWarehouseId()) {
+            $orderQuery->where('warehouse_id', $whId);
+        }
+
+        $orders = $orderQuery->get();
 
         foreach ($orders as $order) {
             $startDate = $order->request_date?->toDateString() ?? now()->toDateString();

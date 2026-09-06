@@ -15,10 +15,10 @@
     $customer = $customerId ? Customer::find($customerId) : ($record?->customer ?? null);
 
     $quotationId = $get('quotation_id');
-    $quotation = $quotationId ? Quotation::with('items.deviceType', 'productLine')->find($quotationId) : ($record?->quotation ?? null);
+    $quotation = $quotationId ? Quotation::with('items.productLine', 'productLine')->find($quotationId) : ($record?->quotation ?? null);
 
     $orderId = $get('order_id');
-    $order = $orderId ? Order::with('items.deviceType')->find($orderId) : ($record?->order ?? null);
+    $order = $orderId ? Order::with('items.productLine')->find($orderId) : ($record?->order ?? null);
 
     $salesUserId = $get('sales_user_id');
     $salesUser = $salesUserId ? User::find($salesUserId) : ($record?->salesUser ?? auth()->user());
@@ -41,7 +41,7 @@
 
     // Quotation fallback from order
     if (! $quotation && $order && $order->quotation_id) {
-        $quotation = Quotation::with('items.deviceType', 'productLine')->find($order->quotation_id);
+        $quotation = Quotation::with('items.productLine', 'productLine')->find($order->quotation_id);
     }
 
     // Items for appendix
@@ -49,9 +49,9 @@
     if ($quotation && $quotation->items->isNotEmpty()) {
         foreach ($quotation->items as $item) {
             $items[] = [
-                'name' => $item->deviceType?->name ?: 'Màn hình LED & Thiết bị',
+                'name' => $item->productLine?->name ?: $item->description ?: 'Màn hình LED & Thiết bị',
                 'description' => $item->description ?: 'Theo tiêu chuẩn kỹ thuật',
-                'unit' => $item->deviceType?->unit?->getLabel() ?? 'Cái',
+                'unit' => 'Tấm / Bộ',
                 'quantity' => (float) $item->quantity,
                 'unit_price' => (float) $item->unit_cost,
                 'line_total' => (float) $item->line_total,
@@ -60,9 +60,9 @@
     } elseif ($order && $order->items->isNotEmpty()) {
         foreach ($order->items as $item) {
             $items[] = [
-                'name' => $item->deviceType?->name ?: 'Thiết bị xuất kho',
+                'name' => $item->productLine?->name ?: $item->note ?: 'Thiết bị xuất kho',
                 'description' => $item->note ?: 'Theo danh mục xuất kho',
-                'unit' => $item->deviceType?->unit?->getLabel() ?? 'Cái',
+                'unit' => 'Tấm / Bộ',
                 'quantity' => (float) $item->quantity_required,
                 'unit_price' => (float) $item->unit_price,
                 'line_total' => (float) ($item->quantity_required * $item->unit_price),

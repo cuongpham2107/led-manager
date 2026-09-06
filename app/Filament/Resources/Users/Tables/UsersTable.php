@@ -9,6 +9,7 @@ use Filament\Support\Enums\Width;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\Summarizers\Count;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Enums\RecordActionsPosition;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -52,7 +53,8 @@ class UsersTable
                 SelectFilter::make('warehouse_id')
                     ->label('Kho công tác')
                     ->relationship('warehouse', 'name'),
-            ])
+            ], layout: FiltersLayout::AboveContent)
+            ->deferFilters(false)
             ->recordActions([
                 EditAction::make()
                     ->modalHeading('Cập nhật tài khoản người dùng')

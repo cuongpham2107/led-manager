@@ -22,16 +22,26 @@ class StatsOverviewWidget extends BaseWidget
 
     protected function getStats(): array
     {
-        $totalRevenue = (float) Order::where('status', '!=', OrderStatus::Cancelled)->sum('value');
-        $totalPaid = (float) Order::sum('total_paid');
+        $whId = auth()->user()?->getScopedWarehouseId();
 
-        $activeOrders = Order::whereIn('status', [
+        $orderQuery = Order::query();
+        $assetQuery = Asset::query();
+
+        if ($whId) {
+            $orderQuery->where('warehouse_id', $whId);
+            $assetQuery->where('current_warehouse_id', $whId);
+        }
+
+        $totalRevenue = (float) (clone $orderQuery)->where('status', '!=', OrderStatus::Cancelled)->sum('value');
+        $totalPaid = (float) (clone $orderQuery)->sum('total_paid');
+
+        $activeOrders = (clone $orderQuery)->whereIn('status', [
             OrderStatus::OutboundCreated,
             OrderStatus::Dispatched,
         ])->count();
 
-        $totalAssets = Asset::count();
-        $readyAssets = Asset::where('current_status', AssetStatus::Ready)->count();
+        $totalAssets = (clone $assetQuery)->count();
+        $readyAssets = (clone $assetQuery)->where('current_status', AssetStatus::Ready)->count();
         $utilizationRate = $totalAssets > 0 ? round((($totalAssets - $readyAssets) / $totalAssets) * 100, 1) : 0;
 
         $pendingQuotations = Quotation::whereNotIn('status', [
@@ -42,7 +52,7 @@ class StatsOverviewWidget extends BaseWidget
 
         // Sparkline: Monthly revenue trend (6 months)
         $revenueTrend = $this->getMonthlyTrend(
-            fn (Carbon $month) => (float) Order::where('status', '!=', OrderStatus::Cancelled)
+            fn (Carbon $month) => (float) (clone $orderQuery)->where('status', '!=', OrderStatus::Cancelled)
                 ->whereYear('request_date', $month->year)
                 ->whereMonth('request_date', $month->month)
                 ->sum('value')
@@ -50,14 +60,14 @@ class StatsOverviewWidget extends BaseWidget
 
         // Sparkline: Monthly active orders trend
         $ordersTrend = $this->getMonthlyTrend(
-            fn (Carbon $month) => Order::whereYear('request_date', $month->year)
+            fn (Carbon $month) => (clone $orderQuery)->whereYear('request_date', $month->year)
                 ->whereMonth('request_date', $month->month)
                 ->count()
         );
 
         // Sparkline: Monthly utilization trend
         $utilizationTrend = $this->getMonthlyTrend(
-            fn (Carbon $month) => Asset::where('current_status', '!=', AssetStatus::Ready)
+            fn (Carbon $month) => (clone $assetQuery)->where('current_status', '!=', AssetStatus::Ready)
                 ->whereDate('created_at', '<=', $month->endOfMonth())
                 ->count()
         );

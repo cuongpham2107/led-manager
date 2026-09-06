@@ -32,7 +32,6 @@ class CompleteMaintenanceBulkAction extends BulkAction
         parent::setUp();
 
         $this
-            ->authorize('CompleteMaintenanceBulk:Asset')
             ->label('Hoàn thành sửa chữa')
             ->icon('heroicon-o-check-badge')
             ->color('success')

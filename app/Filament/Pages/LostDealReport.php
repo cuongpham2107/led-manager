@@ -14,6 +14,7 @@ use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
+use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -26,7 +27,9 @@ class LostDealReport extends Page implements HasTable
     use HasPageShield;
     use InteractsWithTable;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Báo cáo & Thống kê';
+    protected static bool $shouldRegisterNavigation = false;
+
+    protected static string|UnitEnum|null $navigationGroup = 'Báo cáo';
 
     protected static ?string $navigationLabel = 'Phân tích lý do mất deal';
 
@@ -90,6 +93,7 @@ class LostDealReport extends Page implements HasTable
             ->columns([
                 TextColumn::make('code')
                     ->label('Mã báo giá')
+                    ->color('primary')
                     ->weight('bold')
                     ->searchable(),
                 TextColumn::make('customer.name')
@@ -161,7 +165,8 @@ class LostDealReport extends Page implements HasTable
                                 fn (Builder $query, $date): Builder => $query->whereDate('event_start_date', '<=', $date),
                             );
                     }),
-            ])
+            ], layout: FiltersLayout::AboveContent)
+            ->deferFilters(false)
             ->headerActions([
                 Action::make('export_csv')
                     ->label('Xuất CSV')

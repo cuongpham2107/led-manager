@@ -9,10 +9,10 @@ use App\Models\Asset;
 use App\Models\AssetStatusLog;
 use App\Models\CheckinBatch;
 use App\Models\CheckinBatchItem;
-use App\Models\DeviceType;
 use App\Models\ProductLine;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Models\WarehouseLocation;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -27,28 +27,29 @@ class ProductionBatchService
      *  - N CheckinBatchItem rows (is_received = true)
      *  - N AssetStatusLog rows (transition into Ready)
      *
-     * Supports both LED modules/cabinets (with ProductLine) and peripheral equipment
-     * (Processors, Sending cards, Truss, Cables, Flycases) where ProductLine may be null.
-     *
      * @return array{batch: CheckinBatch, assets: Collection<int, Asset>}
      *
      * @throws \RuntimeException when any generated serial_no already exists
      */
     public function createFromProduction(
         ?ProductLine $productLine,
-        DeviceType $deviceType,
         int $quantity,
         Warehouse $warehouse,
         ?string $size,
         string $serialPrefix,
         ?string $note,
         ?User $createdBy = null,
+        WarehouseLocation|int|null $warehouseLocation = null,
     ): array {
         if ($quantity < 1 || $quantity > 500) {
             throw new \InvalidArgumentException('Số lượng sản xuất phải từ 1 đến 500.');
         }
 
-        return DB::transaction(function () use ($productLine, $deviceType, $quantity, $warehouse, $size, $serialPrefix, $note, $createdBy) {
+        $warehouseLocationId = $warehouseLocation instanceof WarehouseLocation
+            ? $warehouseLocation->id
+            : ($warehouseLocation ? (int) $warehouseLocation : null);
+
+        return DB::transaction(function () use ($productLine, $quantity, $warehouse, $size, $serialPrefix, $note, $createdBy, $warehouseLocationId) {
             $batchCode = CodeGeneratorService::generate('IN', 'checkin_batches');
             $now = now();
 
@@ -57,7 +58,6 @@ class ProductionBatchService
                 'warehouse_id' => $warehouse->id,
                 'batch_type' => CheckinBatchType::Production,
                 'product_line_id' => $productLine?->id,
-                'device_type_id' => $deviceType->id,
                 'quantity' => $quantity,
                 'production_note' => $note,
                 'status' => BatchStatus::Completed,
@@ -79,12 +79,12 @@ class ProductionBatchService
                     'serial_no' => $serial,
                     'qr_code' => $serial,
                     'product_line_id' => $productLine?->id,
-                    'device_type_id' => $deviceType->id,
                     'size' => $size,
                     'manufactured_date' => $now->toDateString(),
                     'purchase_cost' => 0,
                     'current_status' => AssetStatus::Ready,
                     'current_warehouse_id' => $warehouse->id,
+                    'warehouse_location_id' => $warehouseLocationId,
                     'note' => $note ? "Nhập từ đợt sản xuất [{$batch->code}]: {$note}" : "Nhập từ đợt sản xuất [{$batch->code}]",
                 ]);
                 $assets->push($asset);
@@ -128,12 +128,12 @@ class ProductionBatchService
     }
 
     /**
-     * Serial prefix suggestion: {ProductLine.code|DeviceType.code}-{YYMMDD}
+     * Serial prefix suggestion: {ProductLine.code}-YYMMDD
      */
-    public function suggestSerialPrefix(?ProductLine $productLine = null, ?DeviceType $deviceType = null, ?Carbon $date = null): string
+    public function suggestSerialPrefix(?ProductLine $productLine = null, ?Carbon $date = null): string
     {
         $date ??= now();
-        $code = $productLine?->code ?: ($deviceType?->code ?: 'ASSET');
+        $code = $productLine?->code ?: 'ASSET';
 
         return Str::upper($code).'-'.$date->format('ymd');
     }
