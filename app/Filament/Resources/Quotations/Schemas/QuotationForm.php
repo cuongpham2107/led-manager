@@ -9,6 +9,7 @@ use App\Models\Asset;
 use App\Models\Customer;
 use App\Models\ProductLine;
 use App\Models\Quotation;
+use App\Models\Warehouse;
 use App\Services\AvailabilityService;
 use App\Services\LedCalculationService;
 use Carbon\Carbon;
@@ -319,11 +320,31 @@ class QuotationForm
                                                         $endFmt = Carbon::parse($endDate)->format('d/m');
                                                         $dateLabel = $startFmt === $endFmt ? $startFmt : "{$startFmt}-{$endFmt}";
 
-                                                        if ($avail > 0) {
-                                                            return "Tồn sẵn sàng: {$readyCount} | Khả dụng lịch ({$dateLabel}): {$avail} thiết bị";
+                                                        $breakdownStr = '';
+                                                        if (! $whId) {
+                                                            $warehouses = Warehouse::query()->where('is_active', true)->get();
+                                                            $breakdown = [];
+                                                            foreach ($warehouses as $w) {
+                                                                $wAvail = app(AvailabilityService::class)->getAvailableCount(
+                                                                    (int) $state,
+                                                                    $startDate,
+                                                                    $endDate,
+                                                                    $w->id,
+                                                                    $convertedOrderId ? (int) $convertedOrderId : null,
+                                                                );
+                                                                $code = str_replace(['WH-', 'Kho '], '', $w->code ?: $w->name);
+                                                                $breakdown[] = "{$code}: {$wAvail}";
+                                                            }
+                                                            if (! empty($breakdown)) {
+                                                                $breakdownStr = ' ['.implode(', ', $breakdown).']';
+                                                            }
                                                         }
 
-                                                        return "Tồn sẵn sàng: {$readyCount} | Khả dụng lịch ({$dateLabel}): 0 thiết bị (Đã kín lịch thuê)";
+                                                        if ($avail > 0) {
+                                                            return "Tồn sẵn sàng: {$readyCount} | Khả dụng lịch ({$dateLabel}): {$avail} thiết bị{$breakdownStr}";
+                                                        }
+
+                                                        return "Tồn sẵn sàng: {$readyCount} | Khả dụng lịch ({$dateLabel}): 0 thiết bị (Đã kín lịch thuê){$breakdownStr}";
                                                     })
                                                     ->afterStateUpdated(function ($state, Get $get, Set $set, Component $component) {
                                                         if (! $state) {
