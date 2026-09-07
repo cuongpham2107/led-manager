@@ -17,7 +17,7 @@ class CustomerResource extends Resource
 {
     protected static ?string $model = Customer::class;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Dữ liệu gốc';
+    protected static string|UnitEnum|null $navigationGroup = 'Dữ liệu';
 
     protected static ?string $navigationLabel = 'Khách hàng';
 

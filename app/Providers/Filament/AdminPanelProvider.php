@@ -68,9 +68,9 @@ class AdminPanelProvider extends PanelProvider
             ->subNavigationPosition(SubNavigationPosition::Top)
             ->navigationGroups([
                 'Tổng quan',
-                'Bán hàng & Dự án',
+                'Dữ liệu',
                 'Quản lý kho',
-                'Dữ liệu gốc',
+                'Bán hàng & Dự án',
                 'Báo cáo',
                 'Hệ thống',
             ])

@@ -12,12 +12,15 @@ return new class extends Migration
         Schema::create('checkout_batches', function (Blueprint $table) {
             $table->id();
             $table->string('code')->unique(); // OUT-2608-02, auto-generated
-            $table->foreignId('order_id')->constrained()->restrictOnDelete();
-            $table->foreignId('customer_id')->constrained()->restrictOnDelete();
+            $table->foreignId('order_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('customer_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('warehouse_id')->constrained()->restrictOnDelete();
 
             $table->decimal('required_area_m2', 10, 2)->nullable();
+            $table->date('export_date')->nullable();
             $table->date('expected_return_date')->nullable();
+            $table->string('purpose')->nullable()->default('Sự kiện');
+            $table->text('note')->nullable();
 
             $table->enum('status', [
                 'pending',      // created, no serials picked yet

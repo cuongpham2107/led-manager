@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CheckinAssetSearchController;
+use App\Http\Controllers\CheckoutAssetSearchController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/mobile', function () {
@@ -21,4 +22,7 @@ Route::get('/scanner', function () {
 Route::middleware(['web', 'auth'])->group(function () {
     Route::get('/filament-api/checkin-assets', [CheckinAssetSearchController::class, 'index'])
         ->name('filament.checkin-assets');
+
+    Route::get('/filament-api/checkout-assets', [CheckoutAssetSearchController::class, 'index'])
+        ->name('filament.checkout-assets');
 });

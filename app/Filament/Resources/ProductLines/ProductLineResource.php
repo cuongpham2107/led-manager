@@ -17,7 +17,7 @@ class ProductLineResource extends Resource
 {
     protected static ?string $model = ProductLine::class;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Dữ liệu gốc';
+    protected static string|UnitEnum|null $navigationGroup = 'Hệ thống';
 
     protected static ?string $navigationLabel = 'Dòng sản phẩm LED';
 
@@ -25,7 +25,7 @@ class ProductLineResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Dòng sản phẩm LED';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 1;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCube;
 

@@ -17,7 +17,7 @@ class WarehouseResource extends Resource
 {
     protected static ?string $model = Warehouse::class;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Dữ liệu gốc';
+    protected static string|UnitEnum|null $navigationGroup = 'Dữ liệu';
 
     protected static ?string $navigationLabel = 'Kho hàng';
 
@@ -25,7 +25,7 @@ class WarehouseResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Danh sách kho hàng';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 2;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedHomeModern;
 

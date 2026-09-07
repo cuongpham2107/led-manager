@@ -22,4 +22,12 @@ class EditCheckoutBatch extends EditRecord
             DeleteAction::make(),
         ];
     }
+
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        unset($data['selected_assets']);
+        unset($data['product_line_id']);
+
+        return $data;
+    }
 }

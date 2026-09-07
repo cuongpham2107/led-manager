@@ -36,23 +36,14 @@ class CreateReturnBatchAction extends Action
             ->fillForm(fn (CheckoutBatch $record): array => $service->fillFormData(collect([$record])))
             ->form($service->formSchema())
             ->action(function (CheckoutBatch $record, array $data) use ($service): void {
-                if (! $order = $record->order) {
-                    Notification::make()
-                        ->title('Không thể tạo đợt trả kho')
-                        ->body('Đợt xuất kho này không liên kết với đơn hàng nào.')
-                        ->danger()
-                        ->send();
-
-                    return;
-                }
-
                 $returnBatch = $service->processReturn(
-                    order: $order,
+                    order: $record->order,
                     items: $data['items'],
                     receivedBy: $data['received_by'] ?? null,
                     returnDate: $data['return_date'] ?? null,
                     note: $data['note'] ?? null,
                     completeBatchIds: [$record->id],
+                    warehouseId: $record->warehouse_id,
                 );
 
                 $normalCount = $returnBatch->items()->where('is_received', true)->where('grade', ReturnGrade::Normal)->count();

@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\CheckoutBatches;
 
-use App\Filament\Resources\CheckoutBatches\Pages\CreateCheckoutBatch;
 use App\Filament\Resources\CheckoutBatches\Pages\EditCheckoutBatch;
 use App\Filament\Resources\CheckoutBatches\Pages\ListCheckoutBatches;
 use App\Filament\Resources\CheckoutBatches\Schemas\CheckoutBatchForm;
@@ -15,6 +14,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 use UnitEnum;
 
 class CheckoutBatchResource extends Resource
@@ -38,7 +38,7 @@ class CheckoutBatchResource extends Resource
         $query = parent::getEloquentQuery();
 
         /** @var User|null $user */
-        $user = auth()->user();
+        $user = Auth::user();
 
         if ($whId = $user?->getScopedWarehouseId()) {
             $query->where('checkout_batches.warehouse_id', $whId);
@@ -68,7 +68,6 @@ class CheckoutBatchResource extends Resource
     {
         return [
             'index' => ListCheckoutBatches::route('/'),
-            'create' => CreateCheckoutBatch::route('/create'),
             'edit' => EditCheckoutBatch::route('/{record}/edit'),
         ];
     }

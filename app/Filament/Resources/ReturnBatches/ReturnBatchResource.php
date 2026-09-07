@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\ReturnBatches;
 
-use App\Filament\Resources\ReturnBatches\Pages\CreateReturnBatch;
 use App\Filament\Resources\ReturnBatches\Pages\EditReturnBatch;
 use App\Filament\Resources\ReturnBatches\Pages\ListReturnBatches;
 use App\Filament\Resources\ReturnBatches\Schemas\ReturnBatchForm;
@@ -15,6 +14,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 use UnitEnum;
 
 class ReturnBatchResource extends Resource
@@ -38,7 +38,7 @@ class ReturnBatchResource extends Resource
         $query = parent::getEloquentQuery();
 
         /** @var User|null $user */
-        $user = auth()->user();
+        $user = Auth::user();
 
         if ($whId = $user?->getScopedWarehouseId()) {
             $query->whereHas('checkoutBatch', fn ($q) => $q->where('warehouse_id', $whId));
@@ -68,7 +68,6 @@ class ReturnBatchResource extends Resource
     {
         return [
             'index' => ListReturnBatches::route('/'),
-            'create' => CreateReturnBatch::route('/create'),
             'edit' => EditReturnBatch::route('/{record}/edit'),
         ];
     }

@@ -20,7 +20,10 @@ class CheckoutBatch extends Model
         'customer_id',
         'warehouse_id',
         'required_area_m2',
+        'export_date',
         'expected_return_date',
+        'purpose',
+        'note',
         'status',
         'created_by',
         'dispatched_at',
@@ -33,6 +36,7 @@ class CheckoutBatch extends Model
     {
         return [
             'required_area_m2' => 'decimal:2',
+            'export_date' => 'date',
             'expected_return_date' => 'date',
             'dispatched_at' => 'datetime',
             'status' => BatchStatus::class,

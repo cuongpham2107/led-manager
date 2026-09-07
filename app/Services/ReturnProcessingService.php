@@ -144,20 +144,22 @@ class ReturnProcessingService
      * @param  array<int, int>  $completeBatchIds  Explicit checkout batch ids to mark Completed (defaults to batches derived from returned items)
      */
     public function processReturn(
-        Order $order,
+        ?Order $order,
         array $items,
         ?int $receivedBy = null,
         ?string $returnDate = null,
         ?string $note = null,
         array $completeBatchIds = [],
+        ?int $warehouseId = null,
     ): ReturnBatch {
-        return DB::transaction(function () use ($order, $items, $receivedBy, $returnDate, $note, $completeBatchIds) {
+        return DB::transaction(function () use ($order, $items, $receivedBy, $returnDate, $note, $completeBatchIds, $warehouseId) {
             $code = CodeGeneratorService::generate('RET', 'return_batches');
             $receivedBy = $receivedBy ?? Auth::id();
+            $targetWarehouseId = $warehouseId ?? $order?->warehouse_id;
 
             $returnBatch = ReturnBatch::create([
                 'code' => $code,
-                'checkout_batch_id' => null,
+                'checkout_batch_id' => ! empty($completeBatchIds) ? $completeBatchIds[0] : null,
                 'return_date' => $returnDate ?? now()->toDateString(),
                 'note' => $note,
                 'status' => ReturnBatchStatus::Completed,
@@ -193,11 +195,13 @@ class ReturnProcessingService
                             'from_status' => $oldStatus,
                             'to_status' => AssetStatus::Missing,
                             'from_warehouse_id' => $asset->current_warehouse_id,
-                            'to_warehouse_id' => $order->warehouse_id,
+                            'to_warehouse_id' => $targetWarehouseId ?? $asset->current_warehouse_id,
                             'source_type' => ReturnBatch::class,
                             'source_id' => $returnBatch->id,
                             'changed_by' => $receivedBy,
-                            'note' => "Thiết bị KHÔNG trả về sau sự kiện '{$order->event}' (Đơn hàng {$order->order_no}). Chuyển sang trạng thái Mất / Chưa trả về.",
+                            'note' => $order
+                                ? "Thiết bị KHÔNG trả về sau sự kiện '{$order->event}' (Đơn hàng {$order->order_no}). Chuyển sang trạng thái Mất / Chưa trả về."
+                                : 'Thiết bị KHÔNG trả về khi thu hồi đợt xuất. Chuyển sang trạng thái Mất / Chưa trả về.',
                             'created_at' => now(),
                         ]);
                     }
@@ -214,7 +218,9 @@ class ReturnProcessingService
                         RepairLog::create([
                             'asset_id' => $asset->id,
                             'start_date' => now()->toDateString(),
-                            'repair_note' => "Hỏng hóc sau sự kiện '{$order->event}' (Đơn hàng {$order->order_no}): ".($gradeNote ?: 'Cần kiểm tra kỹ thuật'),
+                            'repair_note' => $order
+                                ? "Hỏng hóc sau sự kiện '{$order->event}' (Đơn hàng {$order->order_no}): ".($gradeNote ?: 'Cần kiểm tra kỹ thuật')
+                                : 'Hỏng hóc khi thu hồi đợt xuất: '.($gradeNote ?: 'Cần kiểm tra kỹ thuật'),
                             'result_status' => RepairResultStatus::Pending,
                             'created_by' => $receivedBy,
                         ]);
@@ -224,7 +230,7 @@ class ReturnProcessingService
                             'from_status' => $oldStatus,
                             'to_status' => AssetStatus::Repairing,
                             'from_warehouse_id' => $asset->current_warehouse_id,
-                            'to_warehouse_id' => $order->warehouse_id,
+                            'to_warehouse_id' => $targetWarehouseId ?? $asset->current_warehouse_id,
                             'source_type' => ReturnBatch::class,
                             'source_id' => $returnBatch->id,
                             'changed_by' => $receivedBy,
@@ -239,11 +245,13 @@ class ReturnProcessingService
                             'from_status' => $oldStatus,
                             'to_status' => AssetStatus::Ready,
                             'from_warehouse_id' => $asset->current_warehouse_id,
-                            'to_warehouse_id' => $order->warehouse_id,
+                            'to_warehouse_id' => $targetWarehouseId ?? $asset->current_warehouse_id,
                             'source_type' => ReturnBatch::class,
                             'source_id' => $returnBatch->id,
                             'changed_by' => $receivedBy,
-                            'note' => "Thu hồi sau sự kiện '{$order->event}' — Hoạt động tốt",
+                            'note' => $order
+                                ? "Thu hồi sau sự kiện '{$order->event}' — Hoạt động tốt"
+                                : 'Thu hồi sau đợt xuất kho — Hoạt động tốt',
                             'created_at' => now(),
                         ]);
                     }
@@ -266,7 +274,7 @@ class ReturnProcessingService
             }
 
             // Advance the order to Returned only when ALL its checkout batches are completed
-            if ($order->checkoutBatches()->where('status', '!=', BatchStatus::Completed)->doesntExist()) {
+            if ($order && $order->checkoutBatches()->where('status', '!=', BatchStatus::Completed)->doesntExist()) {
                 $order->update(['status' => OrderStatus::Returned]);
             }
 

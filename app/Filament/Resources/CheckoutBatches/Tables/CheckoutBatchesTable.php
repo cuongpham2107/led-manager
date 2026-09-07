@@ -5,6 +5,7 @@ namespace App\Filament\Resources\CheckoutBatches\Tables;
 use App\Enums\BatchStatus;
 use App\Filament\Resources\CheckoutBatches\Actions\CreateReturnBatchAction;
 use App\Filament\Resources\CheckoutBatches\Actions\ViewReturnBatchAction;
+use App\Models\User;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -15,6 +16,7 @@ use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Enums\RecordActionsPosition;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Auth;
 
 class CheckoutBatchesTable
 {
@@ -31,10 +33,12 @@ class CheckoutBatchesTable
                     ->weight('bold'),
                 TextColumn::make('order.order_no')
                     ->label('Đơn hàng')
+                    ->placeholder('—')
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('customer.name')
                     ->label('Khách hàng')
+                    ->placeholder('—')
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('warehouse.name')
@@ -82,7 +86,12 @@ class CheckoutBatchesTable
                 SelectFilter::make('warehouse_id')
                     ->label('Kho hàng')
                     ->relationship('warehouse', 'name')
-                    ->hidden(fn (): bool => (bool) auth()->user()?->getScopedWarehouseId()),
+                    ->hidden(function (): bool {
+                        /** @var User|null $user */
+                        $user = Auth::user();
+
+                        return (bool) $user?->getScopedWarehouseId();
+                    }),
             ], layout: FiltersLayout::AboveContent)
             ->deferFilters(false)
             ->recordActions([

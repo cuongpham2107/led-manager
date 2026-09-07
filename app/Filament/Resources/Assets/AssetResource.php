@@ -20,7 +20,7 @@ class AssetResource extends Resource
 {
     protected static ?string $model = Asset::class;
 
-    protected static string|UnitEnum|null $navigationGroup = 'Dữ liệu gốc';
+    protected static string|UnitEnum|null $navigationGroup = 'Dữ liệu';
 
     protected static ?string $navigationLabel = 'Danh mục thiết bị';
 
@@ -28,7 +28,7 @@ class AssetResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Danh sách tài sản LED';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 3;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCube;
 
