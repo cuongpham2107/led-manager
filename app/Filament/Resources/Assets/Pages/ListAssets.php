@@ -156,7 +156,7 @@ class ListAssets extends ListRecords
             '01/01/2026',
             '15/01/2026',
             3500000,
-            'Hàng mẫu đợt 1',
+            'Xem tab "Danh mục tham khảo" để copy tên Dòng SP / Kho',
         ];
 
         $cellData = [];
@@ -180,15 +180,52 @@ class ListAssets extends ListRecords
             ];
         }
 
+        // Build reference sheet data (Dòng sản phẩm, Kho, Mã kho, Vị trí)
+        $productLines = ProductLine::where('is_active', true)->get();
+        $warehouses = Warehouse::where('is_active', true)->get();
+        $locations = WarehouseLocation::with('warehouse')->where('is_active', true)->get();
+
+        $refHeaders = [
+            0 => ['v' => 'Dòng sản phẩm (Tên)', 's' => ['bl' => 1, 'bg' => ['rgb' => '#DBEAFE'], 'fs' => 11]],
+            1 => ['v' => 'Mã dòng SP', 's' => ['bl' => 1, 'bg' => ['rgb' => '#DBEAFE'], 'fs' => 11]],
+            2 => ['v' => 'Kho lưu trữ (Tên)', 's' => ['bl' => 1, 'bg' => ['rgb' => '#DCFCE7'], 'fs' => 11]],
+            3 => ['v' => 'Mã kho', 's' => ['bl' => 1, 'bg' => ['rgb' => '#DCFCE7'], 'fs' => 11]],
+            4 => ['v' => 'Vị trí kho', 's' => ['bl' => 1, 'bg' => ['rgb' => '#FEF3C7'], 'fs' => 11]],
+            5 => ['v' => 'Thuộc kho', 's' => ['bl' => 1, 'bg' => ['rgb' => '#FEF3C7'], 'fs' => 11]],
+        ];
+
+        $refCellData = [0 => $refHeaders];
+        $maxRefRows = max($productLines->count(), $warehouses->count(), $locations->count(), 1);
+
+        for ($r = 0; $r < $maxRefRows; $r++) {
+            $rowIdx = $r + 1;
+            $pl = $productLines->get($r);
+            $wh = $warehouses->get($r);
+            $loc = $locations->get($r);
+
+            if ($pl) {
+                $refCellData[$rowIdx][0] = ['v' => $pl->name, 's' => ['fs' => 11]];
+                $refCellData[$rowIdx][1] = ['v' => $pl->code ?? '', 's' => ['fs' => 11]];
+            }
+            if ($wh) {
+                $refCellData[$rowIdx][2] = ['v' => $wh->name, 's' => ['fs' => 11]];
+                $refCellData[$rowIdx][3] = ['v' => $wh->code ?? '', 's' => ['fs' => 11]];
+            }
+            if ($loc) {
+                $refCellData[$rowIdx][4] = ['v' => $loc->name, 's' => ['fs' => 11]];
+                $refCellData[$rowIdx][5] = ['v' => $loc->warehouse?->name ?? '', 's' => ['fs' => 11]];
+            }
+        }
+
         return [
             'id' => 'workbook-led',
-            'sheetOrder' => ['sheet-led-01'],
+            'sheetOrder' => ['sheet-led-01', 'sheet-ref-01'],
             'name' => 'Tài sản LED',
             'appVersion' => '3.0.0-alpha',
             'sheets' => [
                 'sheet-led-01' => [
                     'id' => 'sheet-led-01',
-                    'name' => 'Tài sản LED',
+                    'name' => 'Nhập tài sản LED',
                     'rowCount' => 100,
                     'columnCount' => 10,
                     'cellData' => $cellData,
@@ -201,7 +238,22 @@ class ListAssets extends ListRecords
                         5 => ['w' => 120],
                         6 => ['w' => 120],
                         7 => ['w' => 130],
-                        8 => ['w' => 220],
+                        8 => ['w' => 240],
+                    ],
+                ],
+                'sheet-ref-01' => [
+                    'id' => 'sheet-ref-01',
+                    'name' => 'Danh mục tham khảo',
+                    'rowCount' => max(50, $maxRefRows + 10),
+                    'columnCount' => 8,
+                    'cellData' => $refCellData,
+                    'columnData' => [
+                        0 => ['w' => 200],
+                        1 => ['w' => 120],
+                        2 => ['w' => 180],
+                        3 => ['w' => 100],
+                        4 => ['w' => 150],
+                        5 => ['w' => 150],
                     ],
                 ],
             ],
@@ -281,7 +333,21 @@ class ListAssets extends ListRecords
         $headers = [];
 
         if (is_array($sheetData) && isset($sheetData['sheets'])) {
-            $firstSheet = collect($sheetData['sheets'])->first();
+            $targetSheet = null;
+            foreach ($sheetData['sheets'] as $sheet) {
+                if (! empty($sheet['cellData'][0])) {
+                    foreach ($sheet['cellData'][0] as $cell) {
+                        $val = is_array($cell) ? ($cell['v'] ?? '') : ($cell ?? '');
+                        $slug = Str::slug(trim((string) $val), '_');
+                        if (in_array($slug, ['so_seri', 'seri', 'serial', 'serial_no', 'ma_tai_san', 'ma_so_seri', 'ma_thiet_bi'])) {
+                            $targetSheet = $sheet;
+                            break 2;
+                        }
+                    }
+                }
+            }
+
+            $firstSheet = $targetSheet ?? (isset($sheetData['sheetOrder'][0]) ? ($sheetData['sheets'][$sheetData['sheetOrder'][0]] ?? null) : null) ?? collect($sheetData['sheets'])->first();
             if (isset($firstSheet['cellData']) && is_array($firstSheet['cellData'])) {
                 $rawCells = $firstSheet['cellData'];
                 ksort($rawCells, SORT_NUMERIC);
