@@ -50,6 +50,8 @@ class CompleteOrderAction extends Action
 
                 $record->update(['status' => OrderStatus::Completed]);
 
+                $record->refresh();
+
                 Notification::make()
                     ->title('Đơn hàng đã hoàn tất!')
                     ->body("Đơn hàng {$record->order_no} đã được chuyển sang trạng thái Hoàn tất thành công.")

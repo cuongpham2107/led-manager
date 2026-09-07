@@ -29,7 +29,7 @@ class DispatchOrderAction extends Action
             ->label('Xuất kho đi sự kiện')
             ->icon('heroicon-o-truck')
             ->color('info')
-            ->visible(fn (Order $record): bool => $record->status === OrderStatus::OutboundCreated && $record->checkoutBatches->isNotEmpty())
+            ->visible(fn (Order $record): bool => $record->status === OrderStatus::OutboundCreated && $record->checkoutBatches()->exists())
             ->requiresConfirmation()
             ->modalHeading('Xác nhận Xuất kho đi sự kiện')
             ->modalDescription(fn (Order $record) => "Chuyển đơn hàng {$record->order_no} sang trạng thái 'Đã xuất kho đi sự kiện' và chuyển toàn bộ thiết bị trong đợt xuất sang trạng thái 'Đang chạy sự kiện'?")
@@ -80,6 +80,8 @@ class DispatchOrderAction extends Action
                     }
 
                     $record->update(['status' => OrderStatus::Dispatched]);
+
+                    $record->refresh();
 
                     Notification::make()
                         ->title('Đã xuất kho đi sự kiện!')

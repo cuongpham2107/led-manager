@@ -354,3 +354,54 @@ test('draft order displays only initial header actions in edit page', function (
         ->assertActionHidden('return_order')
         ->assertActionHidden('complete_order');
 });
+
+test('executing create_contract and create_checkout_batch instantly transitions visible header actions without reload', function () {
+    (new LedOsDataSeeder)->run();
+
+    $user = User::where('email', 'admin@ledmanager.com')->first();
+    actingAs($user);
+
+    $customer = Customer::first();
+    $warehouse = Warehouse::first();
+
+    $order = Order::create([
+        'order_no' => 'ORD-TEST-TRANS-01',
+        'customer_id' => $customer->id,
+        'warehouse_id' => $warehouse->id,
+        'request_date' => now()->toDateString(),
+        'value' => 30000000,
+        'status' => OrderStatus::Draft,
+        'event' => 'Sự kiện Chuyển đổi Action',
+    ]);
+
+    $component = Livewire::test(EditOrder::class, ['record' => $order->id])
+        ->assertActionVisible('create_contract')
+        ->assertActionHidden('view_contract')
+        ->callAction('create_contract', data: [
+            'deposit_percent' => 50,
+        ])
+        ->assertActionHidden('create_contract')
+        ->assertActionVisible('view_contract')
+        ->assertActionVisible('create_checkout_batch')
+        ->assertActionHidden('view_checkout_batch')
+        ->assertActionHidden('dispatch_order')
+        ->callAction('create_checkout_batch', data: [
+            'auto_assign' => false,
+        ])
+        ->assertActionHidden('create_checkout_batch')
+        ->assertActionVisible('view_checkout_batch')
+        ->assertActionVisible('dispatch_order')
+        ->callAction('dispatch_order')
+        ->assertActionHidden('dispatch_order')
+        ->assertActionVisible('return_order')
+        ->callAction('return_order', data: [
+            'return_date' => now()->toDateString(),
+            'notes' => 'Trả kho xong',
+            'items' => [],
+        ])
+        ->assertActionHidden('return_order')
+        ->assertActionVisible('view_return_batch')
+        ->assertActionVisible('complete_order')
+        ->callAction('complete_order')
+        ->assertActionHidden('complete_order');
+});

@@ -68,6 +68,8 @@ class ManageTimelineAction extends Action
                     'note' => $data['note'] ?? null,
                 ]);
 
+                $record->refresh();
+
                 Notification::make()
                     ->title('Thêm mốc tiến độ thành công')
                     ->body("Đã thêm mốc {$data['type']} cho đơn hàng {$record->order_no}.")

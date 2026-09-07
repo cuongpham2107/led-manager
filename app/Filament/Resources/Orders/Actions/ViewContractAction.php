@@ -22,7 +22,7 @@ class ViewContractAction extends Action
             ->label('Xem Hợp đồng')
             ->icon('heroicon-o-document-check')
             ->color('info')
-            ->visible(fn (Order $record): bool => $record->contracts->isNotEmpty())
-            ->url(fn (Order $record): ?string => ($contract = $record->contracts->first()) ? ContractResource::getUrl('edit', ['record' => $contract]) : null);
+            ->visible(fn (Order $record): bool => $record->contracts()->exists())
+            ->url(fn (Order $record): ?string => ($contract = $record->contracts()->latest('id')->first()) ? ContractResource::getUrl('edit', ['record' => $contract]) : null);
     }
 }

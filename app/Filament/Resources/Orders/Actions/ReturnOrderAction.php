@@ -47,7 +47,7 @@ class ReturnOrderAction extends Action
             ->label('Thu hồi trả kho')
             ->icon('heroicon-o-arrow-path-rounded-square')
             ->color('primary')
-            ->visible(fn (Order $record): bool => $record->status === OrderStatus::Dispatched && $record->checkoutBatches->isNotEmpty())
+            ->visible(fn (Order $record): bool => $record->status === OrderStatus::Dispatched && $record->checkoutBatches()->exists())
             ->modalHeading(fn (Order $record) => 'Thu hồi & Trả kho: '.$record->order_no.($record->event ? " ({$record->event})" : ''))
             ->modalDescription('Kiểm đếm thiết bị trả về từ sự kiện, phân loại tình trạng hoạt động (Grading) để tự động cập nhật kho và tạo phiếu bảo dưỡng nếu có hỏng hóc.')
             ->modalWidth(Width::FiveExtraLarge)
@@ -139,7 +139,7 @@ class ReturnOrderAction extends Action
 
                     $returnBatch = ReturnBatch::create([
                         'code' => $code,
-                        'checkout_batch_id' => null,
+                        'checkout_batch_id' => $record->checkoutBatches()->latest('id')->value('id'),
                         'return_date' => $data['return_date'] ?? now()->toDateString(),
                         'note' => $data['note'] ?? null,
                         'status' => ReturnBatchStatus::Completed,
@@ -243,6 +243,8 @@ class ReturnOrderAction extends Action
                     $record->checkoutBatches()->update(['status' => BatchStatus::Completed]);
 
                     $record->update(['status' => OrderStatus::Returned]);
+
+                    $record->refresh();
 
                     $body = "Phiếu trả kho {$code} đã hoàn tất: {$normalCount} thiết bị đạt chuẩn sẵn sàng trong kho";
                     if ($damagedCount > 0) {

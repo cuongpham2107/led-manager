@@ -22,7 +22,7 @@ class ViewCheckoutBatchAction extends Action
             ->label('Xem Đợt Xuất Kho')
             ->icon('heroicon-o-arrow-top-right-on-square')
             ->color('warning')
-            ->visible(fn (Order $record): bool => $record->checkoutBatches->isNotEmpty())
-            ->url(fn (Order $record): ?string => ($batch = $record->checkoutBatches->first()) ? CheckoutBatchResource::getUrl('edit', ['record' => $batch]) : null);
+            ->visible(fn (Order $record): bool => $record->checkoutBatches()->exists())
+            ->url(fn (Order $record): ?string => ($batch = $record->checkoutBatches()->latest('id')->first()) ? CheckoutBatchResource::getUrl('edit', ['record' => $batch]) : null);
     }
 }

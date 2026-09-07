@@ -76,6 +76,8 @@ class AssignCrewAction extends Action
                     ]
                 );
 
+                $record->refresh();
+
                 Notification::make()
                     ->title('Phân công nhân sự thành công')
                     ->body("Đã phân công nhân sự cho đơn hàng {$record->order_no}.")

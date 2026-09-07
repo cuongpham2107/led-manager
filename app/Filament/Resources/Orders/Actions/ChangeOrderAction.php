@@ -71,6 +71,8 @@ class ChangeOrderAction extends Action
                     'created_by' => Auth::id(),
                 ]);
 
+                $record->refresh();
+
                 Notification::make()
                     ->title('Đã ghi nhận thay đổi đơn hàng!')
                     ->body("Phụ lục cho đơn hàng {$record->order_no} đã được lưu.".($data['type'] === 'extend_return' && ! empty($data['new_expected_return_date']) ? " Ngày trả mới: {$record->expected_return_date->format('d/m/Y')}." : ''))

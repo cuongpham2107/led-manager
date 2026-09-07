@@ -295,6 +295,8 @@ class ConvertToOrderAction extends Action
                     'converted_order_id' => $order->id,
                 ]);
 
+                $record->refresh();
+
                 if ($result['has_conflicts'] && $forceConvert) {
                     Notification::make()
                         ->title('Đã tạo Đơn hàng (Cần lưu ý tồn kho)!')

@@ -28,7 +28,7 @@ class CreateContractAction extends Action
             ->label('Tạo Hợp đồng')
             ->icon('heroicon-o-document-plus')
             ->color('primary')
-            ->visible(fn (Order $record): bool => ! in_array($record->status, [OrderStatus::Cancelled]) && $record->contracts->isEmpty())
+            ->visible(fn (Order $record): bool => ! in_array($record->status, [OrderStatus::Cancelled]) && ! $record->contracts()->exists())
             ->form([
                 TextInput::make('deposit_percent')
                     ->label('Tỷ lệ đặt cọc (%)')
@@ -60,6 +60,8 @@ class CreateContractAction extends Action
                     'sales_user_id' => $record->sales_user_id,
                     'created_by' => Auth::id(),
                 ]);
+
+                $record->refresh();
 
                 Notification::make()
                     ->title('Đã tạo hợp đồng thành công!')
