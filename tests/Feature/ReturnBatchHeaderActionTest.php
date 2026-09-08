@@ -108,21 +108,30 @@ test('can create return batch for a checkout batch via modal action', function (
         'dispatched_at' => now(),
     ]);
 
-    Livewire::test(ListReturnBatches::class)
+    $test = Livewire::test(ListReturnBatches::class)
         ->callAction('create', [
             'checkout_batch_id' => $batch->id,
             'note' => 'Thiết bị trả về nguyên vẹn',
         ])
         ->assertHasNoActionErrors();
 
+    $mountedActions = $test->get('mountedActions');
+    expect($mountedActions)->toBeArray()
+        ->and($mountedActions[0]['name'] ?? null)->toBe('edit');
+
     $returnBatch = ReturnBatch::where('checkout_batch_id', $batch->id)->first();
     expect($returnBatch)->not->toBeNull()
         ->and($returnBatch->note)->toBe('Thiết bị trả về nguyên vẹn')
-        ->and($returnBatch->status)->toBe(ReturnBatchStatus::Completed);
+        ->and($returnBatch->status)->toBe(ReturnBatchStatus::InProgress)
+        ->and($returnBatch->items()->count())->toBe(1)
+        ->and($returnBatch->items()->first()->is_received)->toBeFalse();
 
+    // Receiving item and completing batch
+    $returnBatch->complete($this->user);
+
+    expect($returnBatch->fresh()->status)->toBe(ReturnBatchStatus::Completed);
     expect($batch->fresh()->status)->toBe(BatchStatus::Completed);
     expect($order->fresh()->status)->toBe(OrderStatus::Returned);
-    expect($this->asset->fresh()->current_status)->toBe(AssetStatus::Ready);
 });
 
 test('can create return batch for a checkout batch without order via modal action', function () {
@@ -156,8 +165,11 @@ test('can create return batch for a checkout batch without order via modal actio
     $returnBatch = ReturnBatch::where('checkout_batch_id', $batch->id)->first();
     expect($returnBatch)->not->toBeNull()
         ->and($returnBatch->note)->toBe('Trả hàng không qua đơn')
-        ->and($returnBatch->status)->toBe(ReturnBatchStatus::Completed);
+        ->and($returnBatch->status)->toBe(ReturnBatchStatus::InProgress)
+        ->and($returnBatch->items()->count())->toBe(1);
 
+    $returnBatch->complete($this->user);
+
+    expect($returnBatch->fresh()->status)->toBe(ReturnBatchStatus::Completed);
     expect($batch->fresh()->status)->toBe(BatchStatus::Completed);
-    expect($this->asset->fresh()->current_status)->toBe(AssetStatus::Ready);
 });

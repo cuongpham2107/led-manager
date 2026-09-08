@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\AssetStatus;
 use App\Enums\BatchStatus;
 use App\Models\Asset;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -27,7 +28,11 @@ class CheckoutAssetSearchController extends Controller
                 });
             });
 
-        if (! empty($warehouseId)) {
+        /** @var User|null $user */
+        $user = auth()->user();
+        if ($scopedWhId = $user?->getScopedWarehouseId()) {
+            $query->where('current_warehouse_id', $scopedWhId);
+        } elseif (! empty($warehouseId)) {
             $query->where('current_warehouse_id', $warehouseId);
         }
 

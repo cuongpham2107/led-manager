@@ -7,21 +7,18 @@ use App\Models\Asset;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Models\WarehouseLocation;
-use Filament\Navigation\NavigationGroup;
-use Filament\Navigation\NavigationItem;
-use Filament\Pages\Enums\SubNavigationPosition;
 use Filament\Resources\Pages\ListRecords;
+use Filament\Schemas\Components\EmbeddedTable;
+use Filament\Schemas\Components\RenderHook;
+use Filament\Schemas\Components\View;
+use Filament\Schemas\Schema;
+use Filament\View\PanelsRenderHook;
 use Illuminate\Database\Eloquent\Builder;
 use Livewire\Attributes\Url;
 
 class ListInventoryStocks extends ListRecords
 {
     protected static string $resource = InventoryStockResource::class;
-
-    public static function getSubNavigationPosition(): SubNavigationPosition
-    {
-        return SubNavigationPosition::Start;
-    }
 
     #[Url(as: 'wh')]
     public ?int $selectedWarehouseId = null;
@@ -100,55 +97,15 @@ class ListInventoryStocks extends ListRecords
         $this->resetTable();
     }
 
-    /**
-     * @return array<NavigationGroup | NavigationItem>
-     */
-    public function getSubNavigation(): array
+    public function content(Schema $schema): Schema
     {
-        /** @var User|null $user */
-        $user = auth()->user();
-        $scopedWhId = $user?->getScopedWarehouseId();
-
-        $treeData = $this->getTreeData();
-        $navigation = [];
-
-        if (! $scopedWhId) {
-            $navigation[] = NavigationItem::make('Tất cả thiết bị')
-                ->icon('heroicon-o-squares-2x2')
-                ->badge((string) $treeData['grand_total'])
-                ->url(static::getUrl())
-                ->isActiveWhen(fn (): bool => empty($this->selectedWarehouseId) && empty($this->selectedLocationId));
-        }
-
-        foreach ($treeData['warehouses'] as $wh) {
-            $items = [
-                NavigationItem::make('Tất cả tại '.$wh['name'])
-                    ->badge((string) $wh['total'])
-                    ->url(static::getUrl(['wh' => $wh['id']]))
-                    ->isActiveWhen(fn (): bool => (int) $this->selectedWarehouseId === (int) $wh['id'] && empty($this->selectedLocationId)),
-            ];
-
-            foreach ($wh['locations'] as $loc) {
-                $items[] = NavigationItem::make($loc['name'])
-                    ->badge((string) $loc['count'])
-                    ->url(static::getUrl(['wh' => $wh['id'], 'loc' => $loc['id']]))
-                    ->isActiveWhen(fn (): bool => (int) $this->selectedWarehouseId === (int) $wh['id'] && (string) $this->selectedLocationId === (string) $loc['id']);
-            }
-
-            if ($wh['unassigned_count'] > 0) {
-                $items[] = NavigationItem::make('Chưa xếp vị trí')
-                    ->badge((string) $wh['unassigned_count'], 'warning')
-                    ->url(static::getUrl(['wh' => $wh['id'], 'loc' => 'unassigned']))
-                    ->isActiveWhen(fn (): bool => (int) $this->selectedWarehouseId === (int) $wh['id'] && $this->selectedLocationId === 'unassigned');
-            }
-
-            $navigation[] = NavigationGroup::make($wh['name'])
-                ->icon('heroicon-o-building-storefront')
-                ->collapsible()
-                ->items($items);
-        }
-
-        return $navigation;
+        return $schema
+            ->components([
+                View::make('filament.resources.inventory-stocks.pages.tabs-dropdown'),
+                RenderHook::make(PanelsRenderHook::RESOURCE_PAGES_LIST_RECORDS_TABLE_BEFORE),
+                EmbeddedTable::make(),
+                RenderHook::make(PanelsRenderHook::RESOURCE_PAGES_LIST_RECORDS_TABLE_AFTER),
+            ]);
     }
 
     /**

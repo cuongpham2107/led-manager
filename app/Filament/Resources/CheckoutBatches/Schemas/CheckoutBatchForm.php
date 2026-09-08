@@ -2,9 +2,6 @@
 
 namespace App\Filament\Resources\CheckoutBatches\Schemas;
 
-use App\Enums\AssetStatus;
-use App\Enums\BatchStatus;
-use App\Models\Asset;
 use App\Models\CheckoutBatch;
 use App\Models\ProductLine;
 use App\Models\User;
@@ -114,66 +111,11 @@ class CheckoutBatchForm
                         $warehouseId = $get('warehouse_id');
                         $productLineId = $get('product_line_id');
                         $requiredArea = (float) ($get('required_area_m2') ?? 0);
+                        $isEdit = $record instanceof CheckoutBatch && $record->exists;
 
-                        $query = Asset::query()
-                            ->with('productLine')
-                            ->where('current_status', AssetStatus::Ready)
-                            ->whereDoesntHave('checkoutBatchItems', function ($q) {
-                                $q->whereHas('checkoutBatch', function ($b) {
-                                    $b->whereNotIn('status', [BatchStatus::Completed, BatchStatus::Cancelled]);
-                                });
-                            });
-
-                        if (! empty($warehouseId)) {
-                            $query->where('current_warehouse_id', $warehouseId);
-                        }
-
-                        if (! empty($productLineId)) {
-                            $query->where('product_line_id', $productLineId);
-                        }
-
-                        $assets = $query->orderBy('serial_no')->get()->map(function (Asset $asset) {
-                            $pl = $asset->productLine;
-                            $fullName = $pl?->name ?? 'Cabin LED';
-                            $code = $pl?->code ?: '';
-                            $shortName = $code ? preg_replace('/-FIX$/', '', $code) : explode(' ', $fullName)[0];
-
-                            if (str_contains($fullName, 'Sự kiện')) {
-                                $type = 'Sự kiện';
-                            } elseif (str_contains($fullName, 'Trong nhà cố định')) {
-                                $type = 'Trong nhà cố định';
-                            } elseif (str_contains($fullName, 'Outdoor') || str_contains($fullName, 'Ngoài trời')) {
-                                $type = 'Ngoài trời';
-                            } else {
-                                $type = $pl?->environment?->getLabel() ?? 'Sự kiện';
-                            }
-
-                            $area = 0.25;
-                            if ($pl && (float) $pl->module_width_mm > 0 && (float) $pl->module_height_mm > 0) {
-                                $area = ((float) $pl->module_width_mm / 1000) * ((float) $pl->module_height_mm / 1000);
-                            } elseif (! empty($asset->size)) {
-                                if (str_contains($asset->size, '0.5×1') || str_contains($asset->size, '0.5x1')) {
-                                    $area = 0.5;
-                                } elseif (str_contains($asset->size, '0.5×0.5') || str_contains($asset->size, '0.5x0.5')) {
-                                    $area = 0.25;
-                                }
-                            }
-
-                            return [
-                                'id' => (int) $asset->id,
-                                'serial_no' => (string) $asset->serial_no,
-                                'name' => (string) $shortName,
-                                'size' => (string) ($asset->size ?? '0.5×0.5 m'),
-                                'type' => (string) $type,
-                                'status' => (string) $asset->current_status->value,
-                                'status_label' => (string) $asset->current_status->getLabel(),
-                                'status_color' => (string) $asset->current_status->getColor(),
-                                'area_m2' => (float) $area,
-                            ];
-                        });
-
-                        if ($record instanceof CheckoutBatch) {
-                            $existingAssets = $record->items()
+                        $initialAssets = [];
+                        if ($isEdit) {
+                            $initialAssets = $record->items()
                                 ->with('asset.productLine')
                                 ->get()
                                 ->map(function ($item) {
@@ -218,15 +160,21 @@ class CheckoutBatchForm
                                         'status_label' => (string) $asset->current_status->getLabel(),
                                         'status_color' => (string) $asset->current_status->getColor(),
                                         'area_m2' => (float) $area,
+                                        'is_dispatched' => (bool) $item->is_dispatched,
+                                        'dispatched_at' => $item->dispatched_at?->format('d/m/Y H:i'),
+                                        'checkout_batch_item_id' => (int) $item->id,
                                     ];
                                 })
-                                ->filter();
-
-                            $assets = $existingAssets->concat($assets)->unique('id')->values();
+                                ->filter()
+                                ->values()
+                                ->toArray();
                         }
 
                         return [
-                            'assets' => $assets->values()->toArray(),
+                            'initialAssets' => $initialAssets,
+                            'isEdit' => $isEdit,
+                            'batchId' => $record?->id,
+                            'batchCode' => $record?->code,
                             'warehouseId' => $warehouseId,
                             'productLineId' => $productLineId,
                             'requiredArea' => $requiredArea,

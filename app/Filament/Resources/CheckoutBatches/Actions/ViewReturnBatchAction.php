@@ -23,6 +23,15 @@ class ViewReturnBatchAction extends Action
             ->icon('heroicon-o-document-magnifying-glass')
             ->color('info')
             ->visible(fn (CheckoutBatch $record): bool => $record->returnBatches->isNotEmpty())
-            ->url(fn (CheckoutBatch $record): ?string => ($returnBatch = $record->returnBatches->first()) ? ReturnBatchResource::getUrl('edit', ['record' => $returnBatch]) : null);
+            ->url(function (CheckoutBatch $record): ?string {
+                $returnBatch = $record->returnBatches->first();
+                if (! $returnBatch) {
+                    return null;
+                }
+
+                return ReturnBatchResource::hasPage('edit')
+                    ? ReturnBatchResource::getUrl('edit', ['record' => $returnBatch])
+                    : ReturnBatchResource::getUrl('index');
+            });
     }
 }

@@ -25,6 +25,15 @@ class ViewReturnBatchAction extends Action
             ->icon('heroicon-o-arrow-path-rounded-square')
             ->color('primary')
             ->visible(fn (Order $record): bool => in_array($record->status, [OrderStatus::Returned, OrderStatus::Completed]) && ($record->returnBatches()->exists() || ReturnBatch::whereIn('checkout_batch_id', $record->checkoutBatches()->select('id'))->exists()))
-            ->url(fn (Order $record): ?string => ($returnBatch = $record->returnBatches()->latest('id')->first() ?? ReturnBatch::whereIn('checkout_batch_id', $record->checkoutBatches()->select('id'))->latest('id')->first()) ? ReturnBatchResource::getUrl('edit', ['record' => $returnBatch]) : null);
+            ->url(function (Order $record): ?string {
+                $returnBatch = $record->returnBatches()->latest('id')->first() ?? ReturnBatch::whereIn('checkout_batch_id', $record->checkoutBatches()->select('id'))->latest('id')->first();
+                if (! $returnBatch) {
+                    return null;
+                }
+
+                return ReturnBatchResource::hasPage('edit')
+                    ? ReturnBatchResource::getUrl('edit', ['record' => $returnBatch])
+                    : ReturnBatchResource::getUrl('index');
+            });
     }
 }

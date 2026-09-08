@@ -2,23 +2,16 @@
 
 namespace App\Filament\Resources\ReturnBatches\Schemas;
 
-use App\Enums\ReturnBatchStatus;
+use App\Enums\AssetStatus;
 use App\Enums\ReturnGrade;
-use App\Models\CheckoutBatch;
 use App\Models\ReturnBatch;
 use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\DateTimePicker;
-use Filament\Forms\Components\Repeater;
-use Filament\Forms\Components\Repeater\TableColumn;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\ViewField;
 use Filament\Schemas\Components\Grid;
-use Filament\Schemas\Components\Group;
-use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
-use Illuminate\Support\Facades\Auth;
 
 class ReturnBatchForm
 {
@@ -26,143 +19,88 @@ class ReturnBatchForm
     {
         return $schema
             ->components([
-                Grid::make(['default' => 1, 'lg' => 12])
-                    ->columnSpanFull()
+                Grid::make(3)
                     ->schema([
+                        TextInput::make('code')
+                            ->label('Mã đợt trả')
+                            ->disabled()
+                            ->dehydrated(),
 
-                        // ================= LEFT COLUMN: Return Batch Info (5 cols) =================
-                        Group::make()
-                            ->columnSpan(['default' => 1, 'lg' => 5])
-                            ->schema([
-                                Section::make('Thông tin đợt nhập trả sau sự kiện')
-                                    ->description('Quản lý thu hồi và phân loại kiểm tra (Grading) thiết bị sau sự kiện')
-                                    ->collapsible()
-                                    ->schema([
-                                        Grid::make(2)->schema([
-                                            TextInput::make('code')
-                                                ->label('Mã đợt trả hàng')
-                                                ->required()
-                                                ->default(function () {
-                                                    $batchCount = ReturnBatch::count() + 1;
-                                                    $code = 'RET-'.date('ym').'-'.str_pad((string) $batchCount, 2, '0', STR_PAD_LEFT);
-                                                    while (ReturnBatch::where('code', $code)->exists()) {
-                                                        $batchCount++;
-                                                        $code = 'RET-'.date('ym').'-'.str_pad((string) $batchCount, 2, '0', STR_PAD_LEFT);
-                                                    }
+                        Select::make('checkout_batch_id')
+                            ->label('Theo đợt xuất kho')
+                            ->relationship('checkoutBatch', 'code')
+                            ->disabled()
+                            ->dehydrated(),
 
-                                                    return $code;
-                                                })
-                                                ->placeholder('VD: RET-2608-01'),
+                        DatePicker::make('return_date')
+                            ->label('Ngày trả thực tế')
+                            ->native(false)
+                            ->displayFormat('d/m/Y')
+                            ->default(now()->toDateString()),
+                    ])
+                    ->columnSpanFull(),
 
-                                            Select::make('checkout_batch_id')
-                                                ->label('Theo đợt xuất kho')
-                                                ->relationship('checkoutBatch', 'code')
-                                                ->searchable()
-                                                ->preload()
-                                                ->required()
-                                                ->live()
-                                                ->afterStateUpdated(function ($state, $set) {
-                                                    if (! $state) {
-                                                        return;
-                                                    }
+                Textarea::make('note')
+                    ->label('Ghi chú')
+                    ->placeholder('Ghi nhận chung tình trạng thiết bị khi thu hồi...')
+                    ->columnSpanFull(),
 
-                                                    $checkoutBatch = CheckoutBatch::with('items')->find($state);
-                                                    if (! $checkoutBatch) {
-                                                        return;
-                                                    }
+                ViewField::make('selected_assets')
+                    ->label('Danh sách thiết bị hoàn trả')
+                    ->view('filament.components.return-batch-assets-selector')
+                    ->viewData(function (?ReturnBatch $record = null) {
+                        $initialAssets = [];
 
-                                                    $items = [];
-                                                    foreach ($checkoutBatch->items as $cbItem) {
-                                                        $items[] = [
-                                                            'asset_id' => $cbItem->asset_id,
-                                                            'checkout_batch_item_id' => $cbItem->id,
-                                                            'grade' => ReturnGrade::Normal->value,
-                                                            'is_received' => true,
-                                                            'grade_note' => null,
-                                                        ];
-                                                    }
-                                                    $set('items', $items);
-                                                }),
-                                        ]),
+                        if ($record instanceof ReturnBatch) {
+                            $initialAssets = $record->items()
+                                ->with('asset.productLine')
+                                ->get()
+                                ->map(function ($item) {
+                                    $asset = $item->asset;
+                                    if (! $asset) {
+                                        return null;
+                                    }
+                                    $statusLabel = $asset->current_status instanceof AssetStatus
+                                        ? $asset->current_status->getLabel()
+                                        : 'Sẵn sàng trong kho';
+                                    $statusColor = $asset->current_status instanceof AssetStatus
+                                        ? $asset->current_status->getColor()
+                                        : 'success';
 
-                                        Grid::make(2)->schema([
-                                            Select::make('status')
-                                                ->label('Trạng thái thu hồi')
-                                                ->options(ReturnBatchStatus::class)
-                                                ->required()
-                                                ->default(ReturnBatchStatus::Completed),
+                                    $condition = null;
+                                    if ($item->grade === ReturnGrade::Damaged || $item->grade?->value === 'damaged') {
+                                        $condition = 'damaged';
+                                    } elseif ($item->grade === ReturnGrade::Normal || $item->grade?->value === 'normal') {
+                                        $condition = 'normal';
+                                    }
 
-                                            DatePicker::make('return_date')
-                                                ->label('Ngày trả thực tế')
-                                                ->default(now()->toDateString())
-                                                ->native(false)
-                                                ->required(),
-                                        ]),
+                                    return [
+                                        'id' => (int) $asset->id,
+                                        'item_id' => (int) $item->id,
+                                        'serial_no' => (string) $asset->serial_no,
+                                        'name' => (string) ($asset->productLine?->name ?? 'LED'),
+                                        'size' => (string) ($asset->size ?? '0.5×0.5 m'),
+                                        'status' => (string) $statusLabel,
+                                        'status_color' => (string) $statusColor,
+                                        'is_received' => (bool) $item->is_received,
+                                        'condition' => $condition,
+                                        'condition_raw' => $item->grade?->value ?? ($item->is_received ? 'normal' : null),
+                                        'grade_note' => $item->grade_note,
+                                        'received_at' => $item->received_at ? $item->received_at->format('d/m/Y H:i') : null,
+                                    ];
+                                })
+                                ->filter()
+                                ->values()
+                                ->toArray();
+                        }
 
-                                        Grid::make(2)->schema([
-                                            Select::make('created_by')
-                                                ->label('Người tiếp nhận')
-                                                ->relationship('creator', 'name')
-                                                ->default(fn () => Auth::id())
-                                                ->searchable()
-                                                ->preload()
-                                                ->required(),
-
-                                            DateTimePicker::make('completed_at')
-                                                ->label('Thời gian hoàn thành')
-                                                ->default(now())
-                                                ->native(false),
-                                        ]),
-
-                                        Textarea::make('note')
-                                            ->label('Ghi chú tình trạng lô hàng trả về')
-                                            ->placeholder('Ghi nhận chung tình trạng thiết bị khi thu hồi...')
-                                            ->rows(3)
-                                            ->columnSpanFull(),
-                                    ]),
-                            ]),
-
-                        // ================= RIGHT COLUMN: Grading & Quality Check (7 cols) =================
-                        Group::make()
-                            ->columnSpan(['default' => 1, 'lg' => 7])
-                            ->schema([
-                                Section::make('Danh sách thiết bị kiểm đếm hoàn trả (Grading & Quality Check)')
-                                    ->description('Quét mã QR/chọn thiết bị và chấm điểm phân loại tình trạng vật lý từng thiết bị')
-                                    ->collapsible()
-                                    ->schema([
-                                        Repeater::make('items')
-                                            ->relationship('items')
-                                            ->label('Thiết bị hoàn trả')
-                                            ->table([
-                                                TableColumn::make('Mã Serial / Thiết bị'),
-                                                TableColumn::make('Phân loại chất lượng (Grade)'),
-                                                TableColumn::make('Đã nhận kho'),
-                                                TableColumn::make('Ghi chú lỗi hỏng'),
-                                            ])
-                                            ->schema([
-                                                Select::make('asset_id')
-                                                    ->label('Thiết bị')
-                                                    ->relationship('asset', 'serial_no')
-                                                    ->searchable()
-                                                    ->preload()
-                                                    ->required(),
-                                                Select::make('grade')
-                                                    ->label('Phân loại')
-                                                    ->options(ReturnGrade::class)
-                                                    ->required(),
-                                                Toggle::make('is_received')
-                                                    ->label('Đã nhận')
-                                                    ->default(false),
-                                                TextInput::make('grade_note')
-                                                    ->label('Ghi chú')
-                                                    ->placeholder('Mô tả hỏng hóc nếu có...'),
-                                            ])
-                                            ->addActionLabel('+ Quét / Thêm thiết bị trả về')
-                                            ->collapsible(false)
-                                            ->reorderable(false),
-                                    ]),
-                            ]),
-                    ]),
+                        return [
+                            'initialAssets' => $initialAssets,
+                            'batchId' => $record?->id,
+                            'batchStatus' => $record?->status?->value ?? 'pending',
+                        ];
+                    })
+                    ->columnSpanFull(),
             ]);
     }
 }

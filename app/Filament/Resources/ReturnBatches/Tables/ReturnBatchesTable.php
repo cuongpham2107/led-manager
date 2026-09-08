@@ -3,14 +3,19 @@
 namespace App\Filament\Resources\ReturnBatches\Tables;
 
 use App\Enums\ReturnBatchStatus;
+use App\Models\ReturnBatch;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Notifications\Notification;
+use Filament\Support\Enums\Width;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Enums\RecordActionsPosition;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Auth;
 
 class ReturnBatchesTable
 {
@@ -84,7 +89,35 @@ class ReturnBatchesTable
             ], layout: FiltersLayout::AboveContent)
             ->deferFilters(false)
             ->recordActions([
-                EditAction::make(),
+                EditAction::make()
+                    ->url(null)
+                    ->modal()
+                    ->label(fn (ReturnBatch $record): string => $record->status === ReturnBatchStatus::Completed ? 'Xem chi tiết' : 'Kiểm đếm / Sửa')
+                    ->modalHeading(fn (ReturnBatch $record): string => "Danh sách thiết bị trong đợt nhập trả ({$record->items()->count()})")
+                    ->modalWidth(Width::FourExtraLarge)
+                    ->modalSubmitActionLabel('Lưu')
+                    ->modalCancelActionLabel('Đóng')
+                    ->extraModalFooterActions(fn (ReturnBatch $record): array => [
+                        Action::make('completeReceiving')
+                            ->label('Kết thúc nhận hàng')
+                            ->color('gray')
+                            ->icon('heroicon-o-check-circle')
+                            ->visible(fn (): bool => $record->status !== ReturnBatchStatus::Completed)
+                            ->requiresConfirmation()
+                            ->modalHeading('Kết thúc nhận hàng')
+                            ->modalDescription("Bạn có chắc chắn muốn kết thúc nhận hàng cho đợt trả kho {$record->code} không? Các thiết bị chưa nhận sẽ được đánh dấu là Chưa trả về (Missing) và đợt xuất kho tương ứng sẽ được đánh dấu hoàn tất.")
+                            ->modalSubmitActionLabel('Xác nhận kết thúc')
+                            ->modalCancelActionLabel('Hủy')
+                            ->action(function (ReturnBatch $record) {
+                                $record->complete(Auth::user());
+
+                                Notification::make()
+                                    ->title("Đợt trả kho {$record->code} đã kết thúc nhận hàng hoàn tất!")
+                                    ->success()
+                                    ->send();
+                            })
+                            ->cancelParentActions(),
+                    ]),
             ], position: RecordActionsPosition::BeforeCells)
             ->toolbarActions([
                 BulkActionGroup::make([

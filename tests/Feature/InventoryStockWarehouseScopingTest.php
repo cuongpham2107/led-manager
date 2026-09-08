@@ -146,10 +146,12 @@ it('supports explorer tree navigation by warehouse and location', function () {
 
     $this->actingAs($superAdmin);
 
-    // 1. Initial view: see all assets and tree data
+    // 1. Initial view: see all assets, tabs, and dropdowns
     $test = Livewire::test(ListInventoryStocks::class)
         ->assertSuccessful()
+        ->assertSee('Tất cả thiết bị')
         ->assertSee('Kho Cầu Giấy')
+        ->assertSee('Tất cả tại Kho Cầu Giấy')
         ->assertSee('Kho Thanh Xuân')
         ->assertSee('LED-TREE-001')
         ->assertSee('LED-TREE-WH-B');

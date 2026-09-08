@@ -23,6 +23,15 @@ class ViewCheckoutBatchAction extends Action
             ->icon('heroicon-o-arrow-top-right-on-square')
             ->color('warning')
             ->visible(fn (Order $record): bool => $record->checkoutBatches()->exists())
-            ->url(fn (Order $record): ?string => ($batch = $record->checkoutBatches()->latest('id')->first()) ? CheckoutBatchResource::getUrl('edit', ['record' => $batch]) : null);
+            ->url(function (Order $record): ?string {
+                $batch = $record->checkoutBatches()->latest('id')->first();
+                if (! $batch) {
+                    return null;
+                }
+
+                return CheckoutBatchResource::hasPage('edit')
+                    ? CheckoutBatchResource::getUrl('edit', ['record' => $batch])
+                    : CheckoutBatchResource::getUrl('index', ['tableSearch' => $batch->code]);
+            });
     }
 }

@@ -68,7 +68,7 @@ class ReturnBatchResource extends Resource
     {
         return [
             'index' => ListReturnBatches::route('/'),
-            'edit' => EditReturnBatch::route('/{record}/edit'),
+            // 'edit' => EditReturnBatch::route('/{record}/edit'),
         ];
     }
 }

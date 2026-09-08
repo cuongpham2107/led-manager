@@ -6,10 +6,12 @@ use App\Enums\BatchStatus;
 use App\Models\Asset;
 use App\Models\CheckinBatch;
 use App\Models\CheckinBatchItem;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Notifications\Notification;
 use Filament\Support\Enums\Width;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Enums\FiltersLayout;
@@ -31,20 +33,20 @@ class CheckinBatchesTable
                     ->searchable()
                     ->sortable()
                     ->weight('bold'),
-                TextColumn::make('batch_type')
-                    ->label('Loại')
-                    ->badge()
-                    ->sortable(),
+                // TextColumn::make('batch_type')
+                //     ->label('Loại')
+                //     ->badge()
+                //     ->sortable(),
                 TextColumn::make('warehouse.name')
                     ->label('Kho nhận')
                     ->searchable()
                     ->sortable(),
-                TextColumn::make('quantity')
-                    ->label('SL dự kiến')
-                    ->numeric()
-                    ->sortable()
-                    ->alignCenter()
-                    ->placeholder('—'),
+                // TextColumn::make('quantity')
+                //     ->label('SL dự kiến')
+                //     ->numeric()
+                //     ->sortable()
+                //     ->alignCenter()
+                //     ->placeholder('—'),
                 TextColumn::make('items_count')
                     ->counts('items')
                     ->label('SL items')
@@ -54,32 +56,41 @@ class CheckinBatchesTable
                     ->placeholder('0'),
                 TextColumn::make('progress')
                     ->label('Tiến độ quét')
-                    ->state(function ($record): string {
-                        $scanned = $record->items()->where('is_received', true)->count();
-                        $target = max((int) $record->quantity, $record->items()->count());
+                    ->state(function (CheckinBatch $record): string {
+                        $total = (int) ($record->items_count ?? $record->items()->count());
+                        $scanned = (int) ($record->received_items_count ?? $record->items()->where('is_received', true)->count());
 
-                        if ($target === 0) {
-                            return '—';
+                        if ($total > 0) {
+                            $percent = min(100, (int) round(($scanned / $total) * 100));
+
+                            return "{$scanned}/{$total} ({$percent}%)";
                         }
 
-                        $percent = (int) round(($scanned / $target) * 100);
+                        if ($record->quantity && (int) $record->quantity > 0) {
+                            return "0/{$record->quantity} (0%)";
+                        }
 
-                        return "{$scanned}/{$target} ({$percent}%)";
+                        return '—';
                     })
                     ->badge()
-                    ->color(function ($record): string {
-                        $scanned = $record->items()->where('is_received', true)->count();
-                        $target = max((int) $record->quantity, $record->items()->count());
+                    ->color(function (CheckinBatch $record): string {
+                        if ($record->status === BatchStatus::Completed) {
+                            return 'success';
+                        }
 
-                        if ($target === 0) {
+                        $total = (int) ($record->items_count ?? $record->items()->count());
+                        $scanned = (int) ($record->received_items_count ?? $record->items()->where('is_received', true)->count());
+
+                        if ($total === 0) {
                             return 'gray';
                         }
 
-                        $percent = (int) round(($scanned / $target) * 100);
+                        $percent = min(100, (int) round(($scanned / $total) * 100));
 
                         if ($percent >= 100) {
                             return 'success';
                         }
+
                         if ($percent > 0) {
                             return 'warning';
                         }
@@ -142,6 +153,27 @@ class CheckinBatchesTable
                     ->modalWidth(Width::FourExtraLarge)
                     ->modalSubmitActionLabel('Lưu')
                     ->modalCancelActionLabel('Hủy')
+                    ->extraModalFooterActions(fn (CheckinBatch $record): array => [
+                        Action::make('completeReceiving')
+                            ->label('Kết thúc nhận hàng')
+                            ->color('gray')
+                            ->icon('heroicon-o-check-circle')
+                            ->visible(fn (): bool => $record->status !== BatchStatus::Completed)
+                            ->requiresConfirmation()
+                            ->modalHeading('Kết thúc nhận hàng')
+                            ->modalDescription("Bạn có chắc chắn muốn kết thúc nhận hàng cho đợt nhập {$record->code} không? Tất cả các thiết bị chưa nhận sẽ được đánh dấu nhận hàng hoàn tất và cập nhật trạng thái về kho.")
+                            ->modalSubmitActionLabel('Xác nhận kết thúc')
+                            ->modalCancelActionLabel('Hủy')
+                            ->action(function (CheckinBatch $record) {
+                                $record->complete(Auth::user());
+
+                                Notification::make()
+                                    ->title("Đợt nhập kho {$record->code} đã kết thúc nhận hàng hoàn tất!")
+                                    ->success()
+                                    ->send();
+                            })
+                            ->cancelParentActions(),
+                    ])
                     ->mutateRecordDataUsing(function (array $data, CheckinBatch $record): array {
                         $data['selected_assets'] = $record->items()->pluck('asset_id')->map(fn ($id) => (int) $id)->toArray();
 

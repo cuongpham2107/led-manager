@@ -36,53 +36,58 @@ class AssetsTable
                                 ->orWhereHas('currentWarehouse', fn ($wq) => $wq->where('name', 'like', "%{$search}%"));
                         });
                     })
+                    ->alignCenter()
+                    ->color('primary')
                     ->sortable()
                     ->weight('bold'),
 
                 TextColumn::make('productLine.code')
                     ->label('DÒNG SẢN PHẨM')
+                    ->alignCenter()
                     ->formatStateUsing(fn ($record) => $record->productLine?->code ?: $record->productLine?->name)
                     ->placeholder('—')
                     ->sortable(),
 
                 TextColumn::make('size')
                     ->label('KÍCH THƯỚC')
+                    ->alignCenter()
                     ->formatStateUsing(fn (?string $state): string => $state ? str_replace('x', '×', $state).(str_ends_with($state, 'm') ? '' : ' m') : '—')
                     ->placeholder('—')
                     ->sortable(),
 
-                TextColumn::make('current_status')
-                    ->label('TRẠNG THÁI')
-                    ->badge()
-                    ->formatStateUsing(fn ($state) => $state instanceof AssetStatus ? $state->getLabel() : ($state?->value ?? (string) $state))
-                    ->color(fn ($state) => $state instanceof AssetStatus ? $state->getColor() : 'gray')
-                    ->sortable(),
+                // TextColumn::make('current_status')
+                //     ->label('TRẠNG THÁI')
+                //     ->badge()
+                //     ->formatStateUsing(fn ($state) => $state instanceof AssetStatus ? $state->getLabel() : ($state?->value ?? (string) $state))
+                //     ->color(fn ($state) => $state instanceof AssetStatus ? $state->getColor() : 'gray')
+                //     ->sortable(),
 
-                TextColumn::make('currentWarehouse.name')
-                    ->label('KHO HÀNG')
-                    ->badge()
-                    ->color('info')
-                    ->sortable(),
+                // TextColumn::make('currentWarehouse.name')
+                //     ->label('KHO HÀNG')
+                //     ->badge()
+                //     ->color('info')
+                //     ->sortable(),
 
-                TextColumn::make('warehouseLocation.name')
-                    ->label('VỊ TRÍ KHO')
-                    ->placeholder('Chưa xếp vị trí')
-                    ->sortable(),
+                // TextColumn::make('warehouseLocation.name')
+                //     ->label('VỊ TRÍ KHO')
+                //     ->placeholder('Chưa xếp vị trí')
+                //     ->sortable(),
 
-                TextColumn::make('operating_hours')
-                    ->label('SỐ GIỜ CHẠY')
-                    ->formatStateUsing(fn ($state): string => number_format((float) ($state ?: 0), 0, ',', '.').' h')
-                    ->sortable()
-                    ->alignCenter(),
+                // TextColumn::make('operating_hours')
+                //     ->label('SỐ GIỜ CHẠY')
+                //     ->formatStateUsing(fn ($state): string => number_format((float) ($state ?: 0), 0, ',', '.').' h')
+                //     ->sortable()
+                //     ->alignCenter(),
 
-                TextColumn::make('rental_count')
-                    ->label('SỐ LẦN CHO THUÊ')
-                    ->formatStateUsing(fn ($state): string => number_format((int) ($state ?: 0), 0, ',', '.'))
-                    ->sortable()
-                    ->alignCenter(),
+                // TextColumn::make('rental_count')
+                //     ->label('SỐ LẦN CHO THUÊ')
+                //     ->formatStateUsing(fn ($state): string => number_format((int) ($state ?: 0), 0, ',', '.'))
+                //     ->sortable()
+                //     ->alignCenter(),
 
                 TextColumn::make('manufactured_date')
                     ->label('NGÀY SẢN XUẤT')
+                    ->alignCenter()
                     ->date('d/m/Y')
                     ->placeholder('—')
                     ->sortable(),
@@ -132,7 +137,7 @@ class AssetsTable
                     ->iconButton()
                     ->color('danger')
                     ->tooltip('Xóa'),
-            ], position: RecordActionsPosition::AfterCells)
+            ], position: RecordActionsPosition::BeforeColumns)
             ->toolbarActions([
                 BulkActionGroup::make([
                     SendToMaintenanceBulkAction::make(),

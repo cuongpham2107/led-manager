@@ -33,7 +33,11 @@ class CheckinBatchResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $query = parent::getEloquentQuery();
+        $query = parent::getEloquentQuery()
+            ->withCount([
+                'items',
+                'items as received_items_count' => fn ($q) => $q->where('is_received', true),
+            ]);
 
         /** @var User|null $user */
         $user = auth()->user();

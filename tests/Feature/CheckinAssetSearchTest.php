@@ -45,3 +45,34 @@ test('authenticated user can lazy load assets with pagination and search', funct
     expect($searchData['items'])->not->toBeEmpty()
         ->and($searchData['items'][0]['serial_no'])->toBe($firstSerial);
 });
+
+test('authenticated user can filter checkin assets by product_line, status and warehouse', function () {
+    $user = User::where('email', 'admin@ledmanager.com')->first();
+    actingAs($user);
+
+    $allResponse = $this->getJson(route('filament.checkin-assets', ['per_page' => 100]));
+    $allData = $allResponse->json();
+    $firstItem = $allData['items'][0];
+
+    // Filter by product line
+    $plResponse = $this->getJson(route('filament.checkin-assets', [
+        'product_line_id' => $firstItem['product_line_id'],
+        'per_page' => 50,
+    ]));
+    $plResponse->assertOk();
+    $plData = $plResponse->json();
+    foreach ($plData['items'] as $item) {
+        expect($item['product_line_id'])->toBe($firstItem['product_line_id']);
+    }
+
+    // Filter by status
+    $statusResponse = $this->getJson(route('filament.checkin-assets', [
+        'status' => $firstItem['status_raw'],
+        'per_page' => 50,
+    ]));
+    $statusResponse->assertOk();
+    $statusData = $statusResponse->json();
+    foreach ($statusData['items'] as $item) {
+        expect($item['status_raw'])->toBe($firstItem['status_raw']);
+    }
+});

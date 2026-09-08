@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AssetStatus;
 use App\Enums\BatchStatus;
 use App\Enums\CheckinBatchType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -10,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Support\Facades\DB;
 
 class CheckinBatch extends Model
 {
@@ -90,5 +92,61 @@ class CheckinBatch extends Model
     public function statusLogs(): MorphMany
     {
         return $this->morphMany(AssetStatusLog::class, 'source');
+    }
+
+    /**
+     * Hoàn tất nhận hàng cho toàn bộ đợt nhập.
+     */
+    public function complete(?User $user = null): void
+    {
+        $now = now();
+        $userId = $user?->id ?? auth()->id();
+
+        DB::transaction(function () use ($now, $userId) {
+            $this->loadMissing(['items.asset']);
+
+            foreach ($this->items as $item) {
+                if (! $item->is_received) {
+                    $item->update([
+                        'is_received' => true,
+                        'condition' => $item->condition ?: 'ok',
+                        'received_at' => $now,
+                        'received_by' => $userId,
+                    ]);
+
+                    if ($item->asset) {
+                        $targetStatus = in_array($item->condition, ['fault', 'damaged'], true)
+                            ? AssetStatus::Repairing
+                            : AssetStatus::Ready;
+
+                        $oldStatus = $item->asset->current_status;
+                        $oldWhId = $item->asset->current_warehouse_id;
+
+                        $item->asset->update([
+                            'current_status' => $targetStatus,
+                            'current_warehouse_id' => $this->warehouse_id,
+                        ]);
+
+                        AssetStatusLog::create([
+                            'asset_id' => $item->asset->id,
+                            'from_status' => $oldStatus,
+                            'to_status' => $targetStatus,
+                            'from_warehouse_id' => $oldWhId,
+                            'to_warehouse_id' => $this->warehouse_id,
+                            'source_type' => self::class,
+                            'source_id' => $this->id,
+                            'changed_by' => $userId,
+                            'note' => 'Kết thúc nhận hàng: '.$this->code,
+                            'created_at' => $now,
+                        ]);
+                    }
+                }
+            }
+
+            $this->update([
+                'status' => BatchStatus::Completed,
+                'completed_at' => $now,
+            ]);
+        });
     }
 }

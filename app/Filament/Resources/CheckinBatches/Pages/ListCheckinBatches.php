@@ -61,7 +61,7 @@ class ListCheckinBatches extends ListRecords
                         return $batch;
                     });
                 }),
-            CreateProductionBatchAction::make(),
+            // CreateProductionBatchAction::make(),
         ];
     }
 }

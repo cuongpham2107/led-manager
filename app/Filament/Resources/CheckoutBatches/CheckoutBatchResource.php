@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\CheckoutBatches;
 
-use App\Filament\Resources\CheckoutBatches\Pages\EditCheckoutBatch;
 use App\Filament\Resources\CheckoutBatches\Pages\ListCheckoutBatches;
 use App\Filament\Resources\CheckoutBatches\Schemas\CheckoutBatchForm;
 use App\Filament\Resources\CheckoutBatches\Tables\CheckoutBatchesTable;
@@ -68,7 +67,6 @@ class CheckoutBatchResource extends Resource
     {
         return [
             'index' => ListCheckoutBatches::route('/'),
-            'edit' => EditCheckoutBatch::route('/{record}/edit'),
         ];
     }
 }

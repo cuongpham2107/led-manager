@@ -57,70 +57,84 @@ class AssetForm
                     ->description('Vị trí kho hiện tại và tình trạng sẵn sàng vận hành')
                     ->columnSpanFull()
                     ->schema([
-                        Grid::make(3)->schema([
-                            Select::make('current_status')
-                                ->label('Trạng thái hiện tại')
-                                ->options(AssetStatus::class)
-                                ->default(AssetStatus::Ready)
-                                ->required(),
-                            Select::make('current_warehouse_id')
-                                ->label('Kho lưu trữ hiện tại')
-                                ->relationship('currentWarehouse', 'name')
-                                ->searchable()
-                                ->preload()
-                                ->live()
-                                ->afterStateUpdated(fn (callable $set) => $set('warehouse_location_id', null))
-                                ->required(),
-                            Select::make('warehouse_location_id')
-                                ->label('Vị trí trong kho')
-                                ->relationship('warehouseLocation', 'name', modifyQueryUsing: function ($query, callable $get) {
-                                    if ($whId = $get('current_warehouse_id')) {
-                                        $query->where('warehouse_id', $whId);
-                                    }
-                                })
-                                ->searchable()
-                                ->preload()
-                                ->nullable()
-                                ->placeholder('Chọn vị trí kho...'),
-                        ]),
+                        Grid::make(3)
+                            ->columns(fn (string $operation): int => $operation === 'create' ? 2 : 3)
+                            ->schema([
+                                Select::make('current_status')
+                                    ->label('Trạng thái hiện tại')
+                                    ->options(AssetStatus::class)
+                                    ->default(AssetStatus::Ready)
+                                    ->required()
+                                    ->hiddenOn('create')
+                                    ->dehydratedWhenHidden(),
+                                Select::make('current_warehouse_id')
+                                    ->label('Kho lưu trữ hiện tại')
+                                    ->relationship('currentWarehouse', 'name')
+                                    ->searchable()
+                                    ->preload()
+                                    ->live()
+                                    ->afterStateUpdated(fn (callable $set) => $set('warehouse_location_id', null))
+                                    ->required(),
+                                Select::make('warehouse_location_id')
+                                    ->label('Vị trí trong kho')
+                                    ->relationship('warehouseLocation', 'name', modifyQueryUsing: function ($query, callable $get) {
+                                        if ($whId = $get('current_warehouse_id')) {
+                                            $query->where('warehouse_id', $whId);
+                                        }
+                                    })
+                                    ->searchable()
+                                    ->preload()
+                                    ->nullable()
+                                    ->placeholder('Chọn vị trí kho...'),
+                            ]),
                     ]),
 
                 Section::make('Hồ sơ vận hành & Tài chính')
                     ->description('Theo dõi thông số chạy, số lần cho thuê, nguyên giá tài sản và khấu hao')
                     ->columnSpanFull()
+                    ->hiddenOn('create')
+                    ->dehydratedWhenHidden()
                     ->schema([
-                        Grid::make(2)->schema([
-                            TextInput::make('operating_hours')
-                                ->label('Số giờ chạy')
-                                ->numeric()
-                                ->minValue(0)
-                                ->suffix('h')
-                                ->default(0)
-                                ->placeholder('0')
-                                ->helperText('Tổng số giờ thiết bị đã vận hành thực tế.'),
-                            TextInput::make('rental_count')
-                                ->label('Số lần cho thuê')
-                                ->numeric()
-                                ->minValue(0)
-                                ->default(0)
-                                ->placeholder('0')
-                                ->helperText('Tổng số lượt thiết bị được điều động đi sự kiện.'),
-                        ]),
-                        Grid::make(3)->schema([
-                            DatePicker::make('manufactured_date')
-                                ->label('Ngày sản xuất')
-                                ->placeholder('dd/mm/yyyy'),
-                            DatePicker::make('purchase_date')
-                                ->label('Ngày mua về kho')
-                                ->placeholder('dd/mm/yyyy'),
-                            TextInput::make('purchase_cost')
-                                ->label('Nguyên giá mua')
-                                ->mask(RawJs::make('$money($input)'))
-                                ->stripCharacters(',')
-                                ->numeric()
-                                ->suffix(' đ')
-                                ->placeholder('0'),
-                        ]),
+                        Grid::make(2)
+                            ->dehydratedWhenHidden()
+                            ->schema([
+                                TextInput::make('operating_hours')
+                                    ->label('Số giờ chạy')
+                                    ->numeric()
+                                    ->minValue(0)
+                                    ->suffix('h')
+                                    ->default(0)
+                                    ->placeholder('0')
+                                    ->helperText('Tổng số giờ thiết bị đã vận hành thực tế.'),
+                                TextInput::make('rental_count')
+                                    ->label('Số lần cho thuê')
+                                    ->numeric()
+                                    ->minValue(0)
+                                    ->default(0)
+                                    ->placeholder('0')
+                                    ->helperText('Tổng số lượt thiết bị được điều động đi sự kiện.'),
+                            ]),
+                        Grid::make(3)
+                            ->dehydratedWhenHidden()
+                            ->schema([
+                                DatePicker::make('manufactured_date')
+                                    ->label('Ngày sản xuất')
+                                    ->placeholder('dd/mm/yyyy')
+                                    ->default(now()->toDateString())
+                                    ->dehydratedWhenHidden(),
+                                DatePicker::make('purchase_date')
+                                    ->label('Ngày mua về kho')
+                                    ->placeholder('dd/mm/yyyy')
+                                    ->default(now()->toDateString())
+                                    ->dehydratedWhenHidden(),
+                                TextInput::make('purchase_cost')
+                                    ->label('Nguyên giá mua')
+                                    ->mask(RawJs::make('$money($input)'))
+                                    ->stripCharacters(',')
+                                    ->numeric()
+                                    ->suffix(' đ')
+                                    ->placeholder('0'),
+                            ]),
                         Textarea::make('note')
                             ->label('Ghi chú kỹ thuật')
                             ->rows(3)

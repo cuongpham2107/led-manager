@@ -3,18 +3,20 @@
 namespace App\Filament\Resources\ReturnBatches\Pages;
 
 use App\Enums\BatchStatus;
-use App\Enums\ReturnGrade;
+use App\Enums\ReturnBatchStatus;
 use App\Filament\Resources\ReturnBatches\ReturnBatchResource;
 use App\Models\CheckoutBatch;
 use App\Models\ReturnBatch;
+use App\Models\ReturnBatchItem;
 use App\Models\User;
-use App\Services\ReturnProcessingService;
+use App\Services\CodeGeneratorService;
 use Filament\Actions\CreateAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Support\Enums\Width;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class ListReturnBatches extends ListRecords
 {
@@ -28,10 +30,10 @@ class ListReturnBatches extends ListRecords
                 ->icon('heroicon-o-plus')
                 ->modalHeading('Thêm đợt nhập trả')
                 ->modalWidth(Width::Large)
-                ->modalSubmitActionLabel('Lưu')
+                ->modalSubmitActionLabel('Lưu & Bắt đầu nhận hàng')
                 ->modalCancelActionLabel('Hủy')
                 ->successNotificationTitle('Tạo đợt nhập trả thành công!')
-                ->form([
+                ->schema([
                     Select::make('checkout_batch_id')
                         ->label('Từ đợt xuất kho')
                         ->placeholder('Chọn một đợt xuất kho...')
@@ -81,31 +83,45 @@ class ListReturnBatches extends ListRecords
                         ->required(),
                     Textarea::make('note')
                         ->label('Ghi chú')
+                        ->placeholder('Ghi chú tình trạng thiết bị khi thu hồi...')
                         ->rows(2),
                 ])
                 ->using(function (array $data): ReturnBatch {
-                    /** @var CheckoutBatch $checkoutBatch */
-                    $checkoutBatch = CheckoutBatch::with(['items.asset', 'order'])->findOrFail($data['checkout_batch_id']);
+                    return DB::transaction(function () use ($data) {
+                        /** @var CheckoutBatch $checkoutBatch */
+                        $checkoutBatch = CheckoutBatch::with(['items'])->findOrFail($data['checkout_batch_id']);
 
-                    $items = $checkoutBatch->items->map(function ($item) {
-                        return [
-                            'asset_id' => $item->asset_id,
-                            'checkout_batch_item_id' => $item->id,
-                            'grade' => ReturnGrade::Normal->value,
-                            'is_received' => true,
-                            'grade_note' => null,
-                        ];
-                    })->all();
+                        $code = CodeGeneratorService::generate('RET', 'return_batches');
 
-                    return app(ReturnProcessingService::class)->processReturn(
-                        order: $checkoutBatch->order,
-                        items: $items,
-                        receivedBy: Auth::id(),
-                        returnDate: now()->toDateString(),
-                        note: $data['note'] ?? null,
-                        completeBatchIds: [$checkoutBatch->id],
-                        warehouseId: $checkoutBatch->warehouse_id,
-                    );
+                        $returnBatch = ReturnBatch::create([
+                            'code' => $code,
+                            'checkout_batch_id' => $checkoutBatch->id,
+                            'return_date' => now()->toDateString(),
+                            'note' => $data['note'] ?? null,
+                            'status' => ReturnBatchStatus::InProgress,
+                            'created_by' => Auth::id(),
+                        ]);
+
+                        foreach ($checkoutBatch->items as $cbItem) {
+                            ReturnBatchItem::create([
+                                'return_batch_id' => $returnBatch->id,
+                                'asset_id' => $cbItem->asset_id,
+                                'checkout_batch_item_id' => $cbItem->id,
+                                'grade' => null,
+                                'is_received' => false,
+                                'received_by' => null,
+                                'received_at' => null,
+                            ]);
+                        }
+
+                        return $returnBatch;
+                    });
+                })
+                ->after(function ($livewire, ReturnBatch $record) {
+                    $livewire->replaceMountedAction('edit', context: [
+                        'table' => true,
+                        'recordKey' => (string) $record->getKey(),
+                    ]);
                 }),
         ];
     }
