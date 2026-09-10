@@ -20,11 +20,11 @@ class ReturnBatchItemResource extends JsonResource
             'id' => $this->id,
             'asset_id' => $this->asset_id,
             'is_received' => (bool) $this->is_received,
-            'grade' => [
+            'grade' => $this->grade ? [
                 'value' => $this->grade->value,
                 'label' => $this->grade->getLabel(),
                 'color' => $this->grade->getColor(),
-            ],
+            ] : null,
             'grade_note' => $this->grade_note,
             'received_at' => $this->received_at?->toIso8601String(),
             'received_by' => $this->receivedBy ? [

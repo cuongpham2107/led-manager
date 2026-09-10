@@ -18,6 +18,21 @@ CheckinBatchItem::create([..., 'condition' => 'ok']);
 ### Don't add new migrations to alter existing tables
 The project convention is **edit migrations in-place** + `migrate:fresh --seed`. Adding a new migration to add a column to an existing table violates this convention and breaks the workflow. If you need a new column, find the original `create_*` migration and add it there.
 
+## ❌ API Resources
+
+### Enum fields on pre-created items can be null → resource must guard
+Return/checkin batch items are **pre-created** (grade/condition = null) before they are scanned/graded. An API Resource that does `$this->grade->value` (or `->getLabel()`) throws on null → the whole `index`/`show` response 500s → the mobile app silently catches it and shows an **empty list**.
+
+```php
+// ❌ 500s when grade is null (ungraded item)
+'grade' => ['value' => $this->grade->value, ...],
+
+// ✅ null-safe
+'grade' => $this->grade ? ['value' => $this->grade->value, ...] : null,
+```
+
+Applies to `ReturnBatchItemResource.grade`. Keep the matching mobile type nullable (`grade: {...} | null`) and guard the render (`isReceived && item.grade`).
+
 ## ❌ Models & Relations
 
 ### `CheckinBatchItem::receivedByUser` (NOT `receivedBy`)

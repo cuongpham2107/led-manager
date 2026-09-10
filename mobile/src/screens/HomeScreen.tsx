@@ -50,13 +50,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
     try {
       const [outboundRes, returnRes, checkinRes] = await Promise.all([
         apiClient.get('/checkout-batches', {
-          params: { warehouse_id: selectedWarehouseId, status: 'pending' },
+          params: { warehouse_id: selectedWarehouseId, active: 1 },
         }),
         apiClient.get('/return-batches', {
-          params: { warehouse_id: selectedWarehouseId, status: 'pending' },
+          params: { warehouse_id: selectedWarehouseId, active: 1 },
         }),
         apiClient.get('/checkin-batches', {
-          params: { warehouse_id: selectedWarehouseId, status: 'pending' },
+          params: { warehouse_id: selectedWarehouseId, active: 1 },
         }),
       ]);
 

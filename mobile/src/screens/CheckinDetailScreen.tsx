@@ -1,4 +1,5 @@
 import {
+  AlertTriangle,
   ArrowLeft,
   Box,
   Calendar,
@@ -10,15 +11,18 @@ import {
   QrCode,
   ShoppingCart,
   Truck,
+  X,
 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Modal,
   SafeAreaView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -26,6 +30,8 @@ import { ScannerModal } from '../components/ScannerModal';
 import { StatusBadge } from '../components/StatusBadge';
 import { apiClient } from '../services/apiClient';
 import { CheckinBatch, CheckinBatchItem, CheckinBatchTypeValue } from '../types';
+
+type CheckinConditionValue = 'ok' | 'fault';
 
 interface CheckinDetailScreenProps {
   batchId: number;
@@ -38,6 +44,11 @@ const BatchTypeIcon: React.FC<{ type: CheckinBatchTypeValue; size?: number }> = 
   return <Truck color="#475569" size={size} />;
 };
 
+const CONDITION_META: Record<CheckinConditionValue, { label: string; color: string }> = {
+  ok: { label: 'Bình thường', color: 'success' },
+  fault: { label: 'Hỏng hóc', color: 'danger' },
+};
+
 export const CheckinDetailScreen: React.FC<CheckinDetailScreenProps> = ({
   batchId,
   onBack,
@@ -46,6 +57,12 @@ export const CheckinDetailScreen: React.FC<CheckinDetailScreenProps> = ({
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isCompleting, setIsCompleting] = useState<boolean>(false);
   const [showScanner, setShowScanner] = useState<boolean>(false);
+
+  // Condition inspection modal state
+  const [pendingScanCode, setPendingScanCode] = useState<string | null>(null);
+  const [selectedCondition, setSelectedCondition] = useState<CheckinConditionValue>('ok');
+  const [conditionNote, setConditionNote] = useState<string>('');
+  const [isSubmittingCondition, setIsSubmittingCondition] = useState<boolean>(false);
 
   const fetchBatchDetail = async () => {
     try {
@@ -64,13 +81,45 @@ export const CheckinDetailScreen: React.FC<CheckinDetailScreenProps> = ({
     fetchBatchDetail();
   }, [batchId]);
 
+  // When QR is scanned, open inspection sheet to grade condition
   const handleScanCode = async (code: string) => {
-    const response = await apiClient.post(`/checkin-batches/${batchId}/scan`, {
-      code,
-      condition: 'ok',
-    });
-    if (response.data?.success) {
-      await fetchBatchDetail();
+    setShowScanner(false);
+    setPendingScanCode(code);
+    setSelectedCondition('ok');
+    setConditionNote('');
+  };
+
+  const handleConfirmCondition = async () => {
+    if (!pendingScanCode) return;
+
+    setIsSubmittingCondition(true);
+    try {
+      const response = await apiClient.post(`/checkin-batches/${batchId}/scan`, {
+        code: pendingScanCode,
+        condition: selectedCondition,
+        condition_note: conditionNote.trim() || undefined,
+      });
+
+      if (response.data?.success) {
+        setPendingScanCode(null);
+        await fetchBatchDetail();
+        Alert.alert(
+          'Đã nhập kho',
+          response.data.message,
+          [
+            { text: 'Xong' },
+            {
+              text: 'Quét tiếp',
+              onPress: () => setShowScanner(true),
+            },
+          ]
+        );
+      }
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Không thể lưu kiểm đếm thiết bị.';
+      Alert.alert('Lỗi', msg);
+    } finally {
+      setIsSubmittingCondition(false);
     }
   };
 
@@ -120,9 +169,13 @@ export const CheckinDetailScreen: React.FC<CheckinDetailScreenProps> = ({
     (a, b) => Number(a.is_received) - Number(b.is_received)
   );
   const pendingCount = (batch.items || []).filter((i) => !i.is_received).length;
+  const okCount = (batch.items || []).filter((i) => i.is_received && i.condition !== 'fault').length;
+  const faultCount = (batch.items || []).filter((i) => i.is_received && i.condition === 'fault').length;
 
   const renderItem = ({ item, index }: { item: CheckinBatchItem; index: number }) => {
     const isReceived = !!item.is_received;
+    const conditionValue: CheckinConditionValue = item.condition === 'fault' ? 'fault' : 'ok';
+    const conditionMeta = CONDITION_META[conditionValue];
 
     return (
       <View style={[styles.itemRow, !isReceived && styles.itemRowPending]}>
@@ -134,13 +187,13 @@ export const CheckinDetailScreen: React.FC<CheckinDetailScreenProps> = ({
           <Text style={styles.itemLine}>
             {item.asset?.product_line?.name || 'Cabinet LED'} {item.asset?.size ? `(${item.asset.size})` : ''}
           </Text>
+          {isReceived && item.condition_note ? (
+            <Text style={styles.itemConditionNote}>Lỗi: {item.condition_note}</Text>
+          ) : null}
         </View>
         <View style={styles.itemTimeWrap}>
           {isReceived ? (
-            <>
-              <CheckCircle2 color="#10B981" size={16} />
-              <Text style={styles.itemTime}>Đã nhập</Text>
-            </>
+            <StatusBadge label={conditionMeta.label} color={conditionMeta.color} size="sm" />
           ) : (
             <>
               <Circle color="#94A3B8" size={16} />
@@ -229,6 +282,21 @@ export const CheckinDetailScreen: React.FC<CheckinDetailScreenProps> = ({
               </Text>
             </View>
 
+            {/* Condition Score Tiles */}
+            <View style={styles.gradingSummaryCard}>
+              <Text style={styles.gradingTitle}>Thống Kê Kiểm Tra Tình Trạng</Text>
+              <View style={styles.gradingRow}>
+                <View style={[styles.gradingBox, { backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' }]}>
+                  <Text style={[styles.gradingCount, { color: '#059669' }]}>{okCount}</Text>
+                  <Text style={[styles.gradingLabel, { color: '#047857' }]}>Bình Thường</Text>
+                </View>
+                <View style={[styles.gradingBox, { backgroundColor: '#FEF2F2', borderColor: '#FECACA' }]}>
+                  <Text style={[styles.gradingCount, { color: '#DC2626' }]}>{faultCount}</Text>
+                  <Text style={[styles.gradingLabel, { color: '#B91C1C' }]}>Hỏng Hóc</Text>
+                </View>
+              </View>
+            </View>
+
             {/* Scan Action Big Button */}
             {!isCompleted && (
               <TouchableOpacity
@@ -281,9 +349,86 @@ export const CheckinDetailScreen: React.FC<CheckinDetailScreenProps> = ({
         onClose={() => setShowScanner(false)}
         onScan={handleScanCode}
         title={`Quét Nhập Kho: ${batch.code}`}
-        subtitle={`Đã nhập: ${batch.scanned_count} / ${batch.target_items_count}`}
-        continuousModeDefault={true}
+        subtitle="Bắn mã QR để kiểm tra tình trạng thiết bị"
+        continuousModeDefault={false}
       />
+
+      {/* Condition Inspection Bottom Sheet Modal */}
+      <Modal visible={!!pendingScanCode} transparent animationType="fade">
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Kiểm tra tình trạng</Text>
+              <TouchableOpacity onPress={() => setPendingScanCode(null)}>
+                <X color="#64748B" size={22} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.modalCodeText}>Thiết bị: <Text style={styles.modalBold}>{pendingScanCode}</Text></Text>
+            <Text style={styles.modalSubText}>Đánh giá tình trạng thiết bị khi nhập kho:</Text>
+
+            {/* Condition Options */}
+            <View style={styles.gradeOptionsRow}>
+              <TouchableOpacity
+                style={[
+                  styles.gradeOptionBtn,
+                  selectedCondition === 'ok' && styles.gradeOptionBtnNormal,
+                ]}
+                onPress={() => setSelectedCondition('ok')}
+              >
+                <CheckCircle2 color={selectedCondition === 'ok' ? '#059669' : '#94A3B8'} size={24} />
+                <Text style={[styles.gradeOptionText, selectedCondition === 'ok' && styles.gradeOptionTextActive]}>
+                  Bình Thường (Đạt chuẩn)
+                </Text>
+                <Text style={styles.gradeOptionSub}>Thiết bị hoạt động tốt, sẵn sàng sử dụng</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.gradeOptionBtn,
+                  selectedCondition === 'fault' && styles.gradeOptionBtnDamaged,
+                ]}
+                onPress={() => setSelectedCondition('fault')}
+              >
+                <AlertTriangle color={selectedCondition === 'fault' ? '#DC2626' : '#94A3B8'} size={24} />
+                <Text style={[styles.gradeOptionText, selectedCondition === 'fault' && styles.gradeOptionTextDanger]}>
+                  Hỏng Hóc / Lỗi Thiết Bị
+                </Text>
+                <Text style={styles.gradeOptionSub}>Chết bóng LED, hỏng nguồn, cần kỹ thuật kiểm tra</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Defect note input if fault */}
+            {selectedCondition === 'fault' && (
+              <View style={styles.defectInputWrap}>
+                <Text style={styles.defectLabel}>Mô tả hỏng hóc (để kỹ thuật xử lý):</Text>
+                <TextInput
+                  style={styles.defectInput}
+                  placeholder="VD: Chết 4 bóng LED góc dưới, gãy chốt cài..."
+                  placeholderTextColor="#94A3B8"
+                  value={conditionNote}
+                  onChangeText={setConditionNote}
+                  multiline
+                  numberOfLines={2}
+                />
+              </View>
+            )}
+
+            {/* Submit Inspection */}
+            <TouchableOpacity
+              style={[styles.submitGradeBtn, isSubmittingCondition && styles.submitGradeBtnDisabled]}
+              onPress={handleConfirmCondition}
+              disabled={isSubmittingCondition}
+            >
+              {isSubmittingCondition ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.submitGradeBtnText}>Xác Nhận Nhập Kho</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -551,5 +696,159 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontSize: 14,
     marginTop: 12,
+  },
+  itemConditionNote: {
+    color: '#DC2626',
+    fontSize: 12,
+    marginTop: 4,
+    fontWeight: '600',
+  },
+  gradingSummaryCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#64748B',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+  },
+  gradingTitle: {
+    color: '#0F172A',
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+  gradingRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  gradingBox: {
+    flex: 1,
+    borderRadius: 12,
+    padding: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+  },
+  gradingCount: {
+    fontSize: 24,
+    fontWeight: '800',
+  },
+  gradingLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 4,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    justifyContent: 'flex-end',
+  },
+  modalCard: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  modalTitle: {
+    color: '#0F172A',
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  modalCodeText: {
+    color: '#64748B',
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  modalBold: {
+    color: '#2563EB',
+    fontWeight: '800',
+  },
+  modalSubText: {
+    color: '#64748B',
+    fontSize: 13,
+    marginBottom: 16,
+  },
+  gradeOptionsRow: {
+    gap: 12,
+    marginBottom: 16,
+  },
+  gradeOptionBtn: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  gradeOptionBtnNormal: {
+    backgroundColor: '#ECFDF5',
+    borderColor: '#10B981',
+  },
+  gradeOptionBtnDamaged: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#EF4444',
+  },
+  gradeOptionText: {
+    color: '#334155',
+    fontSize: 15,
+    fontWeight: '700',
+    marginTop: 6,
+  },
+  gradeOptionTextActive: {
+    color: '#047857',
+  },
+  gradeOptionTextDanger: {
+    color: '#B91C1C',
+  },
+  gradeOptionSub: {
+    color: '#64748B',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  defectInputWrap: {
+    marginBottom: 16,
+  },
+  defectLabel: {
+    color: '#334155',
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  defectInput: {
+    backgroundColor: '#FFF',
+    borderRadius: 10,
+    padding: 12,
+    color: '#0F172A',
+    fontSize: 13,
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+  },
+  submitGradeBtn: {
+    backgroundColor: '#2563EB',
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  submitGradeBtnDisabled: {
+    backgroundColor: '#93C5FD',
+  },
+  submitGradeBtnText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
   },
 });

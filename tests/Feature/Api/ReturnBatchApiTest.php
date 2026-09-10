@@ -128,3 +128,27 @@ test('scanning damaged asset creates repair log and transitions to repairing', f
     expect($this->returnBatch->fresh()->status)->toBe(ReturnBatchStatus::Completed);
     expect($this->order->fresh()->status)->toBe(OrderStatus::Returned);
 });
+
+test('index and show endpoints handle ungraded return items without error', function () {
+    $token = $this->user->createToken('test')->plainTextToken;
+
+    // Pre-created item from checkout, not yet scanned/graded (grade = null)
+    $this->returnBatch->items()->create([
+        'asset_id' => $this->normalAsset->id,
+        'grade' => null,
+        'is_received' => false,
+    ]);
+
+    $indexResponse = $this->withHeader('Authorization', "Bearer {$token}")
+        ->getJson('/api/v1/return-batches?warehouse_id='.$this->warehouse->id.'&active=1');
+
+    $indexResponse->assertOk()
+        ->assertJsonPath('success', true);
+
+    $showResponse = $this->withHeader('Authorization', "Bearer {$token}")
+        ->getJson("/api/v1/return-batches/{$this->returnBatch->id}");
+
+    $showResponse->assertOk()
+        ->assertJsonPath('success', true)
+        ->assertJsonPath('data.items.0.grade', null);
+});

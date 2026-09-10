@@ -173,7 +173,7 @@ export const ReturnDetailScreen: React.FC<ReturnDetailScreenProps> = ({
           ) : null}
         </View>
         <View style={styles.gradeBadgeWrap}>
-          {isReceived ? (
+          {isReceived && item.grade ? (
             <StatusBadge label={item.grade.label} color={item.grade.color} size="sm" />
           ) : (
             <View style={styles.pendingBadge}>

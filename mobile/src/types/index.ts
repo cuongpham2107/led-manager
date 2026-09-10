@@ -118,7 +118,7 @@ export interface ReturnBatchItem {
     value: ReturnGradeValue;
     label: string;
     color: string;
-  };
+  } | null;
   grade_note?: string;
   received_at?: string;
   received_by?: {
