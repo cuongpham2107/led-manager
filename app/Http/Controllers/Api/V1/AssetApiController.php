@@ -19,7 +19,7 @@ class AssetApiController extends Controller
             'code' => ['required', 'string'],
         ]);
 
-        $code = trim($request->input('code'));
+        $code = $this->extractCodeFromUrl(trim($request->input('code')));
 
         $asset = Asset::with(['productLine', 'currentWarehouse', 'statusLogs', 'repairLogs'])
             ->where('serial_no', $code)
@@ -59,5 +59,18 @@ class AssetApiController extends Controller
                 ]),
             ],
         ]);
+    }
+
+    /**
+     * If the scanned code is a full URL (e.g. https://domain/q/LED-001),
+     * extract just the asset code segment.
+     */
+    private function extractCodeFromUrl(string $code): string
+    {
+        if (preg_match('#/q/([^/?]+)#i', $code, $matches)) {
+            return $matches[1];
+        }
+
+        return $code;
     }
 }

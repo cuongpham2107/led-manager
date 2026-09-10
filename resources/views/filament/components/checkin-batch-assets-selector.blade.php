@@ -1,5 +1,5 @@
 <div
-    wire:key="checkin-assets-selector-{{ ($isEdit ?? false) ? 'edit-' . ($batchId ?? 0) : 'create' }}-{{ $warehouseId ?? 'all' }}"
+    wire:key="checkin-assets-selector-{{ ($isEdit ?? false) ? 'edit-' . ($batchId ?? 0) : 'create' }}"
     x-data="{
         state: $wire.$entangle('{{ $getStatePath() }}'),
         isEdit: {{ ($isEdit ?? false) ? 'true' : 'false' }},
@@ -10,9 +10,9 @@
         assets: {{ \Illuminate\Support\Js::from($initialAssets ?? []) }},
         productLines: {{ \Illuminate\Support\Js::from($productLines ?? []) }},
         statuses: {{ \Illuminate\Support\Js::from($statuses ?? []) }},
-        warehouseId: {{ !empty($warehouseId) ? (int) $warehouseId : 'null' }},
+        warehouseId: null,
         selectedProductLine: '',
-        selectedStatus: '',
+        selectedStatus: '{{ \App\Enums\AssetStatus::NewlyAdded->value }}',
         selectedCondition: 'all',
         loading: false,
         loadingMore: false,
@@ -110,7 +110,7 @@
         resetFilters() {
             this.search = '';
             this.selectedProductLine = '';
-            this.selectedStatus = '';
+            this.selectedStatus = this.isEdit && !this.addMoreMode ? '' : '{{ \App\Enums\AssetStatus::NewlyAdded->value }}';
             this.selectedCondition = 'all';
             this.applyFilters();
         },
@@ -176,7 +176,7 @@
             this.addMoreMode = true;
             this.search = '';
             this.selectedProductLine = '';
-            this.selectedStatus = '';
+            this.selectedStatus = '{{ \App\Enums\AssetStatus::NewlyAdded->value }}';
             this.page = 1;
             this.fetchAssets(1, false);
         },
@@ -218,9 +218,6 @@
                 }
                 if (this.selectedStatus) {
                     url.searchParams.set('status', this.selectedStatus);
-                }
-                if (this.warehouseId) {
-                    url.searchParams.set('warehouse_id', this.warehouseId);
                 }
 
                 const res = await fetch(url.toString(), {
@@ -369,7 +366,7 @@
     </div>
 
     <!-- Filter & Search Toolbar -->
-    <div class="space-y-2.5">
+    <div class="space-y-2.5 relative z-10">
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
             <!-- Search Input -->
             <div class="relative flex-1">
@@ -397,31 +394,34 @@
 
             <!-- Filter: Dòng sản phẩm -->
             <div class="w-full sm:w-52">
-                <select
-                    x-model="selectedProductLine"
-                    @change="applyFilters()"
-                    class="w-full py-2 px-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent shadow-2xs cursor-pointer"
-                >
-                    <option value="">Tất cả dòng sản phẩm</option>
-                    <template x-for="pl in productLines" :key="pl.id">
-                        <option :value="pl.id" x-text="pl.name"></option>
-                    </template>
-                </select>
+                <x-filament::input.wrapper>
+                    <x-filament::input.select
+                        x-model="selectedProductLine"
+                        @change="applyFilters()"
+                    >
+                        <option value="">Tất cả dòng sản phẩm</option>
+                        <template x-for="pl in productLines" :key="pl.id">
+                            <option :value="pl.id" x-text="pl.name"></option>
+                        </template>
+                    </x-filament::input.select>
+                </x-filament::input.wrapper>
             </div>
 
             <!-- Filter: Trạng thái (chỉ hiện khi chọn từ kho: tạo mới hoặc bấm "Thêm từ kho") -->
             <template x-if="!isEdit || addMoreMode">
                 <div class="w-full sm:w-48">
-                    <select
-                        x-model="selectedStatus"
-                        @change="applyFilters()"
-                        class="w-full py-2 px-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent shadow-2xs cursor-pointer"
-                    >
-                        <option value="">Tất cả trạng thái</option>
-                        <template x-for="st in statuses" :key="st.value">
-                            <option :value="st.value" x-text="st.label"></option>
-                        </template>
-                    </select>
+                    <x-filament::input.wrapper>
+                        <x-filament::input.select
+                            x-model="selectedStatus"
+                            @change="applyFilters()"
+                        >
+                            <option value="{{ \App\Enums\AssetStatus::NewlyAdded->value }}">Mới nhập kho</option>
+                            <option value="">Tất cả trạng thái</option>
+                            <template x-for="st in statuses" :key="st.value">
+                                <option :value="st.value" x-text="st.label" x-show="st.value !== '{{ \App\Enums\AssetStatus::NewlyAdded->value }}'"></option>
+                            </template>
+                        </x-filament::input.select>
+                    </x-filament::input.wrapper>
                 </div>
             </template>
 
@@ -498,7 +498,7 @@
     </div>
 
     <!-- Table Container -->
-    <div class="border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden bg-white dark:bg-gray-900 shadow-xs">
+    <div class="border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden bg-white dark:bg-gray-900 shadow-xs relative z-0">
         <div
             class="max-h-80 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800"
             @scroll.passive="onScroll($event)"
@@ -506,7 +506,7 @@
             <!-- VIEW 1: Existing Batch Receiving Table (Matches user mockup) -->
             <template x-if="isEdit && !addMoreMode">
                 <table class="w-full text-left text-sm border-collapse">
-                    <thead class="sticky top-0 bg-gray-50/95 dark:bg-gray-800/95 backdrop-blur-xs text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider z-1 border-b border-gray-200 dark:border-gray-700">
+                    <thead class="sticky top-0 bg-gray-50 dark:bg-gray-800 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700">
                         <tr>
                             <th class="px-5 py-3">DÒNG SẢN PHẨM</th>
                             <th class="px-5 py-3">KẾT QUẢ NHẬN HÀNG</th>
@@ -581,7 +581,7 @@
             <!-- VIEW 2: Selection Table with Checkboxes (Create mode / Add More mode) -->
             <template x-if="!isEdit || addMoreMode">
                 <table class="w-full text-left text-sm border-collapse">
-                    <thead class="sticky top-0 bg-gray-50/95 dark:bg-gray-800/95 backdrop-blur-xs text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider z-1 border-b border-gray-200 dark:border-gray-700">
+                    <thead class="sticky top-0 bg-gray-50 dark:bg-gray-800 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700">
                         <tr>
                             <th class="w-12 px-4 py-3 text-center">
                                 <input

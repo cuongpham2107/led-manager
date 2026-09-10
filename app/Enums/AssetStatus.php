@@ -8,6 +8,7 @@ use Filament\Support\Contracts\HasLabel;
 
 enum AssetStatus: string implements HasColor, HasIcon, HasLabel
 {
+    case NewlyAdded = 'newly_added';
     case Ready = 'ready';
     case InEvent = 'in_event';
     case InTransit = 'in_transit';
@@ -18,6 +19,7 @@ enum AssetStatus: string implements HasColor, HasIcon, HasLabel
     public function getLabel(): string
     {
         return match ($this) {
+            self::NewlyAdded => 'Mới',
             self::Ready => 'Sẵn sàng trong kho',
             self::InEvent => 'Đang chạy sự kiện',
             self::InTransit => 'Đang vận chuyển',
@@ -30,6 +32,7 @@ enum AssetStatus: string implements HasColor, HasIcon, HasLabel
     public function getColor(): string|array|null
     {
         return match ($this) {
+            self::NewlyAdded => 'primary',
             self::Ready => 'success',
             self::InEvent => 'info',
             self::InTransit => 'warning',
@@ -42,6 +45,7 @@ enum AssetStatus: string implements HasColor, HasIcon, HasLabel
     public function getIcon(): ?string
     {
         return match ($this) {
+            self::NewlyAdded => 'heroicon-o-sparkles',
             self::Ready => 'heroicon-o-check-circle',
             self::InEvent => 'heroicon-o-tv',
             self::InTransit => 'heroicon-o-truck',

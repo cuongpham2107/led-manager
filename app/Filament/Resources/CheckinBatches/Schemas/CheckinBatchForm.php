@@ -47,14 +47,14 @@ class CheckinBatchForm
                             ->label('Ngày dự kiến')
                             ->native(false)
                             ->displayFormat('d/m/Y')
-                            ->placeholder('DD/MM/YYYY')
-                            ->extraAttributes(['class' => 'relative z-30']),
+                            ->placeholder('DD/MM/YYYY'),
                     ])
-                    ->extraAttributes(['class' => 'relative z-30'])
+                    ->extraAttributes(['class' => 'relative z-30', 'style' => 'position: relative; z-index: 30;'])
                     ->columnSpanFull(),
 
                 ViewField::make('selected_assets')
                     ->label('Mã hàng trong đợt')
+                    ->extraAttributes(['class' => 'relative z-0', 'style' => 'position: relative; z-index: 0;'])
                     ->view('filament.components.checkin-batch-assets-selector')
                     ->viewData(function (Get $get, ?CheckinBatch $record = null, string $operation = 'create') {
                         $isEdit = ($record instanceof CheckinBatch && $record->exists) || $operation === 'edit';
@@ -124,7 +124,7 @@ class CheckinBatchForm
                             'initialAssets' => $initialAssets,
                             'productLines' => $productLines,
                             'statuses' => $statuses,
-                            'warehouseId' => $get('warehouse_id') ?? $record?->warehouse_id,
+                            'warehouseId' => null,
                             'apiUrl' => route('filament.checkin-assets'),
                             'batchId' => $record?->id,
                             'batchCode' => $record?->code,

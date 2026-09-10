@@ -113,6 +113,12 @@ class CheckinBatchApiController extends Controller
         }
 
         $code = trim($request->input('code'));
+
+        // Strip URL wrapper if QR encodes a full URL (e.g. https://domain/q/LED-001)
+        if (preg_match('#/q/([^/?]+)#i', $code, $matches)) {
+            $code = $matches[1];
+        }
+
         $asset = Asset::with('productLine')
             ->where('serial_no', $code)
             ->orWhere('qr_code', $code)

@@ -80,6 +80,10 @@ class CheckoutBatchesTable
                             ELSE 6
                         END {$direction}");
                     }),
+                TextColumn::make('created_at')
+                    ->label('Ngày tạo')
+                    ->dateTime('d/m/Y H:i')
+                    ->sortable(),
                 TextColumn::make('dispatched_at')
                     ->label('Thời gian xuất')
                     ->dateTime('d/m/Y H:i')
@@ -199,6 +203,6 @@ class CheckoutBatchesTable
                     DeleteBulkAction::make(),
                 ]),
             ])
-            ->defaultSort('status', 'asc');
+            ->defaultSort('created_at', 'desc');
     }
 }

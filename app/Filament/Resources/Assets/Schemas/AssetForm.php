@@ -49,24 +49,23 @@ class AssetForm
                                 ->preload(),
                             TextInput::make('size')
                                 ->label('Kích thước / Quy cách')
-                                ->placeholder('VD: 0.5×0.5 m / 2U Rack / 6in1 Case'),
+                                ->placeholder('VD: 500×500 mm / 2U Rack / 6in1 Case'),
                         ]),
                     ]),
 
                 Section::make('Trạng thái & Vị trí kho')
                     ->description('Vị trí kho hiện tại và tình trạng sẵn sàng vận hành')
                     ->columnSpanFull()
+                    ->hiddenOn('create')
                     ->schema([
                         Grid::make(3)
-                            ->columns(fn (string $operation): int => $operation === 'create' ? 2 : 3)
+                            ->columns(3)
                             ->schema([
                                 Select::make('current_status')
                                     ->label('Trạng thái hiện tại')
                                     ->options(AssetStatus::class)
-                                    ->default(AssetStatus::Ready)
-                                    ->required()
-                                    ->hiddenOn('create')
-                                    ->dehydratedWhenHidden(),
+                                    ->default(AssetStatus::NewlyAdded)
+                                    ->required(),
                                 Select::make('current_warehouse_id')
                                     ->label('Kho lưu trữ hiện tại')
                                     ->relationship('currentWarehouse', 'name')

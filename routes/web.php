@@ -2,8 +2,14 @@
 
 use App\Http\Controllers\CheckinAssetSearchController;
 use App\Http\Controllers\CheckoutAssetSearchController;
+use App\Http\Controllers\PublicAssetController;
 use App\Http\Controllers\ReturnAssetController;
 use Illuminate\Support\Facades\Route;
+
+// Public asset inspection — QR scan (no auth required)
+Route::middleware('throttle:60,1')
+    ->get('/q/{code}', [PublicAssetController::class, 'show'])
+    ->name('asset.public.show');
 
 Route::get('/mobile', function () {
     $indexPath = public_path('mobile/index.html');

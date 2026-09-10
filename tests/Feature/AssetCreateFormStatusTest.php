@@ -30,7 +30,7 @@ test('create asset modal hides current_status and operation history section and 
 
     $asset = Asset::where('serial_no', 'TEST-SERIAL-999')->first();
     expect($asset)->not->toBeNull()
-        ->and($asset->current_status)->toBe(AssetStatus::Ready)
+        ->and($asset->current_status)->toBe(AssetStatus::NewlyAdded)
         ->and($asset->manufactured_date?->toDateString())->toBe(now()->toDateString())
         ->and($asset->purchase_date?->toDateString())->toBe(now()->toDateString());
 });

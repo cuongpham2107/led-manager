@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\CheckinBatches\Tables;
 
 use App\Enums\BatchStatus;
+use App\Filament\Resources\CheckinBatches\Actions\ImportCheckinBatchItemsAction;
 use App\Models\Asset;
 use App\Models\CheckinBatch;
 use App\Models\CheckinBatchItem;
@@ -128,11 +129,20 @@ class CheckinBatchesTable
                     ->sortable()
                     ->placeholder('—')
                     ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('created_at')
+                    ->label('Ngày tạo')
+                    ->dateTime('d/m/Y H:i')
+                    ->sortable(),
             ])
             ->filters([
                 SelectFilter::make('status')
                     ->label('Trạng thái')
-                    ->options(BatchStatus::class),
+                    ->options([
+                        BatchStatus::Pending->value => BatchStatus::Pending->getLabel(),
+                        BatchStatus::InProgress->value => BatchStatus::InProgress->getLabel(),
+                        BatchStatus::Completed->value => BatchStatus::Completed->getLabel(),
+                        BatchStatus::Cancelled->value => BatchStatus::Cancelled->getLabel(),
+                    ]),
                 SelectFilter::make('batch_type')
                     ->label('Loại nhập')
                     ->options([
@@ -147,6 +157,7 @@ class CheckinBatchesTable
             ], layout: FiltersLayout::AboveContent)
             ->deferFilters(false)
             ->recordActions([
+                ImportCheckinBatchItemsAction::make(),
                 EditAction::make()
                     ->label('Chỉnh sửa')
                     ->modalHeading('Sửa đợt nhập')
@@ -154,6 +165,8 @@ class CheckinBatchesTable
                     ->modalSubmitActionLabel('Lưu')
                     ->modalCancelActionLabel('Hủy')
                     ->extraModalFooterActions(fn (CheckinBatch $record): array => [
+                        ImportCheckinBatchItemsAction::make('modal_import_sheet')
+                            ->cancelParentActions(),
                         Action::make('completeReceiving')
                             ->label('Kết thúc nhận hàng')
                             ->color('gray')

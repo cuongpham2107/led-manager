@@ -6,6 +6,7 @@ use App\Enums\BatchStatus;
 use App\Enums\CheckinBatchType;
 use App\Filament\Resources\CheckinBatches\Actions\CreateProductionBatchAction;
 use App\Filament\Resources\CheckinBatches\CheckinBatchResource;
+use App\Filament\Resources\CheckinBatches\Widgets\CheckinBatchStatsWidget;
 use App\Models\Asset;
 use App\Models\CheckinBatch;
 use App\Models\CheckinBatchItem;
@@ -18,6 +19,13 @@ use Illuminate\Support\Facades\DB;
 class ListCheckinBatches extends ListRecords
 {
     protected static string $resource = CheckinBatchResource::class;
+
+    protected function getHeaderWidgets(): array
+    {
+        return [
+            CheckinBatchStatsWidget::class,
+        ];
+    }
 
     protected function getHeaderActions(): array
     {

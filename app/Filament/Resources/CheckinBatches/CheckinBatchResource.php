@@ -70,6 +70,7 @@ class CheckinBatchResource extends Resource
     {
         return [
             'index' => ListCheckinBatches::route('/'),
+            'edit' => Pages\EditCheckinBatch::route('/{record}/edit'),
         ];
     }
 }

@@ -22,13 +22,14 @@ return new class extends Migration
 
             // Current state — denormalized for fast lookup; source of truth is asset_status_logs
             $table->enum('current_status', [
+                'newly_added',  // Mới nhập kho
                 'ready',        // Trong kho / Sẵn sàng
                 'in_event',     // Đang đi sự kiện
                 'in_transit',   // Đang vận chuyển
                 'repairing',    // Đang bảo trì/sửa chữa
                 'missing',      // Mất / Chưa trả về sau sự kiện
                 'disposed',     // Đã hỏng/Thanh lý
-            ])->default('ready');
+            ])->default('newly_added');
 
             $table->foreignId('current_warehouse_id')->nullable()->constrained('warehouses')->nullOnDelete();
             $table->foreignId('warehouse_location_id')->nullable()->constrained('warehouse_locations')->nullOnDelete();
