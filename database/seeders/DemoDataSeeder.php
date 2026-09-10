@@ -334,6 +334,11 @@ class DemoDataSeeder extends Seeder
         foreach (range(1, 25) as $i) {
             $status = fake()->randomElement($checkinStatuses);
             $expectedDate = fake()->dateTimeBetween('-20 days', '+10 days');
+
+            // Số thiết bị thực tế trong đợt = số lượng dự kiến (quantity), để tiến độ
+            // web và app luôn khớp (received / total).
+            $itemCount = fake()->numberBetween(5, 20);
+
             $batch = CheckinBatch::create([
                 'code' => 'IN-'.now()->format('ym').'-'.str_pad((string) $i, 2, '0', STR_PAD_LEFT).'-'.Str::upper(Str::random(3)),
                 'warehouse_id' => fake()->randomElement($warehouseIds),
@@ -341,19 +346,27 @@ class DemoDataSeeder extends Seeder
                 'expected_date' => $expectedDate,
                 'batch_type' => fake()->randomElement([CheckinBatchType::Production, CheckinBatchType::Purchase, CheckinBatchType::Transfer]),
                 'product_line_id' => $productLines->isNotEmpty() ? fake()->randomElement($productLines)->id : null,
-                'quantity' => fake()->numberBetween(5, 40),
+                'quantity' => $itemCount,
                 'production_note' => fake()->optional()->sentence(),
                 'status' => $status,
                 'created_by' => User::inRandomOrder()->first()?->id,
                 'completed_at' => $status === BatchStatus::Completed ? fake()->dateTimeBetween('-10 days', 'now') : null,
             ]);
 
-            $itemCount = fake()->numberBetween(3, min(40, (int) $batch->quantity));
+            // Số item đã nhận (đã quét) theo trạng thái đợt.
+            $receivedCount = match ($status) {
+                BatchStatus::Completed => $itemCount,
+                BatchStatus::InProgress => fake()->numberBetween(1, max(1, $itemCount - 1)),
+                default => 0, // Pending / Cancelled: chưa quét
+            };
+
             $batchLocationId = WarehouseLocation::where('warehouse_id', $batch->warehouse_id)->inRandomOrder()->value('id');
             foreach (range(1, $itemCount) as $j) {
+                $isReceived = $j <= $receivedCount;
+
                 $asset = Asset::factory()->create([
                     'product_line_id' => $batch->product_line_id,
-                    'current_status' => AssetStatus::Ready,
+                    'current_status' => $isReceived ? AssetStatus::Ready : AssetStatus::NewlyAdded,
                     'current_warehouse_id' => $batch->warehouse_id,
                     'warehouse_location_id' => $batchLocationId,
                     'operating_hours' => 0,
@@ -363,11 +376,11 @@ class DemoDataSeeder extends Seeder
                 CheckinBatchItem::create([
                     'checkin_batch_id' => $batch->id,
                     'asset_id' => $asset->id,
-                    'condition' => fake()->randomElement(['ok', 'ok', 'ok', 'fault']),
-                    'condition_note' => fake()->optional()->sentence(),
-                    'is_received' => true,
-                    'received_by' => User::inRandomOrder()->first()?->id,
-                    'received_at' => fake()->dateTimeBetween('-30 days', 'now'),
+                    'condition' => $isReceived ? fake()->randomElement(['ok', 'ok', 'ok', 'fault']) : 'ok',
+                    'condition_note' => $isReceived ? fake()->optional()->sentence() : null,
+                    'is_received' => $isReceived,
+                    'received_by' => $isReceived ? User::inRandomOrder()->first()?->id : null,
+                    'received_at' => $isReceived ? fake()->dateTimeBetween('-30 days', 'now') : null,
                 ]);
             }
         }

@@ -2,6 +2,7 @@ import {
   ArrowLeft,
   Calendar,
   CheckCircle2,
+  Circle,
   Clock,
   Layers,
   MapPin,
@@ -104,23 +105,41 @@ export const CheckoutDetailScreen: React.FC<CheckoutDetailScreenProps> = ({
 
   const isDispatched = batch.status.value === 'dispatched' || batch.status.value === 'completed';
 
-  const renderScannedItem = ({ item, index }: { item: CheckoutBatchItem; index: number }) => (
-    <View style={styles.itemRow}>
-      <View style={styles.itemIndex}>
-        <Text style={styles.itemIndexText}>{index + 1}</Text>
-      </View>
-      <View style={styles.itemInfo}>
-        <Text style={styles.itemSerial}>{item.asset?.serial_no || `Thiết bị #${item.asset_id}`}</Text>
-        <Text style={styles.itemLine}>
-          {item.asset?.product_line?.name || 'Cabinet LED'} {item.asset?.size ? `(${item.asset.size}m)` : ''}
-        </Text>
-      </View>
-      <View style={styles.itemTimeWrap}>
-        <CheckCircle2 color="#059669" size={16} />
-        <Text style={styles.itemTime}>Đã quét</Text>
-      </View>
-    </View>
+  const sortedItems = [...(batch.items || [])].sort(
+    (a, b) => Number(a.is_dispatched) - Number(b.is_dispatched)
   );
+  const pendingCount = (batch.items || []).filter((i) => !i.is_dispatched).length;
+
+  const renderScannedItem = ({ item, index }: { item: CheckoutBatchItem; index: number }) => {
+    const isDispatched = !!item.is_dispatched;
+
+    return (
+      <View style={[styles.itemRow, !isDispatched && styles.itemRowPending]}>
+        <View style={[styles.itemIndex, !isDispatched && styles.itemIndexPending]}>
+          <Text style={styles.itemIndexText}>{index + 1}</Text>
+        </View>
+        <View style={styles.itemInfo}>
+          <Text style={styles.itemSerial}>{item.asset?.serial_no || `Thiết bị #${item.asset_id}`}</Text>
+          <Text style={styles.itemLine}>
+            {item.asset?.product_line?.name || 'Cabinet LED'} {item.asset?.size ? `(${item.asset.size}m)` : ''}
+          </Text>
+        </View>
+        <View style={styles.itemTimeWrap}>
+          {isDispatched ? (
+            <>
+              <CheckCircle2 color="#059669" size={16} />
+              <Text style={styles.itemTime}>Đã quét</Text>
+            </>
+          ) : (
+            <>
+              <Circle color="#94A3B8" size={16} />
+              <Text style={styles.itemTimePending}>Chưa quét</Text>
+            </>
+          )}
+        </View>
+      </View>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -137,7 +156,7 @@ export const CheckoutDetailScreen: React.FC<CheckoutDetailScreenProps> = ({
       </View>
 
       <FlatList
-        data={batch.items || []}
+        data={sortedItems}
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderScannedItem}
         contentContainerStyle={styles.scrollContent}
@@ -195,7 +214,7 @@ export const CheckoutDetailScreen: React.FC<CheckoutDetailScreenProps> = ({
             )}
 
             <Text style={styles.scannedListTitle}>
-              Danh sách thiết bị đã quét ({batch.items?.length || 0})
+              Danh sách thiết bị ({batch.scanned_count} đã quét{pendingCount > 0 ? ` / ${pendingCount} chưa quét` : ''})
             </Text>
           </>
         }
@@ -421,6 +440,19 @@ const styles = StyleSheet.create({
     color: '#059669',
     fontSize: 12,
     fontWeight: '700',
+  },
+  itemTimePending: {
+    color: '#94A3B8',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  itemRowPending: {
+    backgroundColor: '#F8FAFC',
+    borderStyle: 'dashed',
+    borderColor: '#CBD5E1',
+  },
+  itemIndexPending: {
+    backgroundColor: '#E2E8F0',
   },
   emptyItemsBox: {
     padding: 24,

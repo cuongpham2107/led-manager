@@ -35,6 +35,15 @@ class CheckoutBatchApiController extends Controller
             $query->where('status', $status);
         }
 
+        // Chỉ hiển thị đợt chưa xuất kho (bỏ qua đã xuất / hoàn tất / đã hủy).
+        if ($request->boolean('active')) {
+            $query->whereNotIn('status', [
+                BatchStatus::Dispatched->value,
+                BatchStatus::Completed->value,
+                BatchStatus::Cancelled->value,
+            ]);
+        }
+
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('code', 'like', "%{$search}%")

@@ -34,6 +34,14 @@ class CheckinBatchApiController extends Controller
             $query->where('status', $status);
         }
 
+        // Chỉ hiển thị đợt chưa hoàn tất (bỏ qua đã hoàn tất / đã hủy).
+        if ($request->boolean('active')) {
+            $query->whereNotIn('status', [
+                BatchStatus::Completed->value,
+                BatchStatus::Cancelled->value,
+            ]);
+        }
+
         if ($batchType = $request->input('batch_type')) {
             $query->where('batch_type', $batchType);
         }

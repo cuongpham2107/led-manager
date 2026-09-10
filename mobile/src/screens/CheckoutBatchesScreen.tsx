@@ -37,6 +37,7 @@ export const CheckoutBatchesScreen: React.FC<CheckoutBatchesScreenProps> = ({
         params: {
           warehouse_id: selectedWarehouseId,
           search: searchTerm.trim() || undefined,
+          active: 1,
         },
       });
       if (response.data?.success) {

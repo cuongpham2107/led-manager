@@ -157,7 +157,7 @@ class CheckinBatchesTable
             ], layout: FiltersLayout::AboveContent)
             ->deferFilters(false)
             ->recordActions([
-                ImportCheckinBatchItemsAction::make(),
+                // ImportCheckinBatchItemsAction::make(),
                 EditAction::make()
                     ->label('Chỉnh sửa')
                     ->modalHeading('Sửa đợt nhập')
@@ -165,8 +165,8 @@ class CheckinBatchesTable
                     ->modalSubmitActionLabel('Lưu')
                     ->modalCancelActionLabel('Hủy')
                     ->extraModalFooterActions(fn (CheckinBatch $record): array => [
-                        ImportCheckinBatchItemsAction::make('modal_import_sheet')
-                            ->cancelParentActions(),
+                        // ImportCheckinBatchItemsAction::make()
+                        //     ->cancelParentActions(),
                         Action::make('completeReceiving')
                             ->label('Kết thúc nhận hàng')
                             ->color('gray')

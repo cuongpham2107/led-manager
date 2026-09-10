@@ -45,6 +45,11 @@ class ReturnBatchApiController extends Controller
             $query->where('status', $status);
         }
 
+        // Chỉ hiển thị đợt chưa hoàn tất nhập kho (gồm cả đợt mới tạo "Chờ nhận hàng").
+        if ($request->boolean('active')) {
+            $query->where('status', '!=', ReturnBatchStatus::Completed->value);
+        }
+
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('code', 'like', "%{$search}%")

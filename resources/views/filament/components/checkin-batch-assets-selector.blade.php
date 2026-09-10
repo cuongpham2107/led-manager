@@ -141,6 +141,35 @@
             this.state = current;
         },
 
+        onAssetsImported(detail) {
+            let assets = [];
+            if (Array.isArray(detail)) {
+                assets = (detail[0] && detail[0].assets) ? detail[0].assets : detail;
+            } else if (detail && detail.assets) {
+                assets = detail.assets;
+            }
+            if (!Array.isArray(assets) || assets.length === 0) {
+                return;
+            }
+
+            const ids = Array.isArray(this.state) ? [...this.state.map(Number)] : [];
+            for (const a of assets) {
+                const id = Number(a.id);
+                if (!this.allAssets.some(x => Number(x.id) === id)) {
+                    this.allAssets.push(a);
+                }
+                if (!this.assets.some(x => Number(x.id) === id)) {
+                    this.assets.push(a);
+                }
+                if (!ids.includes(id)) {
+                    ids.push(id);
+                }
+            }
+            this.state = ids;
+            this.total = this.allAssets.length;
+            this.showToast('Đã thêm ' + assets.length + ' thiết bị vào đợt', 'success');
+        },
+
         toggleAllVisible() {
             const visibleIds = this.assets.map(a => Number(a.id));
             let current = Array.isArray(this.state) ? [...this.state.map(Number)] : [];
@@ -316,6 +345,7 @@
             }
         }
     }"
+    x-on:checkin-assets-imported.window="onAssetsImported($event.detail)"
     class="space-y-3 relative z-0"
 >
     <!-- Top Bar: Labels, Counters & Actions -->
@@ -332,6 +362,19 @@
         </div>
 
         <div class="flex items-center gap-2">
+            <template x-if="!isEdit">
+                <button
+                    type="button"
+                    @click="$wire.mountAction('import_checkin_batch_items')"
+                    class="px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-950/60 rounded-lg transition-colors inline-flex items-center gap-1.5 border border-emerald-200 dark:border-emerald-800 cursor-pointer"
+                >
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4m13.5-6.5-11 11"/>
+                    </svg>
+                    <span>Import &amp; tạo nhanh thiết bị</span>
+                </button>
+            </template>
+
             <!-- Mode switch for Edit Mode -->
             <template x-if="isEdit && !addMoreMode">
                 <button

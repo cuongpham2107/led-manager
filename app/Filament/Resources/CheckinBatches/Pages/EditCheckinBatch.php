@@ -24,4 +24,9 @@ class EditCheckinBatch extends EditRecord
             DeleteAction::make(),
         ];
     }
+
+    public function mountImport(): void
+    {
+        $this->mountAction('import_checkin_batch_items');
+    }
 }

@@ -177,3 +177,34 @@ test('unauthenticated requests are rejected', function () {
     $this->getJson('/api/v1/checkin-batches')->assertUnauthorized();
     $this->postJson("/api/v1/checkin-batches/{$this->batch->id}/scan", ['code' => 'X'])->assertUnauthorized();
 });
+
+test('active filter hides completed and cancelled check-in batches', function () {
+    $completed = CheckinBatch::create([
+        'code' => 'IN-DONE-01',
+        'warehouse_id' => $this->warehouse->id,
+        'batch_type' => CheckinBatchType::Production,
+        'product_line_id' => $this->productLine->id,
+        'quantity' => 3,
+        'status' => BatchStatus::Completed,
+        'created_by' => $this->user->id,
+    ]);
+
+    $cancelled = CheckinBatch::create([
+        'code' => 'IN-CANCEL-01',
+        'warehouse_id' => $this->warehouse->id,
+        'batch_type' => CheckinBatchType::Production,
+        'product_line_id' => $this->productLine->id,
+        'quantity' => 3,
+        'status' => BatchStatus::Cancelled,
+        'created_by' => $this->user->id,
+    ]);
+
+    $response = $this->actingAs($this->user)->getJson('/api/v1/checkin-batches?active=1');
+
+    $response->assertOk();
+    $codes = collect($response->json('data'))->pluck('code');
+
+    expect($codes)->toContain('IN-TEST-01')
+        ->and($codes)->not->toContain('IN-DONE-01')
+        ->and($codes)->not->toContain('IN-CANCEL-01');
+});

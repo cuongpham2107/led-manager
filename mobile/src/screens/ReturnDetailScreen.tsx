@@ -4,6 +4,7 @@ import {
   Calendar,
   Check,
   CheckCircle2,
+  Circle,
   MapPin,
   QrCode,
   User,
@@ -146,27 +147,44 @@ export const ReturnDetailScreen: React.FC<ReturnDetailScreenProps> = ({
     );
   }
 
+  const sortedItems = [...(batch.items || [])].sort(
+    (a, b) => Number(a.is_received) - Number(b.is_received)
+  );
+  const receivedCount = (batch.items || []).filter((i) => i.is_received).length;
+  const pendingCount = (batch.items || []).filter((i) => !i.is_received).length;
+
   const isCompleted = batch.status.value === 'completed';
 
-  const renderScannedItem = ({ item, index }: { item: ReturnBatchItem; index: number }) => (
-    <View style={styles.itemRow}>
-      <View style={styles.itemIndex}>
-        <Text style={styles.itemIndexText}>{index + 1}</Text>
+  const renderScannedItem = ({ item, index }: { item: ReturnBatchItem; index: number }) => {
+    const isReceived = !!item.is_received;
+
+    return (
+      <View style={[styles.itemRow, !isReceived && styles.itemRowPending]}>
+        <View style={[styles.itemIndex, !isReceived && styles.itemIndexPending]}>
+          <Text style={styles.itemIndexText}>{index + 1}</Text>
+        </View>
+        <View style={styles.itemInfo}>
+          <Text style={styles.itemSerial}>{item.asset?.serial_no || `Thiết bị #${item.asset_id}`}</Text>
+          <Text style={styles.itemLine}>
+            {item.asset?.product_line?.name || 'Cabinet LED'}
+          </Text>
+          {item.grade_note ? (
+            <Text style={styles.itemGradeNote}>Lỗi: {item.grade_note}</Text>
+          ) : null}
+        </View>
+        <View style={styles.gradeBadgeWrap}>
+          {isReceived ? (
+            <StatusBadge label={item.grade.label} color={item.grade.color} size="sm" />
+          ) : (
+            <View style={styles.pendingBadge}>
+              <Circle color="#94A3B8" size={14} />
+              <Text style={styles.itemTimePending}>Chưa quét</Text>
+            </View>
+          )}
+        </View>
       </View>
-      <View style={styles.itemInfo}>
-        <Text style={styles.itemSerial}>{item.asset?.serial_no || `Thiết bị #${item.asset_id}`}</Text>
-        <Text style={styles.itemLine}>
-          {item.asset?.product_line?.name || 'Cabinet LED'}
-        </Text>
-        {item.grade_note ? (
-          <Text style={styles.itemGradeNote}>Lỗi: {item.grade_note}</Text>
-        ) : null}
-      </View>
-      <View style={styles.gradeBadgeWrap}>
-        <StatusBadge label={item.grade.label} color={item.grade.color} size="sm" />
-      </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -183,7 +201,7 @@ export const ReturnDetailScreen: React.FC<ReturnDetailScreenProps> = ({
       </View>
 
       <FlatList
-        data={batch.items || []}
+        data={sortedItems}
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderScannedItem}
         contentContainerStyle={styles.scrollContent}
@@ -234,7 +252,7 @@ export const ReturnDetailScreen: React.FC<ReturnDetailScreenProps> = ({
             )}
 
             <Text style={styles.scannedListTitle}>
-              Danh sách thiết bị đã kiểm đếm ({batch.items?.length || 0})
+              Danh sách thiết bị ({receivedCount} đã quét{pendingCount > 0 ? ` / ${pendingCount} chưa quét` : ''})
             </Text>
           </>
         }
@@ -507,6 +525,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
+  },
+  itemTimePending: {
+    color: '#94A3B8',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  itemRowPending: {
+    backgroundColor: '#F8FAFC',
+    borderStyle: 'dashed',
+    borderColor: '#CBD5E1',
+  },
+  itemIndexPending: {
+    backgroundColor: '#E2E8F0',
+  },
+  pendingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   itemIndexText: {
     color: '#64748B',

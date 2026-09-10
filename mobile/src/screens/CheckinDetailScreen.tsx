@@ -3,6 +3,7 @@ import {
   Box,
   Calendar,
   CheckCircle2,
+  Circle,
   Cog,
   MapPin,
   PackageCheck,
@@ -115,23 +116,41 @@ export const CheckinDetailScreen: React.FC<CheckinDetailScreenProps> = ({
   const isCompleted = batch.status.value === 'completed' || batch.status.value === 'cancelled';
   const canComplete = !isCompleted && batch.scanned_count > 0;
 
-  const renderItem = ({ item, index }: { item: CheckinBatchItem; index: number }) => (
-    <View style={styles.itemRow}>
-      <View style={styles.itemIndex}>
-        <Text style={styles.itemIndexText}>{index + 1}</Text>
-      </View>
-      <View style={styles.itemInfo}>
-        <Text style={styles.itemSerial}>{item.asset?.serial_no || `Thiết bị #${item.asset_id}`}</Text>
-        <Text style={styles.itemLine}>
-          {item.asset?.product_line?.name || 'Cabinet LED'} {item.asset?.size ? `(${item.asset.size})` : ''}
-        </Text>
-      </View>
-      <View style={styles.itemTimeWrap}>
-        <CheckCircle2 color="#10B981" size={16} />
-        <Text style={styles.itemTime}>Đã nhập</Text>
-      </View>
-    </View>
+  const sortedItems = [...(batch.items || [])].sort(
+    (a, b) => Number(a.is_received) - Number(b.is_received)
   );
+  const pendingCount = (batch.items || []).filter((i) => !i.is_received).length;
+
+  const renderItem = ({ item, index }: { item: CheckinBatchItem; index: number }) => {
+    const isReceived = !!item.is_received;
+
+    return (
+      <View style={[styles.itemRow, !isReceived && styles.itemRowPending]}>
+        <View style={[styles.itemIndex, !isReceived && styles.itemIndexPending]}>
+          <Text style={styles.itemIndexText}>{index + 1}</Text>
+        </View>
+        <View style={styles.itemInfo}>
+          <Text style={styles.itemSerial}>{item.asset?.serial_no || `Thiết bị #${item.asset_id}`}</Text>
+          <Text style={styles.itemLine}>
+            {item.asset?.product_line?.name || 'Cabinet LED'} {item.asset?.size ? `(${item.asset.size})` : ''}
+          </Text>
+        </View>
+        <View style={styles.itemTimeWrap}>
+          {isReceived ? (
+            <>
+              <CheckCircle2 color="#10B981" size={16} />
+              <Text style={styles.itemTime}>Đã nhập</Text>
+            </>
+          ) : (
+            <>
+              <Circle color="#94A3B8" size={16} />
+              <Text style={styles.itemTimePending}>Chưa quét</Text>
+            </>
+          )}
+        </View>
+      </View>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -150,7 +169,7 @@ export const CheckinDetailScreen: React.FC<CheckinDetailScreenProps> = ({
       </View>
 
       <FlatList
-        data={batch.items || []}
+        data={sortedItems}
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderItem}
         contentContainerStyle={styles.scrollContent}
@@ -222,7 +241,7 @@ export const CheckinDetailScreen: React.FC<CheckinDetailScreenProps> = ({
             )}
 
             <Text style={styles.scannedListTitle}>
-              Danh sách thiết bị đã nhập ({batch.items?.length || 0})
+              Danh sách thiết bị ({batch.scanned_count} đã nhập{pendingCount > 0 ? ` / ${pendingCount} chưa quét` : ''})
             </Text>
           </>
         }
@@ -452,6 +471,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
+  itemSerialPending: {
+    color: '#94A3B8',
+    fontSize: 14,
+    fontWeight: '700',
+    fontStyle: 'italic',
+  },
   itemLine: {
     color: '#64748B',
     fontSize: 12,
@@ -466,6 +491,19 @@ const styles = StyleSheet.create({
     color: '#059669',
     fontSize: 12,
     fontWeight: '700',
+  },
+  itemTimePending: {
+    color: '#94A3B8',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  itemRowPending: {
+    backgroundColor: '#F8FAFC',
+    borderStyle: 'dashed',
+    borderColor: '#CBD5E1',
+  },
+  itemIndexPending: {
+    backgroundColor: '#E2E8F0',
   },
   emptyItemsBox: {
     padding: 24,

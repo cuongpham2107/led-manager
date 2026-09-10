@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\CheckinBatches;
 
+use App\Filament\Resources\CheckinBatches\Pages\CreateCheckinBatch;
+use App\Filament\Resources\CheckinBatches\Pages\EditCheckinBatch;
 use App\Filament\Resources\CheckinBatches\Pages\ListCheckinBatches;
 use App\Filament\Resources\CheckinBatches\Schemas\CheckinBatchForm;
 use App\Filament\Resources\CheckinBatches\Tables\CheckinBatchesTable;
@@ -70,7 +72,8 @@ class CheckinBatchResource extends Resource
     {
         return [
             'index' => ListCheckinBatches::route('/'),
-            'edit' => Pages\EditCheckinBatch::route('/{record}/edit'),
+            'create' => CreateCheckinBatch::route('/create'),
+            'edit' => EditCheckinBatch::route('/{record}/edit'),
         ];
     }
 }
