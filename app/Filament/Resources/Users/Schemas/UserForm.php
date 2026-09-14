@@ -44,7 +44,14 @@ class UserForm
                                 ->tel()
                                 ->placeholder('VD: 0912 345 678'),
                         ]),
-                        Grid::make(2)->schema([
+                        Grid::make(3)->schema([
+                            Select::make('agency_id')
+                                ->label('Đại lý trực thuộc')
+                                ->relationship('agency', 'name')
+                                ->searchable()
+                                ->preload()
+                                ->placeholder('Trụ sở chính / Toàn hệ thống')
+                                ->helperText('Chọn nếu nhân sự thuộc biên chế đại lý tỉnh'),
                             Select::make('warehouse_id')
                                 ->label('Kho làm việc chính')
                                 ->relationship('warehouse', 'name')

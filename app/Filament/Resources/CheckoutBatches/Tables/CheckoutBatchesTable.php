@@ -4,6 +4,7 @@ namespace App\Filament\Resources\CheckoutBatches\Tables;
 
 use App\Enums\AssetStatus;
 use App\Enums\BatchStatus;
+use App\Enums\OrderStatus;
 use App\Filament\Resources\CheckoutBatches\Actions\CreateReturnBatchAction;
 use App\Filament\Resources\CheckoutBatches\Actions\ViewReturnBatchAction;
 use App\Models\Asset;
@@ -11,10 +12,12 @@ use App\Models\AssetStatusLog;
 use App\Models\CheckoutBatch;
 use App\Models\CheckoutBatchItem;
 use App\Models\User;
+use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Notifications\Notification;
 use Filament\Support\Enums\Width;
 use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Columns\TextColumn;
@@ -110,12 +113,38 @@ class CheckoutBatchesTable
                     ->label('Chỉnh sửa')
                     ->modalHeading(fn (CheckoutBatch $record): string => "Sửa đợt xuất: {$record->code}")
                     ->modalWidth(Width::FourExtraLarge)
-                    ->modalSubmitActionLabel('Lưu đợt xuất')
+                    ->modalSubmitActionLabel('Xác nhận xuất kho')
                     ->modalCancelActionLabel('Đóng')
                     ->mutateRecordDataUsing(function (array $data, CheckoutBatch $record): array {
                         $data['selected_assets'] = $record->items()->pluck('asset_id')->map(fn ($id) => (int) $id)->toArray();
 
                         return $data;
+                    })
+                    ->before(function (EditAction $action, array $data) {
+                        $selectedAssets = $data['selected_assets'] ?? [];
+                        $assetIds = collect($selectedAssets)->map(fn ($id) => (int) $id)->filter()->values();
+                        if ($assetIds->isEmpty()) {
+                            Notification::make()
+                                ->title('Không đủ điều kiện để xuất kho')
+                                ->body('Vui lòng chọn ít nhất một thiết bị xuất kho.')
+                                ->danger()
+                                ->send();
+                            $action->halt();
+                        }
+
+                        $requiredArea = (float) ($data['required_area_m2'] ?? 0);
+                        if ($requiredArea > 0) {
+                            $assets = Asset::with('productLine')->whereIn('id', $assetIds)->get();
+                            $totalArea = (float) $assets->sum(fn (Asset $a) => $a->area_m2);
+                            if (round($totalArea, 2) < round($requiredArea, 2)) {
+                                Notification::make()
+                                    ->title('Không đủ điều kiện để xuất kho')
+                                    ->body('Kho chỉ có '.number_format($totalArea, 2).' m² khả dụng, không đủ '.number_format($requiredArea, 2).' m² theo yêu cầu.')
+                                    ->danger()
+                                    ->send();
+                                $action->halt();
+                            }
+                        }
                     })
                     ->using(function (CheckoutBatch $record, array $data): CheckoutBatch {
                         return DB::transaction(function () use ($record, $data) {
@@ -154,33 +183,36 @@ class CheckoutBatchesTable
                             }
 
                             // Add newly selected assets
+                            $isDispatched = in_array($record->status, [BatchStatus::Dispatched, BatchStatus::Completed]);
                             foreach ($toAdd as $addId) {
                                 CheckoutBatchItem::create([
                                     'checkout_batch_id' => $record->id,
                                     'asset_id' => $addId,
-                                    'is_dispatched' => true,
-                                    'dispatched_by' => Auth::id(),
-                                    'dispatched_at' => now(),
+                                    'is_dispatched' => $isDispatched,
+                                    'dispatched_by' => $isDispatched ? Auth::id() : null,
+                                    'dispatched_at' => $isDispatched ? now() : null,
                                     'note' => $record->note,
                                 ]);
 
-                                $asset = Asset::find($addId);
-                                if ($asset) {
-                                    $oldStatus = $asset->current_status;
-                                    $asset->update(['current_status' => AssetStatus::InTransit]);
+                                if ($isDispatched) {
+                                    $asset = Asset::find($addId);
+                                    if ($asset) {
+                                        $oldStatus = $asset->current_status;
+                                        $asset->update(['current_status' => AssetStatus::InTransit]);
 
-                                    AssetStatusLog::create([
-                                        'asset_id' => $asset->id,
-                                        'from_status' => $oldStatus,
-                                        'to_status' => AssetStatus::InTransit,
-                                        'from_warehouse_id' => $asset->current_warehouse_id,
-                                        'to_warehouse_id' => $record->warehouse_id,
-                                        'source_type' => CheckoutBatch::class,
-                                        'source_id' => $record->id,
-                                        'changed_by' => Auth::id(),
-                                        'note' => "Bổ sung vào đợt xuất: Đợt {$record->code}",
-                                        'created_at' => now(),
-                                    ]);
+                                        AssetStatusLog::create([
+                                            'asset_id' => $asset->id,
+                                            'from_status' => $oldStatus,
+                                            'to_status' => AssetStatus::InTransit,
+                                            'from_warehouse_id' => $asset->current_warehouse_id,
+                                            'to_warehouse_id' => $record->warehouse_id,
+                                            'source_type' => CheckoutBatch::class,
+                                            'source_id' => $record->id,
+                                            'changed_by' => Auth::id(),
+                                            'note' => "Bổ sung vào đợt xuất: Đợt {$record->code}",
+                                            'created_at' => now(),
+                                        ]);
+                                    }
                                 }
                             }
 
@@ -193,8 +225,62 @@ class CheckoutBatchesTable
                             return $record;
                         });
                     }),
+                Action::make('confirmDispatch')
+                    ->label('Xác nhận xuất kho')
+                    ->icon('heroicon-o-truck')
+                    ->color('success')
+                    ->visible(fn (CheckoutBatch $record): bool => ! in_array($record->status, [BatchStatus::Dispatched, BatchStatus::Completed, BatchStatus::Cancelled]) && $record->items()->count() > 0)
+                    ->requiresConfirmation()
+                    ->modalHeading('Xác nhận Xuất kho đi sự kiện')
+                    ->modalDescription(fn (CheckoutBatch $record): string => "Bạn có chắc chắn muốn xác nhận xuất kho cho đợt {$record->code} ({$record->items()->count()} thiết bị)? Toàn bộ thiết bị sẽ chuyển sang trạng thái Đang vận chuyển.")
+                    ->modalSubmitActionLabel('Xác nhận xuất kho')
+                    ->modalCancelActionLabel('Hủy')
+                    ->action(function (CheckoutBatch $record): void {
+                        DB::transaction(function () use ($record) {
+                            foreach ($record->items as $item) {
+                                $item->update([
+                                    'is_dispatched' => true,
+                                    'dispatched_by' => Auth::id(),
+                                    'dispatched_at' => now(),
+                                ]);
+
+                                $asset = $item->asset;
+                                if ($asset) {
+                                    $oldStatus = $asset->current_status;
+                                    $asset->update(['current_status' => AssetStatus::InTransit]);
+
+                                    AssetStatusLog::create([
+                                        'asset_id' => $asset->id,
+                                        'from_status' => $oldStatus,
+                                        'to_status' => AssetStatus::InTransit,
+                                        'from_warehouse_id' => $record->warehouse_id,
+                                        'to_warehouse_id' => $record->warehouse_id,
+                                        'source_type' => CheckoutBatch::class,
+                                        'source_id' => $record->id,
+                                        'changed_by' => Auth::id(),
+                                        'note' => "Xác nhận xuất kho đợt {$record->code} từ quản trị",
+                                        'created_at' => now(),
+                                    ]);
+                                }
+                            }
+
+                            $record->update([
+                                'status' => BatchStatus::Dispatched,
+                                'dispatched_at' => now(),
+                            ]);
+
+                            if ($record->order) {
+                                $record->order->update(['status' => OrderStatus::Dispatched]);
+                            }
+                        });
+
+                        Notification::make()
+                            ->title("Đợt xuất kho {$record->code} đã được xác nhận xuất kho thành công!")
+                            ->success()
+                            ->send();
+                    }),
                 ActionGroup::make([
-                    CreateReturnBatchAction::make(),
+                    // CreateReturnBatchAction::make(),
                     ViewReturnBatchAction::make(),
                 ]),
             ], position: RecordActionsPosition::BeforeCells)

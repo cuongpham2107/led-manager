@@ -12,7 +12,9 @@ return new class extends Migration
             $table->string('phone')->nullable()->after('email');
             $table->foreignId('warehouse_id')->nullable()->after('phone')
                 ->constrained('warehouses')->nullOnDelete(); // primary warehouse for warehouse staff
-            $table->boolean('is_active')->default(true)->after('warehouse_id');
+            $table->foreignId('agency_id')->nullable()->after('warehouse_id')
+                ->constrained('agencies')->nullOnDelete(); // agency for agency staff
+            $table->boolean('is_active')->default(true)->after('agency_id');
         });
 
         // Roles & permissions: use spatie/laravel-permission (works natively with Filament Shield)

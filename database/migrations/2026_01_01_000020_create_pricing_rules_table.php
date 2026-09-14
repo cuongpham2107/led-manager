@@ -19,9 +19,14 @@ return new class extends Migration
             $table->decimal('crew_rate_per_person_per_day', 14, 2)->default(1600000);
             $table->decimal('transport_rate_per_km', 14, 2)->default(28000);
             $table->decimal('accessory_rate_per_m2', 14, 2)->default(50000);
+            $table->string('name')->nullable(); // Tên bảng giá / đợt áp dụng
+            $table->foreignId('agency_id')->nullable()->constrained('agencies')->nullOnDelete(); // Đại lý áp dụng (NULL = toàn hệ thống)
+            $table->date('effective_from')->nullable(); // Ngày bắt đầu hiệu lực
+            $table->date('effective_to')->nullable();   // Ngày kết thúc hiệu lực (NULL = vô thời hạn)
             $table->boolean('is_active')->default(true);
             $table->timestamps();
 
+            $table->index(['product_line_id', 'is_active', 'effective_from', 'effective_to'], 'pricing_lookup_date_idx');
             $table->index(['product_line_id', 'customer_type', 'is_active'], 'pricing_lookup_idx');
         });
     }

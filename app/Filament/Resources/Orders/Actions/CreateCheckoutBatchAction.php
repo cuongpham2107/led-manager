@@ -142,16 +142,16 @@ class CreateCheckoutBatchAction extends Action
                     ->helperText(fn (Order $record): string => 'Đề xuất theo định mức/diện tích đơn hàng: '.static::resolveRequiredQuantity($record).' thiết bị.'),
 
                 Toggle::make('mark_dispatched')
-                    ->label('Đánh dấu sẵn sàng xuất (Scan to Dispatch)')
-                    ->default(true)
+                    ->label('Đánh dấu đã kiểm đếm xong (Scan to Dispatch)')
+                    ->default(false)
                     ->visible(fn (Get $get): bool => (bool) $get('auto_assign_assets'))
-                    ->helperText('Đánh dấu thiết bị đã kiểm đếm (is_dispatched = true) và chuyển sang trạng thái Đang vận chuyển để có thể Xuất kho đi sự kiện ngay.'),
+                    ->helperText('Nếu bật, toàn bộ thiết bị sẽ được đánh dấu đã kiểm đếm xong (is_dispatched = true) và chuyển sang trạng thái Đang vận chuyển.'),
             ])
             ->action(function (Order $record, array $data): void {
                 $code = CodeGeneratorService::generate('OUT', 'checkout_batches');
                 $autoAssign = (bool) ($data['auto_assign_assets'] ?? true);
                 $targetQty = (int) ($data['quantity'] ?? static::resolveRequiredQuantity($record));
-                $markDispatched = (bool) ($data['mark_dispatched'] ?? true);
+                $markDispatched = (bool) ($data['mark_dispatched'] ?? false);
 
                 /** @var Collection<int, array{asset: Asset, note: string}> $assignedAssets */
                 $assignedAssets = collect();

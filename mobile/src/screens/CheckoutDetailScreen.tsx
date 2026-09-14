@@ -15,6 +15,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Platform,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -64,32 +65,51 @@ export const CheckoutDetailScreen: React.FC<CheckoutDetailScreenProps> = ({
     }
   };
 
+  const executeCompleteDispatch = async () => {
+    setIsCompleting(true);
+    try {
+      const response = await apiClient.post(`/checkout-batches/${batchId}/complete`);
+      if (response.data?.success) {
+        if (Platform.OS === 'web') {
+          window.alert(response.data.message || 'Xuất kho thành công!');
+        } else {
+          Alert.alert('Thành công', response.data.message);
+        }
+        await fetchBatchDetail();
+      }
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Không thể hoàn tất xuất kho.';
+      if (Platform.OS === 'web') {
+        window.alert(msg);
+      } else {
+        Alert.alert('Lỗi', msg);
+      }
+    } finally {
+      setIsCompleting(false);
+    }
+  };
+
   const handleCompleteDispatch = () => {
-    Alert.alert(
-      'Xác nhận Xuất kho đi sự kiện',
-      `Bạn có chắc chắn muốn hoàn tất xuất kho cho phiếu ${batch?.code}? Toàn bộ thiết bị đã quét sẽ chuyển sang trạng thái "Đang chạy sự kiện".`,
-      [
-        { text: 'Kiểm tra lại', style: 'cancel' },
-        {
-          text: 'Xác nhận Xuất kho',
-          onPress: async () => {
-            setIsCompleting(true);
-            try {
-              const response = await apiClient.post(`/checkout-batches/${batchId}/complete`);
-              if (response.data?.success) {
-                Alert.alert('Thành công', response.data.message);
-                await fetchBatchDetail();
-              }
-            } catch (err: any) {
-              const msg = err?.response?.data?.message || 'Không thể hoàn tất xuất kho.';
-              Alert.alert('Lỗi', msg);
-            } finally {
-              setIsCompleting(false);
-            }
+    const title = 'Xác nhận Xuất kho đi sự kiện';
+    const message = `Bạn có chắc chắn muốn hoàn tất xuất kho cho phiếu ${batch?.code}? Toàn bộ thiết bị đã quét sẽ chuyển sang trạng thái "Đang chạy sự kiện".`;
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(`${title}\n\n${message}`)) {
+        executeCompleteDispatch();
+      }
+    } else {
+      Alert.alert(
+        title,
+        message,
+        [
+          { text: 'Kiểm tra lại', style: 'cancel' },
+          {
+            text: 'Xác nhận Xuất kho',
+            onPress: executeCompleteDispatch,
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
 
   if (isLoading || !batch) {
@@ -256,6 +276,7 @@ export const CheckoutDetailScreen: React.FC<CheckoutDetailScreenProps> = ({
         title={`Quét Xuất Kho: ${batch.code}`}
         subtitle={`Đã quét: ${batch.scanned_count} / ${batch.target_cabinets_count}`}
         continuousModeDefault={true}
+        pendingCodes={batch.items?.filter(i => !i.is_dispatched && Boolean(i.asset?.serial_no)).map(i => i.asset?.serial_no ?? '').filter(Boolean) || []}
       />
     </SafeAreaView>
   );

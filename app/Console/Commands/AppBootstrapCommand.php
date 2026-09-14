@@ -47,8 +47,12 @@ class AppBootstrapCommand extends Command
         }
 
         // 2) Shield setup — publishes config + ensures required scaffolding
-        $this->line('▸ shield:setup --force');
-        Artisan::call('shield:setup', ['--force' => true, '--starred' => true]);
+        if (! file_exists(config_path('filament-shield.php'))) {
+            $this->line('▸ shield:setup --force');
+            Artisan::call('shield:setup', ['--force' => true, '--starred' => true]);
+        } else {
+            $this->line('▸ Shield configuration already exists, skipping shield:setup');
+        }
 
         // 3) Generate all permissions for Filament entities.
         //    NOTE: we call Shield's Utils directly instead of `shield:generate`

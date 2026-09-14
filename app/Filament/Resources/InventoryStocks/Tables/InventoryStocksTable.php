@@ -31,6 +31,7 @@ class InventoryStocksTable
                     ->label('TRẠNG THÁI')
                     ->badge()
                     ->formatStateUsing(fn (AssetStatus $state): string => match ($state) {
+                        AssetStatus::NewlyAdded => '• Mới',
                         AssetStatus::Ready => '• Sẵn sàng',
                         AssetStatus::InEvent => '• Đang giữ',
                         AssetStatus::InTransit => '• Đang vận chuyển',
@@ -39,6 +40,7 @@ class InventoryStocksTable
                         AssetStatus::Missing => '• Chưa trả về',
                     })
                     ->color(fn (AssetStatus $state): string => match ($state) {
+                        AssetStatus::NewlyAdded => 'primary',
                         AssetStatus::Ready => 'success',
                         AssetStatus::InEvent, AssetStatus::InTransit => 'warning',
                         AssetStatus::Repairing => 'danger',

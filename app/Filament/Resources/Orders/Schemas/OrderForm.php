@@ -8,10 +8,14 @@ use App\Enums\MilestoneStatus;
 use App\Enums\MilestoneType;
 use App\Enums\OrderStatus;
 use App\Filament\Resources\Customers\Schemas\CustomerForm;
+use App\Models\Agency;
 use App\Models\Asset;
 use App\Models\Order;
+use App\Models\ProductLine;
 use App\Models\Quotation;
+use App\Models\User;
 use App\Services\AvailabilityService;
+use App\Services\PricingService;
 use Carbon\Carbon;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
@@ -78,6 +82,34 @@ class OrderForm
                                             ->required()
                                             ->createOptionForm(fn (Schema $schema) => CustomerForm::configure($schema))
                                             ->createOptionModalHeading('Thêm khách hàng mới'),
+                                        Select::make('agency_id')
+                                            ->label('Đại lý phụ trách')
+                                            ->relationship('agency', 'name')
+                                            ->searchable()
+                                            ->preload()
+                                            ->placeholder('— Trụ sở chính (HQ) —')
+                                            ->default(function () {
+                                                /** @var User|null $user */
+                                                $user = Auth::user();
+
+                                                return $user?->getScopedAgencyId();
+                                            })
+                                            ->disabled(function () {
+                                                /** @var User|null $user */
+                                                $user = Auth::user();
+
+                                                return (bool) $user?->isAgencyScoped();
+                                            })
+                                            ->dehydrated()
+                                            ->live()
+                                            ->afterStateUpdated(function ($state, Set $set) {
+                                                if ($state) {
+                                                    $agency = Agency::find($state);
+                                                    if ($agency && $agency->warehouse_id) {
+                                                        $set('warehouse_id', $agency->warehouse_id);
+                                                    }
+                                                }
+                                            }),
                                         Select::make('warehouse_id')
                                             ->label('Kho xuất hàng')
                                             ->relationship('warehouse', 'name')
@@ -173,11 +205,19 @@ class OrderForm
                                                 ->label('Ngày bắt đầu sự kiện')
                                                 ->native(false)
                                                 ->default(now()->toDateString())
+                                                ->live()
+                                                ->afterStateUpdated(function (Get $get, Set $set) {
+                                                    self::recalculateOrderValue($get, $set);
+                                                })
                                                 ->columnSpan(1),
                                             DatePicker::make('expected_return_date')
                                                 ->label('Ngày dự kiến hoàn trả')
                                                 ->native(false)
                                                 ->default(now()->addDays(3)->toDateString())
+                                                ->live()
+                                                ->afterStateUpdated(function (Get $get, Set $set) {
+                                                    self::recalculateOrderValue($get, $set);
+                                                })
                                                 ->columnSpan(1),
                                         ]),
                                         Textarea::make('note')
@@ -212,6 +252,20 @@ class OrderForm
                                                     ->preload()
                                                     ->live()
                                                     ->nullable()
+                                                    ->afterStateUpdated(function ($state, Set $set, Get $get) {
+                                                        if (! $state) {
+                                                            return;
+                                                        }
+                                                        $reqDate = $get('../../request_date');
+                                                        $agencyId = $get('../../agency_id');
+                                                        $unitPrice = app(PricingService::class)->resolveUnitPrice(
+                                                            (int) $state,
+                                                            $reqDate,
+                                                            $agencyId ? (int) $agencyId : null
+                                                        );
+                                                        $set('unit_price', $unitPrice);
+                                                        self::recalculateOrderValue($get, $set);
+                                                    })
                                                     ->helperText(function ($state, Get $get) {
                                                         if (! $state) {
                                                             return null;
@@ -252,14 +306,22 @@ class OrderForm
                                                     ->label('SL Cần')
                                                     ->numeric()
                                                     ->required()
-                                                    ->default(1),
+                                                    ->default(1)
+                                                    ->live(onBlur: true)
+                                                    ->afterStateUpdated(function (Get $get, Set $set) {
+                                                        self::recalculateOrderValue($get, $set);
+                                                    }),
                                                 TextInput::make('unit_price')
                                                     ->label('Đơn giá')
                                                     ->mask(RawJs::make('$money($input)'))
                                                     ->stripCharacters(',')
                                                     ->numeric()
                                                     ->suffix(' đ')
-                                                    ->default(0),
+                                                    ->default(0)
+                                                    ->live(onBlur: true)
+                                                    ->afterStateUpdated(function (Get $get, Set $set) {
+                                                        self::recalculateOrderValue($get, $set);
+                                                    }),
                                                 TextInput::make('note')
                                                     ->label('Ghi chú')
                                                     ->placeholder('Ghi chú quy cách...'),
@@ -426,6 +488,50 @@ class OrderForm
             throw ValidationException::withMessages([
                 'items' => "Thiếu thiết bị khả dụng trong khoảng ngày đã chọn:\n{$messages}",
             ]);
+        }
+    }
+
+    /**
+     * Tự động tính toán lại tổng giá trị đơn hàng và tổng m2 màn hình LED từ danh sách thiết bị.
+     */
+    public static function recalculateOrderValue(Get $get, Set $set): void
+    {
+        $items = $get('../../items') ?: $get('items') ?: [];
+        $reqDate = $get('../../request_date') ?: $get('request_date');
+        $retDate = $get('../../expected_return_date') ?: $get('expected_return_date') ?: $reqDate;
+
+        $days = 1;
+        if ($reqDate && $retDate) {
+            $days = max(1, (int) Carbon::parse($reqDate)->diffInDays(Carbon::parse($retDate)));
+        }
+
+        $totalValue = 0;
+        $totalArea = 0;
+
+        foreach ($items as $item) {
+            $qty = (int) ($item['quantity_required'] ?? 0);
+            $rawPrice = $item['unit_price'] ?? 0;
+            $price = is_numeric($rawPrice) ? (float) $rawPrice : (float) str_replace(',', '', (string) $rawPrice);
+            $totalValue += ($qty * $price * $days);
+
+            $lineId = $item['product_line_id'] ?? null;
+            if ($lineId && $qty > 0) {
+                $pl = ProductLine::find($lineId);
+                if ($pl && (float) $pl->module_width_mm > 0 && (float) $pl->module_height_mm > 0) {
+                    $cabArea = ((float) $pl->module_width_mm / 1000) * ((float) $pl->module_height_mm / 1000);
+                    $totalArea += ($cabArea * $qty);
+                }
+            }
+        }
+
+        if ($totalValue > 0) {
+            $set('../../value', $totalValue);
+            $set('value', $totalValue);
+        }
+
+        if ($totalArea > 0) {
+            $set('../../area_m2', round($totalArea, 2));
+            $set('area_m2', round($totalArea, 2));
         }
     }
 }

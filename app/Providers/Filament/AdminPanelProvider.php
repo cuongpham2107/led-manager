@@ -6,6 +6,7 @@ use App\Filament\Pages\Auth\Login;
 use App\Filament\Pages\Dashboard;
 use App\Models\User;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
+use Filament\Actions\Action;
 use Filament\Enums\ThemeMode;
 use Filament\Enums\UserMenuPosition;
 use Filament\Http\Middleware\Authenticate;
@@ -75,6 +76,13 @@ class AdminPanelProvider extends PanelProvider
                 'Hệ thống',
             ])
             ->userMenu(position: UserMenuPosition::Sidebar)
+            ->userMenuItems([
+                Action::make('mobile')
+                    ->label('Ứng dụng Mobile / PDA')
+                    ->url(fn (): string => url('/mobile'))
+                    ->icon('heroicon-o-device-phone-mobile')
+                    ->openUrlInNewTab(),
+            ])
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,

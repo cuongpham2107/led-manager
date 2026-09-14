@@ -17,6 +17,7 @@ import {
   Alert,
   FlatList,
   Modal,
+  Platform,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -108,32 +109,51 @@ export const ReturnDetailScreen: React.FC<ReturnDetailScreenProps> = ({
     }
   };
 
+  const executeCompleteReturn = async () => {
+    setIsCompleting(true);
+    try {
+      const response = await apiClient.post(`/return-batches/${batchId}/complete`);
+      if (response.data?.success) {
+        if (Platform.OS === 'web') {
+          window.alert(response.data.message || 'Hoàn tất nhập trả kho thành công!');
+        } else {
+          Alert.alert('Thành công', response.data.message);
+        }
+        await fetchBatchDetail();
+      }
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Không thể hoàn tất đợt trả kho.';
+      if (Platform.OS === 'web') {
+        window.alert(msg);
+      } else {
+        Alert.alert('Lỗi', msg);
+      }
+    } finally {
+      setIsCompleting(false);
+    }
+  };
+
   const handleCompleteReturn = () => {
-    Alert.alert(
-      'Hoàn tất Đợt Thu Hồi',
-      `Xác nhận đợt thu hồi ${batch?.code} đã kiểm đếm đầy đủ? Thiết bị đạt chuẩn sẽ sẵn sàng trong kho, thiết bị hỏng sẽ được đưa vào danh sách bảo dưỡng.`,
-      [
-        { text: 'Kiểm tra thêm', style: 'cancel' },
-        {
-          text: 'Xác nhận Hoàn tất',
-          onPress: async () => {
-            setIsCompleting(true);
-            try {
-              const response = await apiClient.post(`/return-batches/${batchId}/complete`);
-              if (response.data?.success) {
-                Alert.alert('Thành công', response.data.message);
-                await fetchBatchDetail();
-              }
-            } catch (err: any) {
-              const msg = err?.response?.data?.message || 'Không thể hoàn tất đợt trả kho.';
-              Alert.alert('Lỗi', msg);
-            } finally {
-              setIsCompleting(false);
-            }
+    const title = 'Hoàn tất Đợt Thu Hồi';
+    const message = `Xác nhận đợt thu hồi ${batch?.code} đã kiểm đếm đầy đủ? Thiết bị đạt chuẩn sẽ sẵn sàng trong kho, thiết bị hỏng sẽ được đưa vào danh sách bảo dưỡng.`;
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(`${title}\n\n${message}`)) {
+        executeCompleteReturn();
+      }
+    } else {
+      Alert.alert(
+        title,
+        message,
+        [
+          { text: 'Kiểm tra thêm', style: 'cancel' },
+          {
+            text: 'Xác nhận Hoàn tất',
+            onPress: executeCompleteReturn,
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
 
   if (isLoading || !batch) {
@@ -294,6 +314,7 @@ export const ReturnDetailScreen: React.FC<ReturnDetailScreenProps> = ({
         title={`Quét Thu Hồi: ${batch.code}`}
         subtitle="Bắn mã QR để phân loại chất lượng"
         continuousModeDefault={false}
+        pendingCodes={batch.items?.filter(i => !i.is_received && Boolean(i.asset?.serial_no)).map(i => i.asset?.serial_no ?? '').filter(Boolean) || []}
       />
 
       {/* Quality Grading Bottom Sheet Modal */}

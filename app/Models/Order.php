@@ -43,6 +43,7 @@ class Order extends Model implements Eventable
         'order_no',
         'note',
         'warehouse_id',
+        'agency_id',
         'customer_id',
         'quotation_id',
         'request_date',
@@ -81,6 +82,14 @@ class Order extends Model implements Eventable
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class);
+    }
+
+    /**
+     * @return BelongsTo<Agency, $this>
+     */
+    public function agency(): BelongsTo
+    {
+        return $this->belongsTo(Agency::class);
     }
 
     /**

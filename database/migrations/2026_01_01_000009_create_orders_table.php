@@ -14,6 +14,7 @@ return new class extends Migration
             $table->text('note')->nullable();
 
             $table->foreignId('warehouse_id')->constrained()->restrictOnDelete();
+            $table->foreignId('agency_id')->nullable()->constrained('agencies')->nullOnDelete();
             $table->foreignId('customer_id')->constrained()->restrictOnDelete();
             $table->foreignId('quotation_id')->nullable()->constrained()->nullOnDelete();
 

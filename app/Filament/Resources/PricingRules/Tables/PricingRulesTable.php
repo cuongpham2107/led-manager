@@ -3,6 +3,8 @@
 namespace App\Filament\Resources\PricingRules\Tables;
 
 use App\Enums\CustomerType;
+use App\Models\PricingRule;
+use Carbon\Carbon;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -20,46 +22,66 @@ class PricingRulesTable
     {
         return $table
             ->columns([
+                TextColumn::make('name')
+                    ->label('Tên đợt giá')
+                    ->searchable()
+                    ->placeholder('Tiêu chuẩn')
+                    ->weight('bold'),
                 TextColumn::make('productLine.name')
-                    ->label('Dòng LED')
+                    ->label('Dòng máy LED')
                     ->searchable()
                     ->sortable()
                     ->weight('bold'),
-                TextColumn::make('customer_type')
-                    ->label('Nhóm khách hàng')
+                TextColumn::make('agency.name')
+                    ->label('Đại lý')
+                    ->placeholder('Toàn quốc')
                     ->badge()
-                    ->placeholder('Tất cả'),
+                    ->color('info')
+                    ->searchable(),
                 TextColumn::make('base_price_per_unit_per_day')
-                    ->label('Giá / tấm / ngày')
+                    ->label('Đơn giá máy / ngày')
                     ->money('VND')
                     ->sortable()
-                    ->weight('bold'),
+                    ->weight('bold')
+                    ->color('success'),
+                TextColumn::make('effective_period')
+                    ->label('Thời điểm hiệu lực')
+                    ->state(function (PricingRule $record): string {
+                        $from = $record->effective_from ? Carbon::parse($record->effective_from)->format('d/m/Y') : 'Từ trước';
+                        $to = $record->effective_to ? Carbon::parse($record->effective_to)->format('d/m/Y') : 'Vô thời hạn';
+
+                        return "{$from} – {$to}";
+                    })
+                    ->badge()
+                    ->color(function (PricingRule $record): string {
+                        $now = now()->toDateString();
+                        $fromStr = $record->effective_from ? Carbon::parse($record->effective_from)->toDateString() : null;
+                        $toStr = $record->effective_to ? Carbon::parse($record->effective_to)->toDateString() : null;
+
+                        if ($fromStr && $fromStr > $now) {
+                            return 'gray'; // Chưa tới hạn
+                        }
+                        if ($toStr && $toStr < $now) {
+                            return 'danger'; // Hết hạn
+                        }
+
+                        return 'success'; // Đang hiệu lực
+                    }),
                 TextColumn::make('day_range')
-                    ->label('Khung ngày thuê')
-                    ->state(fn ($record) => $record->max_days ? "{$record->min_days} – {$record->max_days} ngày" : "Từ {$record->min_days} ngày trở lên")
-                    ->badge(),
+                    ->label('Khung ngày')
+                    ->state(fn ($record) => $record->max_days ? "{$record->min_days} – {$record->max_days} ngày" : "Từ {$record->min_days} ngày")
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('discount_percent')
                     ->label('Chiết khấu')
                     ->suffix('%')
-                    ->sortable(),
-                TextColumn::make('crew_rate_per_person_per_day')
-                    ->label('Nhân công / ngày')
-                    ->money('VND')
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('transport_rate_per_km')
-                    ->label('Vận chuyển / km')
-                    ->money('VND')
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('accessory_rate_per_m2')
-                    ->label('Phụ kiện / m²')
-                    ->money('VND')
+                    ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 IconColumn::make('is_active')
                     ->label('Kích hoạt')
                     ->boolean()
                     ->sortable(),
                 TextColumn::make('created_at')
-                    ->dateTime()
+                    ->dateTime('d/m/Y H:i')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
@@ -67,6 +89,10 @@ class PricingRulesTable
                 SelectFilter::make('product_line_id')
                     ->label('Dòng LED')
                     ->relationship('productLine', 'name'),
+                SelectFilter::make('agency_id')
+                    ->label('Đại lý')
+                    ->relationship('agency', 'name')
+                    ->placeholder('Tất cả đại lý'),
                 SelectFilter::make('customer_type')
                     ->label('Nhóm khách')
                     ->options(CustomerType::class),
@@ -74,8 +100,8 @@ class PricingRulesTable
             ->deferFilters(false)
             ->recordActions([
                 EditAction::make()
-                    ->modalHeading('Cập nhật bảng giá thuê')
-                    ->modalDescription('Chỉnh sửa đơn giá, chiết khấu và chi phí nhân công/vận chuyển.')
+                    ->modalHeading('Cập nhật bảng giá thuê máy/ngày')
+                    ->modalDescription('Chỉnh sửa đơn giá, thời điểm hiệu lực và đại lý áp dụng.')
                     ->modalWidth(Width::FiveExtraLarge),
             ], position: RecordActionsPosition::BeforeCells)
             ->toolbarActions([

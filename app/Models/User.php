@@ -19,7 +19,7 @@ use Spatie\Permission\Traits\HasRoles;
 /**
  * @mixin HasRoles
  */
-#[Fillable(['name', 'email', 'password', 'phone', 'warehouse_id', 'is_active'])]
+#[Fillable(['name', 'email', 'password', 'phone', 'warehouse_id', 'agency_id', 'is_active'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser
 {
@@ -68,6 +68,27 @@ class User extends Authenticatable implements FilamentUser
     }
 
     /**
+     * Get the agency ID that scopes the user's data access.
+     * Super admins and Admins are global and never scoped to a specific agency.
+     */
+    public function getScopedAgencyId(): ?int
+    {
+        if ($this->hasRole(['super_admin', 'admin'])) {
+            return null;
+        }
+
+        return $this->agency_id ? (int) $this->agency_id : null;
+    }
+
+    /**
+     * Determine if the user is scoped to a specific agency.
+     */
+    public function isAgencyScoped(): bool
+    {
+        return ! is_null($this->getScopedAgencyId());
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array
@@ -85,6 +106,14 @@ class User extends Authenticatable implements FilamentUser
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class);
+    }
+
+    /**
+     * @return BelongsTo<Agency, $this>
+     */
+    public function agency(): BelongsTo
+    {
+        return $this->belongsTo(Agency::class);
     }
 
     /**

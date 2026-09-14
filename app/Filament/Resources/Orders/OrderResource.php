@@ -15,6 +15,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 use UnitEnum;
 
 class OrderResource extends Resource
@@ -38,7 +39,11 @@ class OrderResource extends Resource
         $query = parent::getEloquentQuery();
 
         /** @var User|null $user */
-        $user = auth()->user();
+        $user = Auth::user();
+
+        if ($agencyId = $user?->getScopedAgencyId()) {
+            $query->where('orders.agency_id', $agencyId);
+        }
 
         if ($whId = $user?->getScopedWarehouseId()) {
             $query->where('orders.warehouse_id', $whId);

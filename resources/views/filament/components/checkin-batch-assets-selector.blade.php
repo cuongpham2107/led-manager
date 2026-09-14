@@ -9,10 +9,8 @@
         allAssets: {{ \Illuminate\Support\Js::from($initialAssets ?? []) }},
         assets: {{ \Illuminate\Support\Js::from($initialAssets ?? []) }},
         productLines: {{ \Illuminate\Support\Js::from($productLines ?? []) }},
-        statuses: {{ \Illuminate\Support\Js::from($statuses ?? []) }},
         warehouseId: null,
         selectedProductLine: '',
-        selectedStatus: '{{ \App\Enums\AssetStatus::NewlyAdded->value }}',
         selectedCondition: 'all',
         loading: false,
         loadingMore: false,
@@ -32,6 +30,9 @@
         activeAsset: null,
         receiveCondition: null,
         submittingReceive: false,
+
+        importUrl: '{{ route("filament.checkin-import") }}',
+        importing: false,
 
         toast: {
             show: false,
@@ -76,7 +77,6 @@
             return Boolean(
                 (this.search && this.search.trim()) ||
                 this.selectedProductLine ||
-                this.selectedStatus ||
                 (this.selectedCondition && this.selectedCondition !== 'all')
             );
         },
@@ -110,7 +110,6 @@
         resetFilters() {
             this.search = '';
             this.selectedProductLine = '';
-            this.selectedStatus = this.isEdit && !this.addMoreMode ? '' : '{{ \App\Enums\AssetStatus::NewlyAdded->value }}';
             this.selectedCondition = 'all';
             this.applyFilters();
         },
@@ -205,7 +204,6 @@
             this.addMoreMode = true;
             this.search = '';
             this.selectedProductLine = '';
-            this.selectedStatus = '{{ \App\Enums\AssetStatus::NewlyAdded->value }}';
             this.page = 1;
             this.fetchAssets(1, false);
         },
@@ -214,7 +212,6 @@
             this.addMoreMode = false;
             this.search = '';
             this.selectedProductLine = '';
-            this.selectedStatus = '';
             this.selectedCondition = 'all';
             this.applyFilters();
         },
@@ -245,9 +242,7 @@
                 if (this.selectedProductLine) {
                     url.searchParams.set('product_line_id', this.selectedProductLine);
                 }
-                if (this.selectedStatus) {
-                    url.searchParams.set('status', this.selectedStatus);
-                }
+                url.searchParams.set('status', '{{ \App\Enums\AssetStatus::NewlyAdded->value }}');
 
                 const res = await fetch(url.toString(), {
                     headers: {
@@ -343,7 +338,47 @@
             } finally {
                 this.submittingReceive = false;
             }
-        }
+        },
+
+        triggerImportFile() {
+            this.$refs.importFileInput.click();
+        },
+
+        async handleImportFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            this.importing = true;
+            const formData = new FormData();
+            formData.append('excel_file', file);
+            formData.append('_token', this.csrfToken);
+
+            try {
+                const res = await fetch(this.importUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: formData,
+                });
+
+                const data = await res.json();
+
+                if (data.success && Array.isArray(data.assets) && data.assets.length > 0) {
+                    this.onAssetsImported(data.assets);
+                    this.showToast(data.message || 'Import thành công!');
+                } else {
+                    this.showToast(data.message || 'Không có thiết bị nào được import.', 'error');
+                }
+            } catch (err) {
+                console.error('Lỗi import:', err);
+                this.showToast('Không thể kết nối đến máy chủ.', 'error');
+            } finally {
+                this.importing = false;
+                event.target.value = '';
+            }
+        },
     }"
     x-on:checkin-assets-imported.window="onAssetsImported($event.detail)"
     class="space-y-3 relative z-0"
@@ -363,16 +398,31 @@
 
         <div class="flex items-center gap-2">
             <template x-if="!isEdit">
-                <button
-                    type="button"
-                    @click="$wire.mountAction('import_checkin_batch_items')"
-                    class="px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-950/60 rounded-lg transition-colors inline-flex items-center gap-1.5 border border-emerald-200 dark:border-emerald-800 cursor-pointer"
-                >
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4m13.5-6.5-11 11"/>
-                    </svg>
-                    <span>Import &amp; tạo nhanh thiết bị</span>
-                </button>
+                <div class="flex items-center gap-2">
+                    <input
+                        type="file"
+                        x-ref="importFileInput"
+                        accept=".xlsx,.xls,.csv"
+                        @change="handleImportFile($event)"
+                        class="hidden"
+                    />
+                    <a href="{{ route('filament.checkin-batch-template') }}" target="_blank" class="text-xs text-gray-400 hover:text-primary-600 dark:text-gray-500 dark:hover:text-primary-400 underline transition-colors">Tải file mẫu</a>
+                    <button
+                        type="button"
+                        @click="triggerImportFile()"
+                        :disabled="importing"
+                        class="px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-950/60 rounded-lg transition-colors inline-flex items-center gap-1.5 border border-emerald-200 dark:border-emerald-800 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <svg x-show="!importing" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4m13.5-6.5-11 11"/>
+                        </svg>
+                        <svg x-show="importing" class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                        </svg>
+                        <span x-text="importing ? 'Đang import...' : 'Import Excel'"></span>
+                    </button>
+                </div>
             </template>
 
             <!-- Mode switch for Edit Mode -->
@@ -397,13 +447,6 @@
                 >
                     <span>← Quay lại danh sách đợt (<span x-text="selectedList.length"></span>)</span>
                 </button>
-            </template>
-
-            <template x-if="!isEdit">
-                <span class="text-xs text-gray-500 dark:text-gray-400">
-                    Đã chọn: <strong class="text-primary-600 font-semibold" x-text="selectedList.length">0</strong>
-                    <span x-show="total > 0" class="text-gray-400"> / Tổng <span x-text="total"></span></span>
-                </span>
             </template>
         </div>
     </div>
@@ -449,24 +492,6 @@
                     </x-filament::input.select>
                 </x-filament::input.wrapper>
             </div>
-
-            <!-- Filter: Trạng thái (chỉ hiện khi chọn từ kho: tạo mới hoặc bấm "Thêm từ kho") -->
-            <template x-if="!isEdit || addMoreMode">
-                <div class="w-full sm:w-48">
-                    <x-filament::input.wrapper>
-                        <x-filament::input.select
-                            x-model="selectedStatus"
-                            @change="applyFilters()"
-                        >
-                            <option value="{{ \App\Enums\AssetStatus::NewlyAdded->value }}">Mới nhập kho</option>
-                            <option value="">Tất cả trạng thái</option>
-                            <template x-for="st in statuses" :key="st.value">
-                                <option :value="st.value" x-text="st.label" x-show="st.value !== '{{ \App\Enums\AssetStatus::NewlyAdded->value }}'"></option>
-                            </template>
-                        </x-filament::input.select>
-                    </x-filament::input.wrapper>
-                </div>
-            </template>
 
             <!-- Nút Reset Filter -->
             <button
@@ -565,18 +590,18 @@
                                     <div class="text-xs font-mono text-gray-400 dark:text-gray-500 mt-0.5" x-text="item.serial_no"></div>
                                 </td>
                                 <td class="px-5 py-3.5">
-                                    <template x-if="!item.condition">
+                                    <template x-if="!item.is_received">
                                         <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300">
                                             Chưa nhận
                                         </span>
                                     </template>
-                                    <template x-if="item.condition === 'normal' || item.condition_raw === 'ok'">
+                                    <template x-if="item.is_received && (item.condition === 'normal' || item.condition_raw === 'ok')">
                                         <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/60">
                                             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                                             Bình thường
                                         </span>
                                     </template>
-                                    <template x-if="item.condition === 'damaged' || item.condition_raw === 'fault'">
+                                    <template x-if="item.is_received && (item.condition === 'damaged' || item.condition_raw === 'fault')">
                                         <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/60">
                                             <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
                                             Hỏng hóc
@@ -584,10 +609,10 @@
                                     </template>
                                 </td>
                                 <td class="px-5 py-3.5 text-gray-500 dark:text-gray-400 text-sm">
-                                    <span x-text="item.received_at || '—'"></span>
+                                    <span x-text="item.is_received ? (item.received_at || '—') : '—'"></span>
                                 </td>
                                 <td class="px-5 py-3.5 text-right">
-                                    <template x-if="!item.condition">
+                                    <template x-if="!item.is_received">
                                         <button
                                             type="button"
                                             @click="openReceiveModal(item)"
@@ -597,7 +622,7 @@
                                             Nhận hàng
                                         </button>
                                     </template>
-                                    <template x-if="item.condition">
+                                    <template x-if="item.is_received">
                                         <button
                                             type="button"
                                             @click="openReceiveModal(item)"
@@ -722,108 +747,118 @@
         </div>
     </div>
 
+    <!-- Selected Counter (Create mode) -->
+    <template x-if="!isEdit">
+        <div class="text-center text-xs text-gray-500 dark:text-gray-400">
+            Đã chọn: <strong class="text-primary-600 font-semibold" x-text="selectedList.length">0</strong>
+            <span x-show="total > 0" class="text-gray-400"> / Tổng <span x-text="total"></span></span>
+        </div>
+    </template>
+
     <!-- MODAL 1: Nhận hàng -->
-    <div
-        x-show="showReceiveModal"
-        x-cloak
-        class="fixed inset-0 z-[99999] flex items-center justify-center p-4"
-        @keydown.escape.window="closeReceiveModal()"
-    >
-        <!-- Backdrop -->
+    <template x-teleport="body">
         <div
             x-show="showReceiveModal"
-            x-transition:enter="ease-out duration-200"
-            x-transition:enter-start="opacity-0"
-            x-transition:enter-end="opacity-100"
-            x-transition:leave="ease-in duration-150"
-            x-transition:leave-start="opacity-100"
-            x-transition:leave-end="opacity-0"
-            @click="closeReceiveModal()"
-            class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
-        ></div>
-
-        <!-- Modal Dialog -->
-        <div
-            x-show="showReceiveModal"
-            x-transition:enter="ease-out duration-200"
-            x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-            x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
-            x-transition:leave="ease-in duration-150"
-            x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
-            x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-            class="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-800 w-full max-w-md p-6 space-y-5 z-10"
-            @click.stop
+            x-cloak
+            class="fixed inset-0 z-[99999] flex items-center justify-center p-4"
+            @keydown.escape.window="closeReceiveModal()"
         >
-            <!-- Title and Subtitle: {Serial} · {ProductLine} -->
-            <div>
-                <h3 class="text-lg font-bold text-gray-900 dark:text-white" x-text="activeAsset?.is_received ? 'Cập nhật tình trạng nhận hàng' : 'Nhận hàng'"></h3>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    <span class="font-mono font-semibold text-primary-600 dark:text-primary-400" x-text="activeAsset?.serial_no"></span>
-                    <span> · </span>
-                    <span x-text="activeAsset?.name"></span>
-                </p>
-            </div>
+            <!-- Backdrop -->
+            <div
+                x-show="showReceiveModal"
+                x-transition:enter="ease-out duration-200"
+                x-transition:enter-start="opacity-0"
+                x-transition:enter-end="opacity-100"
+                x-transition:leave="ease-in duration-150"
+                x-transition:leave-start="opacity-100"
+                x-transition:leave-end="opacity-0"
+                @click="closeReceiveModal()"
+                class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
+            ></div>
 
-            <!-- Tình trạng hàng toggle -->
-            <div class="space-y-2">
-                <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">Tình trạng hàng</label>
-                <div class="grid grid-cols-2 gap-3">
+            <!-- Modal Dialog -->
+            <div
+                x-show="showReceiveModal"
+                x-transition:enter="ease-out duration-200"
+                x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                x-transition:leave="ease-in duration-150"
+                x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                class="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-800 w-full max-w-md p-6 space-y-5 z-10"
+                @click.stop
+            >
+                <!-- Title and Subtitle: {Serial} · {ProductLine} -->
+                <div>
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white" x-text="activeAsset?.is_received ? 'Cập nhật tình trạng nhận hàng' : 'Nhận hàng'"></h3>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        <span class="font-mono font-semibold text-primary-600 dark:text-primary-400" x-text="activeAsset?.serial_no"></span>
+                        <span> · </span>
+                        <span x-text="activeAsset?.name"></span>
+                    </p>
+                </div>
+
+                <!-- Tình trạng hàng toggle -->
+                <div class="space-y-2">
+                    <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">Tình trạng hàng</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button
+                            type="button"
+                            @click="receiveCondition = 'normal'"
+                            class="py-3 px-4 rounded-xl border text-sm font-semibold transition-all text-center cursor-pointer flex items-center justify-center gap-2"
+                            :class="receiveCondition === 'normal'
+                                ? 'border-2 border-emerald-500 bg-emerald-50/50 text-emerald-700 dark:border-emerald-400 dark:bg-emerald-950/40 dark:text-emerald-300 shadow-xs'
+                                : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800'"
+                        >
+                            <svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            <span>Bình thường</span>
+                        </button>
+                        <button
+                            type="button"
+                            @click="receiveCondition = 'damaged'"
+                            class="py-3 px-4 rounded-xl border text-sm font-semibold transition-all text-center cursor-pointer flex items-center justify-center gap-2"
+                            :class="receiveCondition === 'damaged'
+                                ? 'border-2 border-rose-500 bg-rose-50/50 text-rose-700 dark:border-rose-400 dark:bg-rose-950/40 dark:text-rose-300 shadow-xs'
+                                : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800'"
+                        >
+                            <svg class="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                            <span>Hỏng hóc</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Modal Footer: Hủy & Xác nhận nhận hàng -->
+                <div class="flex items-center justify-end gap-3 pt-2">
                     <button
                         type="button"
-                        @click="receiveCondition = 'normal'"
-                        class="py-3 px-4 rounded-xl border text-sm font-semibold transition-all text-center cursor-pointer flex items-center justify-center gap-2"
-                        :class="receiveCondition === 'normal'
-                            ? 'border-2 border-emerald-500 bg-emerald-50/50 text-emerald-700 dark:border-emerald-400 dark:bg-emerald-950/40 dark:text-emerald-300 shadow-xs'
-                            : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800'"
+                        @click="closeReceiveModal()"
+                        class="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors cursor-pointer"
                     >
-                        <svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
-                        </svg>
-                        <span>Bình thường</span>
+                        Hủy
                     </button>
                     <button
                         type="button"
-                        @click="receiveCondition = 'damaged'"
-                        class="py-3 px-4 rounded-xl border text-sm font-semibold transition-all text-center cursor-pointer flex items-center justify-center gap-2"
-                        :class="receiveCondition === 'damaged'
-                            ? 'border-2 border-rose-500 bg-rose-50/50 text-rose-700 dark:border-rose-400 dark:bg-rose-950/40 dark:text-rose-300 shadow-xs'
-                            : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800'"
+                        @click="submitReceive()"
+                        :disabled="!receiveCondition || submittingReceive"
+                        class="px-5 py-2 text-sm font-semibold rounded-lg transition-all inline-flex items-center gap-2"
+                        :class="(!receiveCondition || submittingReceive)
+                            ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed border border-transparent'
+                            : 'bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white shadow-sm cursor-pointer'"
                     >
-                        <svg class="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        <svg x-show="submittingReceive" class="animate-spin w-4 h-4 text-white" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
                         </svg>
-                        <span>Hỏng hóc</span>
+                        <span x-text="submittingReceive ? 'Đang lưu...' : (activeAsset?.is_received ? 'Cập nhật tình trạng' : 'Xác nhận nhận hàng')"></span>
                     </button>
                 </div>
             </div>
-
-            <!-- Modal Footer: Hủy & Xác nhận nhận hàng -->
-            <div class="flex items-center justify-end gap-3 pt-2">
-                <button
-                    type="button"
-                    @click="closeReceiveModal()"
-                    class="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors cursor-pointer"
-                >
-                    Hủy
-                </button>
-                <button
-                    type="button"
-                    @click="submitReceive()"
-                    :disabled="!receiveCondition || submittingReceive"
-                    class="px-5 py-2 text-sm font-semibold rounded-lg transition-all inline-flex items-center gap-2"
-                    :class="(!receiveCondition || submittingReceive)
-                        ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed border border-transparent'
-                        : 'bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white shadow-sm cursor-pointer'"
-                >
-                    <svg x-show="submittingReceive" class="animate-spin w-4 h-4 text-white" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-                    </svg>
-                    <span x-text="submittingReceive ? 'Đang lưu...' : (activeAsset?.is_received ? 'Cập nhật tình trạng' : 'Xác nhận nhận hàng')"></span>
-                </button>
-            </div>
         </div>
-    </div>
+    </template>
 
 
 

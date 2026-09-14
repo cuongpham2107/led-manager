@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\CustomerType;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,7 +13,11 @@ class PricingRule extends Model
     use HasFactory;
 
     protected $fillable = [
+        'name',
         'product_line_id',
+        'agency_id',
+        'effective_from',
+        'effective_to',
         'customer_type',
         'base_price_per_unit_per_day',
         'min_days',
@@ -31,6 +36,8 @@ class PricingRule extends Model
     {
         return [
             'customer_type' => CustomerType::class,
+            'effective_from' => 'date',
+            'effective_to' => 'date',
             'base_price_per_unit_per_day' => 'decimal:2',
             'min_days' => 'integer',
             'max_days' => 'integer',
@@ -48,5 +55,32 @@ class PricingRule extends Model
     public function productLine(): BelongsTo
     {
         return $this->belongsTo(ProductLine::class);
+    }
+
+    /**
+     * @return BelongsTo<Agency, $this>
+     */
+    public function agency(): BelongsTo
+    {
+        return $this->belongsTo(Agency::class);
+    }
+
+    /**
+     * Scope query to active pricing rules effective at a given date.
+     *
+     * @param  Builder<PricingRule>  $query
+     * @return Builder<PricingRule>
+     */
+    public function scopeEffectiveAt(Builder $query, ?string $date = null): Builder
+    {
+        $targetDate = $date ?: now()->toDateString();
+
+        return $query->where('is_active', true)
+            ->where(function ($q) use ($targetDate) {
+                $q->whereNull('effective_from')->orWhereDate('effective_from', '<=', $targetDate);
+            })
+            ->where(function ($q) use ($targetDate) {
+                $q->whereNull('effective_to')->orWhereDate('effective_to', '>=', $targetDate);
+            });
     }
 }

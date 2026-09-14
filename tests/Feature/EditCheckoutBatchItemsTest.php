@@ -110,7 +110,7 @@ test('can add and remove assets when saving modal edit in CheckoutBatchesTable',
     expect($this->batch->items)->toHaveCount(1)
         ->and($this->batch->items->first()->asset_id)->toBe($this->asset2->id);
 
-    // asset1 should be reverted to Ready, asset2 should now be InTransit
+    // asset1 should be reverted to Ready, asset2 should remain Ready until dispatched
     expect($this->asset1->fresh()->current_status)->toBe(AssetStatus::Ready);
-    expect($this->asset2->fresh()->current_status)->toBe(AssetStatus::InTransit);
+    expect($this->asset2->fresh()->current_status)->toBe(AssetStatus::Ready);
 });

@@ -42,6 +42,12 @@ class UsersTable
                     ->label('Vai trò')
                     ->badge()
                     ->color('primary'),
+                TextColumn::make('agency.name')
+                    ->label('Đại lý trực thuộc')
+                    ->placeholder('Trụ sở chính')
+                    ->badge()
+                    ->color('info')
+                    ->searchable(),
                 TextColumn::make('warehouse.name')
                     ->label('Kho công tác')
                     ->placeholder('Toàn hệ thống'),
@@ -50,6 +56,9 @@ class UsersTable
                     ->boolean(),
             ])
             ->filters([
+                SelectFilter::make('agency_id')
+                    ->label('Đại lý')
+                    ->relationship('agency', 'name'),
                 SelectFilter::make('warehouse_id')
                     ->label('Kho công tác')
                     ->relationship('warehouse', 'name'),

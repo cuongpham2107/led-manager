@@ -1,10 +1,15 @@
 <?php
 
+use App\Exports\CheckinBatchTemplate;
 use App\Http\Controllers\CheckinAssetSearchController;
+use App\Http\Controllers\CheckinImportController;
 use App\Http\Controllers\CheckoutAssetSearchController;
 use App\Http\Controllers\PublicAssetController;
 use App\Http\Controllers\ReturnAssetController;
+use App\Models\Quotation;
+use App\Services\QuotationPdfService;
 use Illuminate\Support\Facades\Route;
+use Maatwebsite\Excel\Facades\Excel;
 
 // Public asset inspection — QR scan (no auth required)
 Route::middleware('throttle:60,1')
@@ -27,6 +32,13 @@ Route::get('/scanner', function () {
 })->name('scanner.redirect');
 
 Route::middleware(['web', 'auth'])->group(function () {
+    Route::get('/filament/checkin-batch-template', function () {
+        return Excel::download(new CheckinBatchTemplate, 'mau-import-checkin.xlsx');
+    })->name('filament.checkin-batch-template');
+
+    Route::post('/filament-api/checkin-import', [CheckinImportController::class, 'import'])
+        ->name('filament.checkin-import');
+
     Route::get('/filament-api/checkin-assets', [CheckinAssetSearchController::class, 'index'])
         ->name('filament.checkin-assets');
 
@@ -44,4 +56,8 @@ Route::middleware(['web', 'auth'])->group(function () {
 
     Route::post('/filament-api/return-complete-batch', [ReturnAssetController::class, 'completeBatch'])
         ->name('filament.return-complete-batch');
+
+    Route::get('/admin/quotations/{quotation}/pdf', function (Quotation $quotation, QuotationPdfService $service) {
+        return $service->downloadPdf($quotation);
+    })->name('admin.quotations.pdf');
 });

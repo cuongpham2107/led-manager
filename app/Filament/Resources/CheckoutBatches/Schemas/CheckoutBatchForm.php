@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\CheckoutBatches\Schemas;
 
+use App\Models\Asset;
 use App\Models\CheckoutBatch;
 use App\Models\ProductLine;
 use App\Models\User;
@@ -79,7 +80,25 @@ class CheckoutBatchForm
                             ->label('Diện tích cần xuất (m²)')
                             ->numeric()
                             ->default(0)
-                            ->live(debounce: 300),
+                            ->live(debounce: 300)
+                            ->rules([
+                                fn (Get $get): \Closure => function (string $attribute, $value, \Closure $fail) use ($get) {
+                                    $requiredArea = (float) ($value ?? 0);
+                                    if ($requiredArea <= 0) {
+                                        return;
+                                    }
+                                    $selectedIds = collect($get('selected_assets') ?? [])->map(fn ($id) => (int) $id)->filter()->values();
+                                    if ($selectedIds->isNotEmpty()) {
+                                        $assets = Asset::with('productLine')->whereIn('id', $selectedIds)->get();
+                                        $totalArea = (float) $assets->sum(fn (Asset $a) => $a->area_m2);
+                                        if (round($totalArea, 2) < round($requiredArea, 2)) {
+                                            $totalFormatted = number_format($totalArea, 2);
+                                            $requiredFormatted = number_format($requiredArea, 2);
+                                            $fail("Kho chỉ có {$totalFormatted} m² khả dụng, không đủ {$requiredFormatted} m² theo yêu cầu. Không đủ điều kiện để xuất kho!");
+                                        }
+                                    }
+                                },
+                            ]),
 
                         Select::make('purpose')
                             ->label('Mục đích sử dụng')
@@ -186,6 +205,28 @@ class CheckoutBatchForm
                             $component->state($record->items()->pluck('asset_id')->map(fn ($id) => (int) $id)->toArray());
                         }
                     })
+                    ->rules([
+                        fn (Get $get): \Closure => function (string $attribute, $value, \Closure $fail) use ($get) {
+                            $selectedIds = collect($value)->map(fn ($id) => (int) $id)->filter()->values();
+                            if ($selectedIds->isEmpty()) {
+                                $fail('Vui lòng chọn ít nhất một thiết bị xuất kho.');
+
+                                return;
+                            }
+
+                            $requiredArea = (float) ($get('required_area_m2') ?? 0);
+                            if ($requiredArea > 0) {
+                                $assets = Asset::with('productLine')->whereIn('id', $selectedIds)->get();
+                                $totalArea = (float) $assets->sum(fn (Asset $a) => $a->area_m2);
+
+                                if (round($totalArea, 2) < round($requiredArea, 2)) {
+                                    $totalFormatted = number_format($totalArea, 2);
+                                    $requiredFormatted = number_format($requiredArea, 2);
+                                    $fail("Kho chỉ có {$totalFormatted} m² khả dụng, không đủ {$requiredFormatted} m² theo yêu cầu. Không đủ điều kiện để xuất kho!");
+                                }
+                            }
+                        },
+                    ])
                     ->default([])
                     ->dehydrated(true)
                     ->columnSpanFull(),

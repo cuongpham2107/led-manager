@@ -4,7 +4,6 @@ namespace App\Filament\Resources\CheckinBatches\Tables;
 
 use App\Enums\BatchStatus;
 use App\Filament\Resources\CheckinBatches\Actions\ImportCheckinBatchItemsAction;
-use App\Models\Asset;
 use App\Models\CheckinBatch;
 use App\Models\CheckinBatchItem;
 use Filament\Actions\Action;
@@ -165,8 +164,8 @@ class CheckinBatchesTable
                     ->modalSubmitActionLabel('Lưu')
                     ->modalCancelActionLabel('Hủy')
                     ->extraModalFooterActions(fn (CheckinBatch $record): array => [
-                        // ImportCheckinBatchItemsAction::make()
-                        //     ->cancelParentActions(),
+                        ImportCheckinBatchItemsAction::make()
+                            ->cancelParentActions(),
                         Action::make('completeReceiving')
                             ->label('Kết thúc nhận hàng')
                             ->color('gray')
@@ -218,16 +217,10 @@ class CheckinBatchesTable
                                 CheckinBatchItem::create([
                                     'checkin_batch_id' => $record->id,
                                     'asset_id' => $assetId,
-                                    'condition' => 'ok',
-                                    'is_received' => true,
-                                    'received_at' => now(),
-                                    'received_by' => Auth::id(),
-                                ]);
-                            }
-
-                            if ($selectedIds->isNotEmpty()) {
-                                Asset::whereIn('id', $selectedIds)->update([
-                                    'current_warehouse_id' => $data['warehouse_id'],
+                                    'condition' => null,
+                                    'is_received' => false,
+                                    'received_at' => null,
+                                    'received_by' => null,
                                 ]);
                             }
 

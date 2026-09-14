@@ -145,10 +145,11 @@ test('univer sheet initial data contains preconfigured column headers without ma
     $headers = collect($cellData[0])->pluck('v')->toArray();
     expect($headers)->not->toContain('Trạng thái')
         ->and($headers)->not->toContain('Mã QR')
+        ->and($headers)->not->toContain('Kho lưu trữ')
+        ->and($headers)->not->toContain('Ngày sản xuất')
         ->and($cellData[0][0]['v'])->toBe('Số Seri')
         ->and($cellData[0][1]['v'])->toBe('Dòng sản phẩm')
-        ->and($cellData[0][2]['v'])->toBe('Kho lưu trữ')
-        ->and($cellData[0][3]['v'])->toBe('Vị trí')
+        ->and($cellData[0][2]['v'])->toBe('Kích thước')
         ->and($cellData[1][0]['v'])->toBe('P26-HN-SAMPLE01');
 });
 
@@ -226,14 +227,15 @@ test('user can import assets directly from univer sheet snapshot data', function
     expect($asset1)->not->toBeNull()
         ->and($asset1->qr_code)->toBe('LED-UNIVER-LED-001')
         ->and($asset1->product_line_id)->toBe($pl->id)
-        ->and($asset1->current_warehouse_id)->toBe($wh->id)
-        ->and($asset1->warehouse_location_id)->toBe($loc->id)
+        ->and($asset1->current_warehouse_id)->toBeNull()
+        ->and($asset1->warehouse_location_id)->toBeNull()
+        ->and($asset1->current_status)->toBe(AssetStatus::NewlyAdded)
         ->and((float) $asset1->purchase_cost)->toBe(3800000.0)
         ->and($asset1->note)->toBe('Direct from Univer Sheet');
 
     $asset2 = Asset::where('serial_no', 'UNIVER-LED-002')->first();
     expect($asset2)->not->toBeNull()
-        ->and($asset2->current_status)->toBe(AssetStatus::Repairing);
+        ->and($asset2->current_warehouse_id)->toBeNull();
 });
 
 test('univer sheet updates existing asset when update_existing is true', function () {
@@ -314,8 +316,9 @@ test('univer sheet applies default product line, warehouse, and location selects
     expect($asset)->not->toBeNull()
         ->and($asset->qr_code)->toBe('LED-ONLY-SERIAL-001')
         ->and($asset->product_line_id)->toBe($pl->id)
-        ->and($asset->current_warehouse_id)->toBe($wh->id)
-        ->and($asset->warehouse_location_id)->toBe($loc->id);
+        ->and($asset->current_warehouse_id)->toBeNull()
+        ->and($asset->warehouse_location_id)->toBeNull()
+        ->and($asset->current_status)->toBe(AssetStatus::NewlyAdded);
 });
 
 test('asset model automatically generates qr_code from serial_no if empty on save', function () {

@@ -278,123 +278,125 @@
         </div>
     </div>
 
-    <!-- POPUP MODAL: Receive Single Asset (Kept within component to preserve input focus) -->
-    <div
-        x-show="showReceiveModal"
-        x-cloak
-        class="fixed inset-0 z-[99999] flex items-center justify-center p-4"
-        @keydown.escape.window="closeReceiveModal()"
-    >
-        <!-- Backdrop -->
+    <!-- POPUP MODAL: Receive Single Asset -->
+    <template x-teleport="body">
         <div
             x-show="showReceiveModal"
-            x-transition:enter="ease-out duration-200"
-            x-transition:enter-start="opacity-0"
-            x-transition:enter-end="opacity-100"
-            x-transition:leave="ease-in duration-150"
-            x-transition:leave-start="opacity-100"
-            x-transition:leave-end="opacity-0"
-            @click="closeReceiveModal()"
-            class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
-        ></div>
-
-        <!-- Modal Dialog -->
-        <div
-            x-show="showReceiveModal"
-            x-transition:enter="ease-out duration-200"
-            x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-            x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
-            x-transition:leave="ease-in duration-150"
-            x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
-            x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-            class="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-800 w-full max-w-md p-6 space-y-5 z-10"
-            @click.stop
+            x-cloak
+            class="fixed inset-0 z-[99999] flex items-center justify-center p-4"
+            @keydown.escape.window="closeReceiveModal()"
         >
-            <!-- Title and Subtitle -->
-            <div>
-                <h3 class="text-lg font-bold text-gray-900 dark:text-white" x-text="activeAsset?.condition ? 'Cập nhật tình trạng thiết bị' : 'Nhận hàng hoàn trả'"></h3>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    <span class="font-mono font-semibold text-primary-600 dark:text-primary-400" x-text="activeAsset?.serial_no"></span>
-                    <span> · </span>
-                    <span x-text="activeAsset?.name"></span>
-                </p>
-            </div>
+            <!-- Backdrop -->
+            <div
+                x-show="showReceiveModal"
+                x-transition:enter="ease-out duration-200"
+                x-transition:enter-start="opacity-0"
+                x-transition:enter-end="opacity-100"
+                x-transition:leave="ease-in duration-150"
+                x-transition:leave-start="opacity-100"
+                x-transition:leave-end="opacity-0"
+                @click="closeReceiveModal()"
+                class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
+            ></div>
 
-            <!-- Tình trạng hàng toggle -->
-            <div class="space-y-2">
-                <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">Tình trạng thiết bị</label>
-                <div class="grid grid-cols-2 gap-3">
+            <!-- Modal Dialog -->
+            <div
+                x-show="showReceiveModal"
+                x-transition:enter="ease-out duration-200"
+                x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                x-transition:leave="ease-in duration-150"
+                x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                class="relative bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-800 w-full max-w-md p-6 space-y-5 z-10"
+                @click.stop
+            >
+                <!-- Title and Subtitle -->
+                <div>
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white" x-text="activeAsset?.condition ? 'Cập nhật tình trạng thiết bị' : 'Nhận hàng hoàn trả'"></h3>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        <span class="font-mono font-semibold text-primary-600 dark:text-primary-400" x-text="activeAsset?.serial_no"></span>
+                        <span> · </span>
+                        <span x-text="activeAsset?.name"></span>
+                    </p>
+                </div>
+
+                <!-- Tình trạng hàng toggle -->
+                <div class="space-y-2">
+                    <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">Tình trạng thiết bị</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button
+                            type="button"
+                            @click="receiveCondition = 'normal'"
+                            class="py-3 px-4 rounded-xl border text-sm font-semibold transition-all text-center cursor-pointer flex items-center justify-center gap-2"
+                            :class="receiveCondition === 'normal'
+                                ? 'border-2 border-emerald-500 bg-emerald-50/50 text-emerald-700 dark:border-emerald-400 dark:bg-emerald-950/40 dark:text-emerald-300 shadow-xs'
+                                : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800'"
+                        >
+                            <svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            <span>Bình thường</span>
+                        </button>
+                        <button
+                            type="button"
+                            @click="receiveCondition = 'damaged'"
+                            class="py-3 px-4 rounded-xl border text-sm font-semibold transition-all text-center cursor-pointer flex items-center justify-center gap-2"
+                            :class="receiveCondition === 'damaged'
+                                ? 'border-2 border-rose-500 bg-rose-50/50 text-rose-700 dark:border-rose-400 dark:bg-rose-950/40 dark:text-rose-300 shadow-xs'
+                                : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800'"
+                        >
+                            <svg class="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                            <span>Hỏng hóc</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Note field -->
+                <div x-show="receiveCondition" x-transition class="space-y-1.5">
+                    <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">
+                        <span x-show="receiveCondition === 'damaged'" class="text-rose-600 dark:text-rose-400">Mô tả tình trạng lỗi / hỏng</span>
+                        <span x-show="receiveCondition !== 'damaged'">Ghi chú (tùy chọn)</span>
+                    </label>
+                    <textarea
+                        x-model="receiveNote"
+                        rows="2"
+                        :placeholder="receiveCondition === 'damaged' ? 'VD: Chết 2 module LED góc dưới, móp khung nhôm...' : 'Ghi chú thêm về thiết bị (nếu có)...'"
+                        class="w-full px-3 py-2 text-xs rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                        :class="receiveCondition === 'damaged' ? 'focus:ring-rose-500/20 focus:border-rose-500 border-rose-300 dark:border-rose-700' : ''"
+                    ></textarea>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="flex items-center justify-end gap-3 pt-2">
                     <button
                         type="button"
-                        @click="receiveCondition = 'normal'"
-                        class="py-3 px-4 rounded-xl border text-sm font-semibold transition-all text-center cursor-pointer flex items-center justify-center gap-2"
-                        :class="receiveCondition === 'normal'
-                            ? 'border-2 border-emerald-500 bg-emerald-50/50 text-emerald-700 dark:border-emerald-400 dark:bg-emerald-950/40 dark:text-emerald-300 shadow-xs'
-                            : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800'"
+                        @click="closeReceiveModal()"
+                        class="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors cursor-pointer"
                     >
-                        <svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
-                        </svg>
-                        <span>Bình thường</span>
+                        Hủy
                     </button>
                     <button
                         type="button"
-                        @click="receiveCondition = 'damaged'"
-                        class="py-3 px-4 rounded-xl border text-sm font-semibold transition-all text-center cursor-pointer flex items-center justify-center gap-2"
-                        :class="receiveCondition === 'damaged'
-                            ? 'border-2 border-rose-500 bg-rose-50/50 text-rose-700 dark:border-rose-400 dark:bg-rose-950/40 dark:text-rose-300 shadow-xs'
-                            : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800'"
+                        @click="submitReceive()"
+                        :disabled="!receiveCondition || submittingReceive"
+                        class="px-5 py-2 text-sm font-semibold rounded-lg transition-all inline-flex items-center gap-2"
+                        :class="(!receiveCondition || submittingReceive)
+                            ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed border border-transparent'
+                            : 'bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white shadow-sm cursor-pointer'"
                     >
-                        <svg class="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        <svg x-show="submittingReceive" class="animate-spin w-4 h-4 text-white" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
                         </svg>
-                        <span>Hỏng hóc</span>
+                        <span x-text="submittingReceive ? 'Đang lưu...' : (activeAsset?.condition ? 'Lưu thay đổi' : 'Xác nhận nhận hàng')"></span>
                     </button>
                 </div>
             </div>
-
-            <!-- Note field -->
-            <div x-show="receiveCondition" x-transition class="space-y-1.5">
-                <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">
-                    <span x-show="receiveCondition === 'damaged'" class="text-rose-600 dark:text-rose-400">Mô tả tình trạng lỗi / hỏng</span>
-                    <span x-show="receiveCondition !== 'damaged'">Ghi chú (tùy chọn)</span>
-                </label>
-                <textarea
-                    x-model="receiveNote"
-                    rows="2"
-                    :placeholder="receiveCondition === 'damaged' ? 'VD: Chết 2 module LED góc dưới, móp khung nhôm...' : 'Ghi chú thêm về thiết bị (nếu có)...'"
-                    class="w-full px-3 py-2 text-xs rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
-                    :class="receiveCondition === 'damaged' ? 'focus:ring-rose-500/20 focus:border-rose-500 border-rose-300 dark:border-rose-700' : ''"
-                ></textarea>
-            </div>
-
-            <!-- Modal Footer -->
-            <div class="flex items-center justify-end gap-3 pt-2">
-                <button
-                    type="button"
-                    @click="closeReceiveModal()"
-                    class="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors cursor-pointer"
-                >
-                    Hủy
-                </button>
-                <button
-                    type="button"
-                    @click="submitReceive()"
-                    :disabled="!receiveCondition || submittingReceive"
-                    class="px-5 py-2 text-sm font-semibold rounded-lg transition-all inline-flex items-center gap-2"
-                    :class="(!receiveCondition || submittingReceive)
-                        ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed border border-transparent'
-                        : 'bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white shadow-sm cursor-pointer'"
-                >
-                    <svg x-show="submittingReceive" class="animate-spin w-4 h-4 text-white" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-                    </svg>
-                    <span x-text="submittingReceive ? 'Đang lưu...' : (activeAsset?.condition ? 'Lưu thay đổi' : 'Xác nhận nhận hàng')"></span>
-                </button>
-            </div>
         </div>
-    </div>
+    </template>
 
     <!-- Floating Toast Feedback -->
     <template x-teleport="body">

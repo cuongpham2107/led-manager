@@ -110,6 +110,28 @@ class Asset extends Model
     }
 
     /**
+     * Calculate cabinet area in m2
+     */
+    public function getAreaM2Attribute(): float
+    {
+        $pl = $this->productLine;
+        if ($pl && (float) $pl->module_width_mm > 0 && (float) $pl->module_height_mm > 0) {
+            return round(((float) $pl->module_width_mm / 1000) * ((float) $pl->module_height_mm / 1000), 4);
+        }
+
+        if (! empty($this->size)) {
+            if (str_contains($this->size, '0.5×1') || str_contains($this->size, '0.5x1')) {
+                return 0.5;
+            }
+            if (str_contains($this->size, '0.5×0.5') || str_contains($this->size, '0.5x0.5')) {
+                return 0.25;
+            }
+        }
+
+        return 0.25;
+    }
+
+    /**
      * @return BelongsTo<ProductLine, $this>
      */
     public function productLine(): BelongsTo

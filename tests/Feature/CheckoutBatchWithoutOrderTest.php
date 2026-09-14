@@ -103,7 +103,7 @@ test('can create checkout batch through modal action on ListCheckoutBatches', fu
             'customer_id' => $this->customer->id,
             'export_date' => now()->toDateString(),
             'expected_return_date' => now()->addDays(2)->toDateString(),
-            'required_area_m2' => 20,
+            'required_area_m2' => 0.5,
             'purpose' => 'Sự kiện',
             'selected_assets' => [$this->asset->id],
         ])
@@ -116,7 +116,27 @@ test('can create checkout batch through modal action on ListCheckoutBatches', fu
         ->and($batch->note)->toBe('Xuất đi sự kiện thử nghiệm')
         ->and($batch->items)->toHaveCount(1);
 
-    expect($this->asset->fresh()->current_status)->toBe(AssetStatus::InTransit);
+    expect($this->asset->fresh()->current_status)->toBe(AssetStatus::Ready);
+});
+
+test('cannot create checkout batch when selected assets area is less than required area', function () {
+    actingAs($this->user);
+
+    Livewire::test(ListCheckoutBatches::class)
+        ->callAction('create', [
+            'code' => 'OUT-MODAL-TEST-FAIL · Hệ thống tự sinh',
+            'note' => 'Thử xuất thiếu diện tích',
+            'warehouse_id' => $this->warehouse->id,
+            'customer_id' => $this->customer->id,
+            'export_date' => now()->toDateString(),
+            'expected_return_date' => now()->addDays(2)->toDateString(),
+            'required_area_m2' => 10,
+            'purpose' => 'Sự kiện',
+            'selected_assets' => [$this->asset->id], // only 0.5 m2
+        ])
+        ->assertHasActionErrors();
+
+    expect(CheckoutBatch::where('code', 'OUT-MODAL-TEST-FAIL')->exists())->toBeFalse();
 });
 
 test('checkout assets api returns ready assets with short name, type, and status', function () {

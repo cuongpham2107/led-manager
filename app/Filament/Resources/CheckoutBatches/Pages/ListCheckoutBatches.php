@@ -2,15 +2,14 @@
 
 namespace App\Filament\Resources\CheckoutBatches\Pages;
 
-use App\Enums\AssetStatus;
 use App\Enums\BatchStatus;
 use App\Filament\Resources\CheckoutBatches\CheckoutBatchResource;
 use App\Models\Asset;
-use App\Models\AssetStatusLog;
 use App\Models\CheckoutBatch;
 use App\Models\CheckoutBatchItem;
 use App\Services\CodeGeneratorService;
 use Filament\Actions\CreateAction;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Support\Enums\Width;
 use Illuminate\Support\Facades\Auth;
@@ -30,6 +29,33 @@ class ListCheckoutBatches extends ListRecords
                 ->modalWidth(Width::FourExtraLarge)
                 ->modalSubmitActionLabel('Lưu đợt xuất')
                 ->modalCancelActionLabel('Hủy')
+                ->createAnother(false)
+                ->before(function (CreateAction $action, array $data) {
+                    $selectedAssets = $data['selected_assets'] ?? [];
+                    $assetIds = collect($selectedAssets)->map(fn ($id) => (int) $id)->filter()->values();
+                    if ($assetIds->isEmpty()) {
+                        Notification::make()
+                            ->title('Không đủ điều kiện để xuất kho')
+                            ->body('Vui lòng chọn ít nhất một thiết bị xuất kho.')
+                            ->danger()
+                            ->send();
+                        $action->halt();
+                    }
+
+                    $requiredArea = (float) ($data['required_area_m2'] ?? 0);
+                    if ($requiredArea > 0) {
+                        $assets = Asset::with('productLine')->whereIn('id', $assetIds)->get();
+                        $totalArea = (float) $assets->sum(fn (Asset $a) => $a->area_m2);
+                        if (round($totalArea, 2) < round($requiredArea, 2)) {
+                            Notification::make()
+                                ->title('Không đủ điều kiện để xuất kho')
+                                ->body('Kho chỉ có '.number_format($totalArea, 2).' m² khả dụng, không đủ '.number_format($requiredArea, 2).' m² theo yêu cầu.')
+                                ->danger()
+                                ->send();
+                            $action->halt();
+                        }
+                    }
+                })
                 ->using(function (array $data): CheckoutBatch {
                     return DB::transaction(function () use ($data) {
                         $selectedAssets = $data['selected_assets'] ?? [];
@@ -52,34 +78,11 @@ class ListCheckoutBatches extends ListRecords
                             CheckoutBatchItem::create([
                                 'checkout_batch_id' => $batch->id,
                                 'asset_id' => $assetId,
-                                'is_dispatched' => true,
-                                'dispatched_by' => Auth::id(),
-                                'dispatched_at' => now(),
+                                'is_dispatched' => false,
+                                'dispatched_by' => null,
+                                'dispatched_at' => null,
                                 'note' => $data['note'] ?? null,
                             ]);
-
-                            $asset = Asset::find($assetId);
-                            if ($asset) {
-                                $oldStatus = $asset->current_status;
-                                $asset->update(['current_status' => AssetStatus::InTransit]);
-
-                                AssetStatusLog::create([
-                                    'asset_id' => $asset->id,
-                                    'from_status' => $oldStatus,
-                                    'to_status' => AssetStatus::InTransit,
-                                    'from_warehouse_id' => $asset->current_warehouse_id,
-                                    'to_warehouse_id' => $batch->warehouse_id,
-                                    'source_type' => CheckoutBatch::class,
-                                    'source_id' => $batch->id,
-                                    'changed_by' => Auth::id(),
-                                    'note' => "Tạo xuất kho: Đợt {$code}",
-                                    'created_at' => now(),
-                                ]);
-                            }
-                        }
-
-                        if ($assetIds->isNotEmpty()) {
-                            $batch->update(['status' => BatchStatus::InProgress]);
                         }
 
                         return $batch;

@@ -7,6 +7,7 @@ import {
   Modal,
   Platform,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -21,7 +22,175 @@ interface ScannerModalProps {
   title?: string;
   subtitle?: string;
   continuousModeDefault?: boolean;
+  pendingCodes?: string[];
 }
+
+interface WebCameraViewProps {
+  onBarcodeScanned: ({ data }: { data: string }) => void;
+  isProcessing: boolean;
+  onPhotoCapture: () => void;
+}
+
+const WebCameraView: React.FC<WebCameraViewProps> = ({
+  onBarcodeScanned,
+  isProcessing,
+  onPhotoCapture,
+}) => {
+  const videoRef = React.useRef<HTMLVideoElement | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [retryCount, setRetryCount] = useState<number>(0);
+  const streamRef = React.useRef<MediaStream | null>(null);
+
+  React.useEffect(() => {
+    let active = true;
+    let scanTimer: any = null;
+
+    const startWebcam = async () => {
+      setLoading(true);
+      setErrorMsg(null);
+
+      if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+        if (typeof window !== 'undefined' && window.isSecureContext === false) {
+          setErrorMsg(
+            'Trình duyệt chặn Camera do đang truy cập qua HTTP (không phải HTTPS hoặc localhost).'
+          );
+        } else {
+          setErrorMsg('Trình duyệt không hỗ trợ mở camera (navigator.mediaDevices.getUserMedia).');
+        }
+        setLoading(false);
+        return;
+      }
+
+      try {
+        let stream: MediaStream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: 'environment' } },
+            audio: false,
+          });
+        } catch {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: false,
+          });
+        }
+
+        if (!active) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play().catch((e) => console.warn('Video play error:', e));
+        }
+        setLoading(false);
+
+        if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
+          try {
+            const detector = new (window as any).BarcodeDetector({
+              formats: ['qr_code', 'code_128', 'code_39', 'ean_13'],
+            });
+
+            scanTimer = setInterval(async () => {
+              if (!videoRef.current || isProcessing || videoRef.current.readyState < 2) return;
+              try {
+                const barcodes = await detector.detect(videoRef.current);
+                if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+                  onBarcodeScanned({ data: barcodes[0].rawValue });
+                }
+              } catch {
+                // Ignore detection frame drops
+              }
+            }, 300);
+          } catch (e) {
+            console.warn('BarcodeDetector error:', e);
+          }
+        }
+      } catch (err: any) {
+        console.error('Webcam start error:', err);
+        let msg = 'Không thể bật máy ảnh của máy tính.';
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          msg = 'Quyền Camera đang bị chặn. Hãy bấm vào biểu tượng 🔒 hoặc 📷 trên thanh địa chỉ URL của trình duyệt và chọn "Cho phép" (Allow Camera), sau đó thử lại.';
+        } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+          msg = 'Không tìm thấy Webcam/Camera nào được kết nối với máy tính.';
+        } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+          msg = 'Máy ảnh đang được sử dụng bởi ứng dụng khác (Zoom, Meet, Camera app...). Hãy tắt ứng dụng đó rồi thử lại.';
+        }
+        setErrorMsg(msg);
+        setLoading(false);
+      }
+    };
+
+    startWebcam();
+
+    return () => {
+      active = false;
+      if (scanTimer) clearInterval(scanTimer);
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+      }
+    };
+  }, [retryCount]);
+
+  if (errorMsg) {
+    return (
+      <View style={styles.permissionBox}>
+        <Camera color="#EF4444" size={56} style={{ marginBottom: 16 }} />
+        <Text style={[styles.permissionText, { color: '#FCA5A5' }]}>{errorMsg}</Text>
+        <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap', justifyContent: 'center', marginTop: 12 }}>
+          <TouchableOpacity
+            onPress={() => setRetryCount((c) => c + 1)}
+            style={[styles.permissionBtn, { backgroundColor: '#2563EB' }]}
+          >
+            <Text style={styles.permissionBtnText}>🔄 Thử bật lại Camera</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={onPhotoCapture}
+            style={[styles.permissionBtn, { backgroundColor: '#10B981' }]}
+          >
+            <Text style={styles.permissionBtnText}>📷 Chụp ảnh / Tải ảnh QR</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <View style={StyleSheet.absoluteFill}>
+      {React.createElement('video', {
+        ref: videoRef,
+        autoPlay: true,
+        playsInline: true,
+        muted: true,
+        style: {
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          backgroundColor: '#000',
+        },
+      })}
+      {loading && (
+        <View style={[StyleSheet.absoluteFill, { justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.7)' }]}>
+          <ActivityIndicator color="#3B82F6" size="large" />
+          <Text style={{ color: '#94A3B8', marginTop: 12, fontSize: 13 }}>Đang khởi động máy ảnh...</Text>
+        </View>
+      )}
+      <View style={styles.overlay}>
+        <View style={styles.targetFrame}>
+          <View style={[styles.corner, styles.topLeft]} />
+          <View style={[styles.corner, styles.topRight]} />
+          <View style={[styles.corner, styles.bottomLeft]} />
+          <View style={[styles.corner, styles.bottomRight]} />
+          <View style={styles.laserLine} />
+        </View>
+      </View>
+    </View>
+  );
+};
 
 export const ScannerModal: React.FC<ScannerModalProps> = ({
   visible,
@@ -30,6 +199,7 @@ export const ScannerModal: React.FC<ScannerModalProps> = ({
   title = 'Quét mã QR / Barcode',
   subtitle = 'Hướng camera về phía mã QR trên thiết bị',
   continuousModeDefault = true,
+  pendingCodes = [],
 }) => {
   const [permission, requestPermission] = useCameraPermissions();
   const [torch, setTorch] = useState<boolean>(false);
@@ -104,6 +274,45 @@ export const ScannerModal: React.FC<ScannerModalProps> = ({
     setManualCode('');
   };
 
+  const handlePhotoCapture = () => {
+    if (typeof document !== 'undefined') {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.setAttribute('capture', 'environment');
+      input.onchange = async (e: any) => {
+        const file = e.target?.files?.[0];
+        if (!file) return;
+
+        if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
+          try {
+            const barcodeDetector = new (window as any).BarcodeDetector({
+              formats: ['qr_code', 'code_128', 'code_39', 'ean_13'],
+            });
+            const bitmap = await createImageBitmap(file);
+            const barcodes = await barcodeDetector.detect(bitmap);
+            if (barcodes && barcodes.length > 0 && barcodes[0].rawValue) {
+              await handleBarcodeScanned({ data: barcodes[0].rawValue });
+              return;
+            }
+          } catch (err) {
+            console.warn('BarcodeDetector error:', err);
+          }
+        }
+
+        const nameWithoutExt = file.name.replace(/\.[^/.]+$/, '');
+        const promptCode = window.prompt(
+          'Đã chọn/chụp ảnh. Nhập mã QR hoặc số Serial hiển thị trên ảnh:',
+          nameWithoutExt.length > 2 && !nameWithoutExt.startsWith('image') ? nameWithoutExt : ''
+        );
+        if (promptCode && promptCode.trim()) {
+          await handleBarcodeScanned({ data: promptCode.trim() });
+        }
+      };
+      input.click();
+    }
+  };
+
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
       <SafeAreaView style={styles.container}>
@@ -116,23 +325,44 @@ export const ScannerModal: React.FC<ScannerModalProps> = ({
             <Text style={styles.headerTitle}>{title}</Text>
             <Text style={styles.headerSubtitle}>{subtitle}</Text>
           </View>
-          <TouchableOpacity
-            onPress={() => setTorch((prev) => !prev)}
-            style={[styles.iconBtn, torch && styles.iconBtnActive]}
-          >
-            <Flashlight color={torch ? '#F59E0B' : '#fff'} size={22} />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <TouchableOpacity
+              onPress={handlePhotoCapture}
+              style={[styles.iconBtn, { backgroundColor: '#10B981' }]}
+            >
+              <Camera color="#fff" size={20} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setTorch((prev) => !prev)}
+              style={[styles.iconBtn, torch && styles.iconBtnActive]}
+            >
+              <Flashlight color={torch ? '#F59E0B' : '#fff'} size={22} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Camera Viewfinder */}
         <View style={styles.cameraContainer}>
-          {!permission?.granted ? (
+          {Platform.OS === 'web' ? (
+            <WebCameraView
+              onBarcodeScanned={handleBarcodeScanned}
+              isProcessing={isProcessing}
+              onPhotoCapture={handlePhotoCapture}
+            />
+          ) : !permission?.granted ? (
             <View style={styles.permissionBox}>
               <Camera color="#94A3B8" size={56} style={{ marginBottom: 16 }} />
-              <Text style={styles.permissionText}>Ứng dụng cần quyền Camera để quét mã QR thiết bị</Text>
-              <TouchableOpacity onPress={requestPermission} style={styles.permissionBtn}>
-                <Text style={styles.permissionBtnText}>Cấp quyền Camera</Text>
-              </TouchableOpacity>
+              <Text style={styles.permissionText}>
+                Ứng dụng cần quyền Camera để quét mã QR thiết bị
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+                <TouchableOpacity onPress={requestPermission} style={styles.permissionBtn}>
+                  <Text style={styles.permissionBtnText}>Cấp quyền Camera</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handlePhotoCapture} style={[styles.permissionBtn, { backgroundColor: '#10B981' }]}>
+                  <Text style={styles.permissionBtnText}>📷 Chụp ảnh / Tải ảnh QR</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           ) : (
             <CameraView
@@ -177,7 +407,26 @@ export const ScannerModal: React.FC<ScannerModalProps> = ({
 
         {/* Bottom Control Bar */}
         <View style={styles.bottomControls}>
-          {/* Continuous mode toggle */}
+          {/* Quick pick pending codes if available */}
+          {pendingCodes && pendingCodes.length > 0 && (
+            <View style={styles.quickPickContainer}>
+              <Text style={styles.quickPickTitle}>Mã trong đợt (chạm để quét nhanh):</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.quickPickScroll}>
+                {pendingCodes.slice(0, 25).map((code) => (
+                  <TouchableOpacity
+                    key={code}
+                    style={styles.quickPickChip}
+                    onPress={() => handleBarcodeScanned({ data: code })}
+                    disabled={isProcessing}
+                  >
+                    <Text style={styles.quickPickChipText}>{code}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
+          {/* Continuous mode toggle and Photo capture row */}
           <View style={styles.modeRow}>
             <TouchableOpacity
               style={[styles.modeToggle, continuous && styles.modeToggleActive]}
@@ -187,6 +436,15 @@ export const ScannerModal: React.FC<ScannerModalProps> = ({
               <Text style={[styles.modeToggleText, continuous && styles.modeToggleTextActive]}>
                 Quét liên tục: {continuous ? 'BẬT' : 'TẮT'}
               </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.photoActionBtn}
+              onPress={handlePhotoCapture}
+              disabled={isProcessing}
+            >
+              <Camera color="#10B981" size={16} />
+              <Text style={styles.photoActionBtnText}>Chụp / Chọn ảnh</Text>
             </TouchableOpacity>
           </View>
 
@@ -440,6 +698,51 @@ const styles = StyleSheet.create({
   manualBtnText: {
     color: '#fff',
     fontSize: 14,
+    fontWeight: '700',
+  },
+  photoActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#064E3B',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#059669',
+    marginLeft: 10,
+  },
+  photoActionBtnText: {
+    color: '#34D399',
+    fontSize: 13,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  quickPickContainer: {
+    marginBottom: 10,
+  },
+  quickPickTitle: {
+    color: '#94A3B8',
+    fontSize: 11,
+    fontWeight: '600',
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  quickPickScroll: {
+    flexDirection: 'row',
+  },
+  quickPickChip: {
+    backgroundColor: '#1E293B',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  quickPickChipText: {
+    color: '#38BDF8',
+    fontSize: 12,
     fontWeight: '700',
   },
 });

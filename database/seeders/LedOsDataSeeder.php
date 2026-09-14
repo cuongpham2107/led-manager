@@ -15,6 +15,7 @@ use App\Enums\QuotationStatus;
 use App\Enums\RepairResultStatus;
 use App\Enums\ReturnBatchStatus;
 use App\Enums\ReturnGrade;
+use App\Models\Agency;
 use App\Models\Asset;
 use App\Models\AssetStatusLog;
 use App\Models\CheckinBatch;
@@ -71,6 +72,8 @@ class LedOsDataSeeder extends Seeder
         $techRole = Role::firstOrCreate(['name' => 'technician', 'guard_name' => 'web']);
         $accountantRole = Role::firstOrCreate(['name' => 'accountant', 'guard_name' => 'web']);
         $adminRole = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
+        $agencyManagerRole = Role::firstOrCreate(['name' => 'agency_manager', 'guard_name' => 'web']);
+        $agencyStaffRole = Role::firstOrCreate(['name' => 'agency_staff', 'guard_name' => 'web']);
 
         // Sync Shield Permissions if permissions exist
         if (Permission::count() > 0) {
@@ -156,6 +159,25 @@ class LedOsDataSeeder extends Seeder
                     ->orWhere('name', 'like', 'View%:MonthlyRevenueChart%');
             })->get();
             $accountantRole->syncPermissions($accountantPermissions);
+
+            $agencyPermissions = Permission::where(function ($q) {
+                $q->where('name', 'like', '%:Order%')
+                    ->orWhere('name', 'like', '%:Customer%')
+                    ->orWhere('name', 'like', 'View%:Asset%')
+                    ->orWhere('name', 'like', 'View%:Warehouse%')
+                    ->orWhere('name', 'like', 'View%:ProductLine%')
+                    ->orWhere('name', 'like', 'View%:PricingRule%')
+                    ->orWhere('name', 'like', 'View%:Dashboard%')
+                    ->orWhere('name', 'like', 'View%:EventCalendar%')
+                    ->orWhere('name', 'like', 'View%:AgencyRevenueReport%')
+                    ->orWhere('name', 'like', 'View%:StatsOverview%')
+                    ->orWhere('name', 'like', 'View%:LatestOrders%');
+            })->whereNotIn('name', [
+                'ForceDelete:Order', 'ForceDeleteAny:Order',
+                'ForceDelete:Customer', 'ForceDeleteAny:Customer',
+            ])->get();
+            $agencyManagerRole->syncPermissions($agencyPermissions);
+            $agencyStaffRole->syncPermissions($agencyPermissions);
         }
 
         // 2. Warehouses (4 major hubs)
@@ -185,6 +207,53 @@ class LedOsDataSeeder extends Seeder
             'address' => '88 30 Tháng 4, Ninh Kiều, Cần Thơ',
             'phone' => '0292 3555 789',
             'is_active' => true,
+        ]);
+
+        $whHp = Warehouse::updateOrCreate(['code' => 'WH-HP'], [
+            'name' => 'Kho Hải Phòng',
+            'address' => 'Số 15 Lê Hồng Phong, Ngô Quyền, Hải Phòng',
+            'phone' => '0225 3888 999',
+            'is_active' => true,
+        ]);
+
+        // 2.0 Agencies (Đại lý tỉnh: 1000m2, ăn theo %)
+        $agencyHp = Agency::updateOrCreate(['code' => 'DL-HP'], [
+            'name' => 'Đại lý Hải Phòng',
+            'province' => 'Hải Phòng',
+            'contact_person' => 'Trần Văn Hoàng',
+            'phone' => '0904 123 456',
+            'address' => 'Số 15 Lê Hồng Phong, Ngô Quyền, Hải Phòng',
+            'commission_rate' => 15.00,
+            'allocated_area_m2' => 1000.00,
+            'warehouse_id' => $whHp->id,
+            'is_active' => true,
+            'note' => 'Đại lý chiến lược Đông Bắc Bộ, định mức 1.000m2 LED, hoa hồng 15%',
+        ]);
+
+        $agencyDn = Agency::updateOrCreate(['code' => 'DL-DN'], [
+            'name' => 'Đại lý Đà Nẵng',
+            'province' => 'Đà Nẵng',
+            'contact_person' => 'Lê Thanh Sơn',
+            'phone' => '0913 234 567',
+            'address' => '120 Nguyễn Văn Linh, Hải Châu, Đà Nẵng',
+            'commission_rate' => 12.00,
+            'allocated_area_m2' => 1000.00,
+            'warehouse_id' => $whDn->id,
+            'is_active' => true,
+            'note' => 'Đại lý miền Trung, định mức 1.000m2 LED, hoa hồng 12%',
+        ]);
+
+        $agencyCt = Agency::updateOrCreate(['code' => 'DL-CT'], [
+            'name' => 'Đại lý Cần Thơ',
+            'province' => 'Cần Thơ',
+            'contact_person' => 'Phạm Minh Tuấn',
+            'phone' => '0939 345 678',
+            'address' => '88 30 Tháng 4, Ninh Kiều, Cần Thơ',
+            'commission_rate' => 10.00,
+            'allocated_area_m2' => 1000.00,
+            'warehouse_id' => $whCt->id,
+            'is_active' => true,
+            'note' => 'Đại lý Tây Nam Bộ, định mức 1.000m2 LED, hoa hồng 10%',
         ]);
 
         // 2.1 Warehouse Locations (Vị trí kho)
@@ -259,6 +328,12 @@ class LedOsDataSeeder extends Seeder
         $locCt2 = WarehouseLocation::updateOrCreate(['warehouse_id' => $whCt->id, 'code' => 'CT-K2'], [
             'name' => 'Khu 2 - Kệ phụ kiện & Case',
             'description' => 'Flight case và cáp kết nối chi nhánh Cần Thơ',
+            'is_active' => true,
+        ]);
+
+        $locHp1 = WarehouseLocation::updateOrCreate(['warehouse_id' => $whHp->id, 'code' => 'HP-K1'], [
+            'name' => 'Khu 1 - Kho thiết bị đại lý Hải Phòng',
+            'description' => 'Màn hình LED P3.9 và P2.6 phục vụ đại lý Hải Phòng',
             'is_active' => true,
         ]);
 
@@ -362,11 +437,33 @@ class LedOsDataSeeder extends Seeder
         ]);
         $accountantUser->syncRoles([$accountantRole]);
 
+        $agencyManagerHp = User::updateOrCreate(['email' => 'daily.haiphong@ledmanager.com'], [
+            'name' => 'Trần Văn Hoàng (Đại lý HP)',
+            'password' => Hash::make('password'),
+            'phone' => '0904 123 456',
+            'warehouse_id' => $whHp->id,
+            'agency_id' => $agencyHp->id,
+            'is_active' => true,
+        ]);
+        $agencyManagerHp->syncRoles([$agencyManagerRole]);
+
+        $agencyManagerDn = User::updateOrCreate(['email' => 'daily.danang@ledmanager.com'], [
+            'name' => 'Lê Thanh Sơn (Đại lý ĐN)',
+            'password' => Hash::make('password'),
+            'phone' => '0913 234 567',
+            'warehouse_id' => $whDn->id,
+            'agency_id' => $agencyDn->id,
+            'is_active' => true,
+        ]);
+        $agencyManagerDn->syncRoles([$agencyManagerRole]);
+
         // Link accounts to admin for quick switching without password
         $admin->linkAccount($sales1, label: 'Sales Executive (Trần Minh Tuấn)', requiresPassword: false);
         $admin->linkAccount($whStaff1, label: 'Kho Hà Nội (Lê Hoàng Nam)', requiresPassword: false);
         $admin->linkAccount($techUser1, label: 'Kỹ thuật viên (Vũ Đình Trọng)', requiresPassword: false);
         $admin->linkAccount($accountantUser, label: 'Kế toán (Nguyễn Thị Mai)', requiresPassword: false);
+        $admin->linkAccount($agencyManagerHp, label: 'Đại lý Hải Phòng (Trần Văn Hoàng)', requiresPassword: false);
+        $admin->linkAccount($agencyManagerDn, label: 'Đại lý Đà Nẵng (Lê Thanh Sơn)', requiresPassword: false);
 
         // 4. Product Lines (P1.5, P2.6, P2.9, P3.9, P4.8)
         $plP15 = ProductLine::updateOrCreate(['code' => 'P1.5'], [
@@ -533,7 +630,10 @@ class LedOsDataSeeder extends Seeder
                 'customer_type' => $pr['customer_type'],
                 'min_days' => $pr['min_days'],
             ], [
+                'name' => 'Bảng giá chuẩn 2026',
                 'base_price_per_unit_per_day' => $pr['base_price_per_unit_per_day'],
+                'effective_from' => '2026-01-01',
+                'effective_to' => '2026-12-31',
                 'max_days' => $pr['max_days'],
                 'discount_percent' => $pr['discount_percent'],
                 'crew_rate_per_person_per_day' => 1600000,
@@ -542,6 +642,19 @@ class LedOsDataSeeder extends Seeder
                 'is_active' => true,
             ]);
         }
+
+        // Bảng giá riêng cho Đại lý Hải Phòng
+        PricingRule::updateOrCreate([
+            'product_line_id' => $plP26->id,
+            'agency_id' => $agencyHp->id,
+            'min_days' => 1,
+        ], [
+            'name' => 'Bảng giá riêng Đại lý Hải Phòng',
+            'base_price_per_unit_per_day' => 320000,
+            'effective_from' => '2026-01-01',
+            'effective_to' => '2026-12-31',
+            'is_active' => true,
+        ]);
 
         // 6. Customers (12 realistic accounts across Vietnam)
         $customersData = [
@@ -988,6 +1101,23 @@ class LedOsDataSeeder extends Seeder
             $assets->push($asset);
         }
 
+        // 7.5 Kho Hải Phòng (WH-HP) assets - Bàn giao đại lý Hải Phòng
+        for ($i = 1; $i <= 60; $i++) {
+            $serial = 'GL-P39-HP-'.str_pad((string) $i, 3, '0', STR_PAD_LEFT);
+            $asset = Asset::updateOrCreate(['serial_no' => $serial], [
+                'qr_code' => 'QR-'.$serial,
+                'product_line_id' => $plP39->id,
+                'size' => '0.5×1.0 m',
+                'manufactured_date' => '2026-01-10',
+                'purchase_cost' => 11000000,
+                'purchase_date' => '2026-01-20',
+                'current_status' => AssetStatus::Ready,
+                'current_warehouse_id' => $whHp->id,
+                'warehouse_location_id' => $locHp1->id,
+            ]);
+            $assets->push($asset);
+        }
+
         // 8. Quotations and BOM Generation
         $calcService = app(LedCalculationService::class);
 
@@ -1409,6 +1539,7 @@ class LedOsDataSeeder extends Seeder
         // 9.3 Order 3: Sun Group DIFF Đà Nẵng (WH-DN) -> Confirmed / OutboundCreated
         $order3 = Order::updateOrCreate(['order_no' => 'ORD-2608-03'], [
             'warehouse_id' => $whDn->id,
+            'agency_id' => $agencyDn->id,
             'customer_id' => $customers[6]->id,
             'quotation_id' => $quotation3->id,
             'request_date' => now()->addDays(10)->toDateString(),
@@ -1495,6 +1626,64 @@ class LedOsDataSeeder extends Seeder
             'note' => 'Đơn hàng mới tạo từ báo giá đã duyệt',
         ]);
         $quotation6->update(['converted_order_id' => $order6->id]);
+
+        // 9.7 Order DL-HP-01: Vincom Plaza Hải Phòng (WH-HP / Agency Hải Phòng) -> Direct Agency Order without quotation
+        $orderHp1 = Order::updateOrCreate(['order_no' => 'ORD-DL-HP-01'], [
+            'warehouse_id' => $whHp->id,
+            'agency_id' => $agencyHp->id,
+            'customer_id' => $customers[0]->id,
+            'quotation_id' => null,
+            'request_date' => now()->subDays(3)->toDateString(),
+            'expected_return_date' => now()->addDays(2)->toDateString(),
+            'area_m2' => 25.0,
+            'event' => 'Khai Trương Vincom Plaza Lê Thánh Tông Hải Phòng',
+            'product_line_id' => $plP39->id,
+            'value' => 45000000,
+            'deposit_paid' => 45000000,
+            'total_paid' => 45000000,
+            'paid_at' => now()->subDays(3),
+            'status' => OrderStatus::Dispatched,
+            'sales_user_id' => $agencyManagerHp->id,
+            'note' => 'Đơn hàng đại lý tạo trực tiếp theo bảng giá ngày (không cần báo giá/hợp đồng)',
+        ]);
+
+        OrderItem::updateOrCreate([
+            'order_id' => $orderHp1->id,
+            'product_line_id' => $plP39->id,
+            'note' => 'Màn hình LED ngoài trời P3.9 (25m2 = 100 Cabinet)',
+        ], [
+            'quantity_required' => 100,
+            'unit_price' => 450000,
+        ]);
+
+        // 9.8 Order DL-HP-02: Khách sạn Pearl River Hải Phòng -> Cọc 50%
+        $orderHp2 = Order::updateOrCreate(['order_no' => 'ORD-DL-HP-02'], [
+            'warehouse_id' => $whHp->id,
+            'agency_id' => $agencyHp->id,
+            'customer_id' => $customers[1]->id,
+            'quotation_id' => null,
+            'request_date' => now()->addDays(4)->toDateString(),
+            'expected_return_date' => now()->addDays(6)->toDateString(),
+            'area_m2' => 30.0,
+            'event' => 'Hội Nghị Khách Hàng Thép Việt Ý - Pearl River',
+            'product_line_id' => $plP26->id,
+            'value' => 60000000,
+            'deposit_paid' => 30000000,
+            'total_paid' => 30000000,
+            'paid_at' => now()->subDays(1),
+            'status' => OrderStatus::OutboundCreated,
+            'sales_user_id' => $agencyManagerHp->id,
+            'note' => 'Khách đã cọc 50%, hoa hồng đại lý tính trên 30tr thực thu',
+        ]);
+
+        OrderItem::updateOrCreate([
+            'order_id' => $orderHp2->id,
+            'product_line_id' => $plP26->id,
+            'note' => 'Màn hình LED trong nhà P2.6 (30m2 = 120 Cabinet)',
+        ], [
+            'quantity_required' => 120,
+            'unit_price' => 500000,
+        ]);
 
         // 10. Checkin Batches (Nhập kho hàng mới nhập từ hãng)
         $inBatch1 = CheckinBatch::updateOrCreate(['code' => 'IN-2608-01'], [

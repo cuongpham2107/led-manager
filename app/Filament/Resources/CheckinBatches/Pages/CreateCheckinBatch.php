@@ -6,7 +6,6 @@ use App\Enums\BatchStatus;
 use App\Enums\CheckinBatchType;
 use App\Filament\Resources\CheckinBatches\Actions\ImportCheckinBatchItemsAction;
 use App\Filament\Resources\CheckinBatches\CheckinBatchResource;
-use App\Models\Asset;
 use App\Models\CheckinBatch;
 use App\Models\CheckinBatchItem;
 use Filament\Resources\Pages\CreateRecord;
@@ -38,7 +37,7 @@ class CreateCheckinBatch extends CreateRecord
 
     protected function getRedirectUrl(): string
     {
-        return static::getResource()::getUrl('edit', ['record' => $this->getRecord()]);
+        return static::getResource()::getUrl('index');
     }
 
     protected function handleRecordCreation(array $data): Model
@@ -61,20 +60,14 @@ class CreateCheckinBatch extends CreateRecord
             $batch = CheckinBatch::create($data);
 
             foreach ($assetIds as $assetId) {
-                // Thêm vào đợt ở dạng CHỜ NHẬN để quét nhận trên app di động.
+                // Thêm vào đợt ở dạng CHỜ NHẬN để quét nhận trên app di động hoặc nhận trên web.
                 CheckinBatchItem::create([
                     'checkin_batch_id' => $batch->id,
                     'asset_id' => $assetId,
-                    'condition' => 'ok',
+                    'condition' => null,
                     'is_received' => false,
                     'received_at' => null,
                     'received_by' => null,
-                ]);
-            }
-
-            if ($assetIds->isNotEmpty()) {
-                Asset::whereIn('id', $assetIds)->update([
-                    'current_warehouse_id' => $data['warehouse_id'],
                 ]);
             }
 

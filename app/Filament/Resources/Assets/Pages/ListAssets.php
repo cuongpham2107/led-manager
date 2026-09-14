@@ -6,8 +6,6 @@ use App\Enums\AssetStatus;
 use App\Filament\Resources\Assets\AssetResource;
 use App\Models\Asset;
 use App\Models\ProductLine;
-use App\Models\Warehouse;
-use App\Models\WarehouseLocation;
 use Carbon\Carbon;
 use DateTimeInterface;
 use Filament\Actions\Action;
@@ -62,7 +60,7 @@ class ListAssets extends ListRecords
                 ->modalSubmitActionLabel('Lưu & Nhập vào hệ thống')
                 ->modalWidth(Width::SevenExtraLarge)
                 ->form([
-                    Grid::make(3)
+                    Grid::make(2)
                         ->schema([
                             Select::make('default_product_line_id')
                                 ->label('Dòng sản phẩm (Gợi ý / Mặc định)')
@@ -72,39 +70,11 @@ class ListAssets extends ListRecords
                                 ->placeholder('Chọn dòng sản phẩm...')
                                 ->helperText('Áp dụng tự động nếu ô "Dòng sản phẩm" để trống'),
 
-                            Select::make('default_warehouse_id')
-                                ->label('Kho lưu trữ (Gợi ý / Mặc định)')
-                                ->options(fn () => Warehouse::where('is_active', true)->pluck('name', 'id'))
-                                ->default(fn () => auth()->user()?->getScopedWarehouseId())
-                                ->disabled(fn () => (bool) auth()->user()?->getScopedWarehouseId())
-                                ->dehydrated()
-                                ->searchable()
-                                ->preload()
-                                ->live()
-                                ->afterStateUpdated(fn (callable $set) => $set('default_warehouse_location_id', null))
-                                ->placeholder('Chọn kho lưu trữ...')
-                                ->helperText('Áp dụng tự động nếu ô "Kho lưu trữ" để trống'),
-
-                            Select::make('default_warehouse_location_id')
-                                ->label('Vị trí kho (Gợi ý / Mặc định)')
-                                ->options(function (callable $get) {
-                                    $whId = $get('default_warehouse_id') ?: auth()->user()?->getScopedWarehouseId();
-                                    if (! $whId) {
-                                        return [];
-                                    }
-
-                                    return WarehouseLocation::where('warehouse_id', $whId)->pluck('name', 'id');
-                                })
-                                ->searchable()
-                                ->preload()
-                                ->placeholder('Chọn vị trí...')
-                                ->helperText('Áp dụng tự động nếu ô "Vị trí" để trống'),
+                            Toggle::make('update_existing')
+                                ->label('Cập nhật nếu số Seri đã tồn tại trong hệ thống')
+                                ->default(true)
+                                ->helperText('Nếu bật, thiết bị trùng số Seri sẽ được cập nhật thông tin mới. Nếu tắt, dòng đó sẽ được bỏ qua.'),
                         ]),
-
-                    Toggle::make('update_existing')
-                        ->label('Cập nhật nếu số Seri đã tồn tại trong hệ thống')
-                        ->default(true)
-                        ->helperText('Nếu bật, thiết bị trùng số Seri sẽ được cập nhật thông tin mới. Nếu tắt, dòng đó sẽ được bỏ qua.'),
 
                     SpreadsheetField::make('sheet_data')
                         ->label('Bảng tính nhập liệu')
@@ -129,7 +99,14 @@ class ListAssets extends ListRecords
             CreateAction::make()
                 ->label('+ Thêm tài sản')
                 ->modalHeading('Thêm tài sản LED mới')
-                ->modalWidth(Width::FourExtraLarge),
+                ->modalWidth(Width::FourExtraLarge)
+                ->mutateFormDataUsing(function (array $data): array {
+                    $data['current_status'] = AssetStatus::NewlyAdded;
+                    $data['current_warehouse_id'] = null;
+                    $data['warehouse_location_id'] = null;
+
+                    return $data;
+                }),
         ];
     }
 
@@ -138,25 +115,13 @@ class ListAssets extends ListRecords
         $headers = [
             'Số Seri',
             'Dòng sản phẩm',
-            'Kho lưu trữ',
-            'Vị trí',
             'Kích thước',
-            'Ngày sản xuất',
-            'Ngày mua',
-            'Nguyên giá',
-            'Ghi chú',
         ];
 
         $sampleRow = [
             'P26-HN-SAMPLE01',
             'P2.6 Sự kiện',
-            'Kho Hà Nội',
-            'HN-K1',
             '500×500 mm',
-            '01/01/2026',
-            '15/01/2026',
-            3500000,
-            'Xem tab "Danh mục tham khảo" để copy tên Dòng SP / Kho',
         ];
 
         $cellData = [];
@@ -180,40 +145,24 @@ class ListAssets extends ListRecords
             ];
         }
 
-        // Build reference sheet data (Dòng sản phẩm, Kho, Mã kho, Vị trí)
+        // Build reference sheet data (Dòng sản phẩm)
         $productLines = ProductLine::where('is_active', true)->get();
-        $warehouses = Warehouse::where('is_active', true)->get();
-        $locations = WarehouseLocation::with('warehouse')->where('is_active', true)->get();
 
         $refHeaders = [
             0 => ['v' => 'Dòng sản phẩm (Tên)', 's' => ['bl' => 1, 'bg' => ['rgb' => '#DBEAFE'], 'fs' => 11]],
             1 => ['v' => 'Mã dòng SP', 's' => ['bl' => 1, 'bg' => ['rgb' => '#DBEAFE'], 'fs' => 11]],
-            2 => ['v' => 'Kho lưu trữ (Tên)', 's' => ['bl' => 1, 'bg' => ['rgb' => '#DCFCE7'], 'fs' => 11]],
-            3 => ['v' => 'Mã kho', 's' => ['bl' => 1, 'bg' => ['rgb' => '#DCFCE7'], 'fs' => 11]],
-            4 => ['v' => 'Vị trí kho', 's' => ['bl' => 1, 'bg' => ['rgb' => '#FEF3C7'], 'fs' => 11]],
-            5 => ['v' => 'Thuộc kho', 's' => ['bl' => 1, 'bg' => ['rgb' => '#FEF3C7'], 'fs' => 11]],
         ];
 
         $refCellData = [0 => $refHeaders];
-        $maxRefRows = max($productLines->count(), $warehouses->count(), $locations->count(), 1);
+        $maxRefRows = max($productLines->count(), 1);
 
         for ($r = 0; $r < $maxRefRows; $r++) {
             $rowIdx = $r + 1;
             $pl = $productLines->get($r);
-            $wh = $warehouses->get($r);
-            $loc = $locations->get($r);
 
             if ($pl) {
                 $refCellData[$rowIdx][0] = ['v' => $pl->name, 's' => ['fs' => 11]];
                 $refCellData[$rowIdx][1] = ['v' => $pl->code ?? '', 's' => ['fs' => 11]];
-            }
-            if ($wh) {
-                $refCellData[$rowIdx][2] = ['v' => $wh->name, 's' => ['fs' => 11]];
-                $refCellData[$rowIdx][3] = ['v' => $wh->code ?? '', 's' => ['fs' => 11]];
-            }
-            if ($loc) {
-                $refCellData[$rowIdx][4] = ['v' => $loc->name, 's' => ['fs' => 11]];
-                $refCellData[$rowIdx][5] = ['v' => $loc->warehouse?->name ?? '', 's' => ['fs' => 11]];
             }
         }
 
@@ -227,33 +176,23 @@ class ListAssets extends ListRecords
                     'id' => 'sheet-led-01',
                     'name' => 'Nhập tài sản LED',
                     'rowCount' => 100,
-                    'columnCount' => 10,
+                    'columnCount' => 3,
                     'cellData' => $cellData,
                     'columnData' => [
-                        0 => ['w' => 160],
-                        1 => ['w' => 160],
-                        2 => ['w' => 140],
-                        3 => ['w' => 120],
-                        4 => ['w' => 120],
-                        5 => ['w' => 120],
-                        6 => ['w' => 120],
-                        7 => ['w' => 130],
-                        8 => ['w' => 240],
+                        0 => ['w' => 180],
+                        1 => ['w' => 200],
+                        2 => ['w' => 160],
                     ],
                 ],
                 'sheet-ref-01' => [
                     'id' => 'sheet-ref-01',
                     'name' => 'Danh mục tham khảo',
                     'rowCount' => max(50, $maxRefRows + 10),
-                    'columnCount' => 8,
+                    'columnCount' => 2,
                     'cellData' => $refCellData,
                     'columnData' => [
-                        0 => ['w' => 200],
-                        1 => ['w' => 120],
-                        2 => ['w' => 180],
-                        3 => ['w' => 100],
-                        4 => ['w' => 150],
-                        5 => ['w' => 150],
+                        0 => ['w' => 220],
+                        1 => ['w' => 140],
                     ],
                 ],
             ],
@@ -445,11 +384,7 @@ class ListAssets extends ListRecords
         }
 
         $productLines = ProductLine::all();
-        $warehouses = Warehouse::with('locations')->get();
-        $userWarehouseId = auth()->user()?->getScopedWarehouseId();
-        $defaultWarehouseId = $userWarehouseId ?: ($data['default_warehouse_id'] ?? null);
         $defaultProductLineId = $data['default_product_line_id'] ?? null;
-        $defaultLocationId = $data['default_warehouse_location_id'] ?? null;
         $updateExisting = (bool) ($data['update_existing'] ?? true);
 
         $createdCount = 0;
@@ -483,39 +418,6 @@ class ListAssets extends ListRecords
                     $productLineId = $productLines->first()->id;
                 }
 
-                // Match warehouse
-                $warehouseId = $defaultWarehouseId;
-                if (! $userWarehouseId && isset($columnMap['warehouse']) && ! empty(trim((string) ($row[$columnMap['warehouse']] ?? '')))) {
-                    $val = trim((string) $row[$columnMap['warehouse']]);
-                    $matchedWh = $warehouses->first(function ($wh) use ($val) {
-                        return mb_strtolower($wh->name, 'UTF-8') === mb_strtolower($val, 'UTF-8')
-                            || mb_strtolower($wh->code ?? '', 'UTF-8') === mb_strtolower($val, 'UTF-8');
-                    });
-                    if ($matchedWh) {
-                        $warehouseId = $matchedWh->id;
-                    }
-                }
-
-                // Match location in warehouse
-                $locationId = null;
-                if ($warehouseId) {
-                    $currentWh = $warehouses->firstWhere('id', $warehouseId);
-                    if ($currentWh && isset($columnMap['location']) && ! empty(trim((string) ($row[$columnMap['location']] ?? '')))) {
-                        $locVal = trim((string) $row[$columnMap['location']]);
-                        $matchedLoc = $currentWh->locations->first(function ($loc) use ($locVal) {
-                            return mb_strtolower($loc->name, 'UTF-8') === mb_strtolower($locVal, 'UTF-8')
-                                || mb_strtolower($loc->code ?? '', 'UTF-8') === mb_strtolower($locVal, 'UTF-8');
-                        });
-                        if ($matchedLoc) {
-                            $locationId = $matchedLoc->id;
-                        }
-                    }
-
-                    if (! $locationId && $defaultLocationId) {
-                        $locationId = $defaultLocationId;
-                    }
-                }
-
                 $size = isset($columnMap['size']) ? trim((string) ($row[$columnMap['size']] ?? '')) : '';
                 if ($size === '') {
                     $pl = $productLines->firstWhere('id', $productLineId);
@@ -523,10 +425,6 @@ class ListAssets extends ListRecords
                         ? "{$pl->module_width_mm}×{$pl->module_height_mm} mm"
                         : '500×500 mm';
                 }
-
-                $status = isset($columnMap['status'])
-                    ? $this->parseStatus($row[$columnMap['status']] ?? null)
-                    : ($existingAsset?->current_status ?? AssetStatus::Ready);
 
                 $mfgDate = isset($columnMap['manufactured_date'])
                     ? $this->parseDate($row[$columnMap['manufactured_date']] ?? null)
@@ -551,10 +449,7 @@ class ListAssets extends ListRecords
                     if ($updateExisting) {
                         $existingAsset->update(array_filter([
                             'product_line_id' => $productLineId,
-                            'current_warehouse_id' => $warehouseId,
-                            'warehouse_location_id' => $locationId ?: $existingAsset->warehouse_location_id,
                             'size' => $size,
-                            'current_status' => $status,
                             'manufactured_date' => $mfgDate ?: $existingAsset->manufactured_date,
                             'purchase_date' => $purDate ?: $existingAsset->purchase_date,
                             'purchase_cost' => $cost > 0 ? $cost : $existingAsset->purchase_cost,
@@ -578,9 +473,9 @@ class ListAssets extends ListRecords
                         'useful_life_months' => 36,
                         'depreciation_method' => 'straight_line',
                         'salvage_value' => 0,
-                        'current_status' => $status,
-                        'current_warehouse_id' => $warehouseId,
-                        'warehouse_location_id' => $locationId,
+                        'current_status' => AssetStatus::NewlyAdded,
+                        'current_warehouse_id' => null,
+                        'warehouse_location_id' => null,
                         'note' => $note,
                     ]);
                     $createdCount++;

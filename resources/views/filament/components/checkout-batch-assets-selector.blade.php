@@ -3,7 +3,7 @@
 @endphp
 
 <div
-    wire:key="checkout-assets-selector-{{ ($isEdit ?? false) ? 'edit-' . ($batchId ?? 0) : 'create' }}-{{ $warehouseId ?? 'all' }}-{{ $productLineId ?? 'all' }}"
+    wire:key="checkout-assets-selector-{{ ($isEdit ?? false) ? 'edit-' . ($batchId ?? 0) : 'create' }}-{{ $warehouseId ?? 'all' }}-{{ $productLineId ?? 'all' }}-{{ $requiredArea ?? 0 }}"
     x-data="{
         state: $wire.$entangle('{{ $statePath }}'),
         isEdit: {{ ($isEdit ?? false) ? 'true' : 'false' }},
@@ -23,6 +23,8 @@
         loading: false,
         loadingMore: false,
         totalWarehouse: 0,
+        insufficientStockWarning: false,
+        insufficientStockMessage: '',
 
         init() {
             if (!Array.isArray(this.state)) {
@@ -34,15 +36,21 @@
                 this.selectedAssetsMap[Number(a.id)] = a;
             }
 
+            this.$watch('state', () => {
+                this.checkStockSufficiency();
+            });
+
             if (this.isEdit) {
                 // Sửa đợt xuất: Chỉ hiển thị danh sách thiết bị trong đợt!
                 if (this.state.length === 0 && this.allAssets.length > 0) {
                     this.state = this.allAssets.map(a => Number(a.id));
                 }
                 this.assets = [...this.allAssets];
+                this.checkStockSufficiency();
             } else {
                 // Thêm mới: Tải danh sách từ kho (Lazy loading)
                 this.fetchWarehouseAssets(1, false);
+                this.checkStockSufficiency();
             }
         },
 
@@ -249,9 +257,10 @@
                 this.totalWarehouse = data.total || 0;
 
                 // Auto suggest for create mode if requiredArea is set
-                if (!this.isEdit && this.requiredArea > 0 && this.state.length === 0 && targetPage === 1) {
-                    this.autoSuggestByArea(this.requiredArea);
+                if (!this.isEdit && this.requiredArea > 0 && this.state.length === 0 && targetPage === 1 && !this.insufficientStockWarning) {
+                    await this.autoSuggestByArea(this.requiredArea);
                 }
+                this.checkStockSufficiency();
             } catch (err) {
                 console.error('Lỗi khi tải danh sách thiết bị kho:', err);
             } finally {
@@ -260,32 +269,105 @@
             }
         },
 
-        async autoSuggestByArea(area) {
-            if (area <= 0 || this.warehouseAssets.length === 0) return;
-
-            let accumulated = 0;
-            const suggestedIds = [];
-
-            for (const asset of this.warehouseAssets) {
-                const id = Number(asset.id);
-                suggestedIds.push(id);
-                this.selectedAssetsMap[id] = asset;
-                accumulated += (parseFloat(asset.area_m2) || 0.25);
-                if (accumulated >= area) {
-                    break;
+        checkStockSufficiency() {
+            if (this.requiredArea > 0) {
+                if (this.selectedArea < this.requiredArea) {
+                    this.insufficientStockWarning = true;
+                    if (this.selectedList.length === 0) {
+                        const totalArea = this.warehouseAssets.reduce((sum, a) => sum + (parseFloat(a.area_m2) || 0.25), 0);
+                        this.insufficientStockMessage = `Kho chỉ còn ${totalArea.toFixed(2)} m² khả dụng, không đủ ${this.requiredArea.toFixed(2)} m² theo yêu cầu. Không đủ điều kiện để xuất kho!`;
+                    } else {
+                        this.insufficientStockMessage = `Kho chỉ còn ${this.selectedArea.toFixed(2)} m² khả dụng, không đủ ${this.requiredArea.toFixed(2)} m² theo yêu cầu. Không đủ điều kiện để xuất kho!`;
+                    }
+                    this.toggleSubmitButtons(false);
+                } else {
+                    this.insufficientStockWarning = false;
+                    this.insufficientStockMessage = '';
+                    this.toggleSubmitButtons(true);
+                }
+            } else {
+                if (this.selectedList.length === 0 && !this.isEdit) {
+                    this.toggleSubmitButtons(false);
+                } else {
+                    this.insufficientStockWarning = false;
+                    this.insufficientStockMessage = '';
+                    this.toggleSubmitButtons(true);
                 }
             }
+        },
 
-            this.state = suggestedIds;
+        toggleSubmitButtons(enabled) {
+            const updateButtons = () => {
+                const modal = this.$el.closest('.fi-modal') || document.querySelector('.fi-modal') || document;
+                const submitButtons = modal.querySelectorAll('.fi-modal-footer-actions button[type=submit], .fi-modal-footer-actions button.fi-btn-color-primary');
+                submitButtons.forEach(btn => {
+                    btn.disabled = !enabled;
+                    if (!enabled) {
+                        btn.classList.add('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
+                        btn.setAttribute('title', 'Không đủ điều kiện để xuất kho (chưa đủ m² yêu cầu)');
+                    } else {
+                        btn.classList.remove('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
+                        btn.removeAttribute('title');
+                    }
+                });
+            };
 
-            if (accumulated < area && this.hasMore && !this.loading && !this.loadingMore) {
-                await this.fetchWarehouseAssets(this.page + 1, true);
-                this.autoSuggestByArea(area);
+            this.$nextTick(updateButtons);
+            setTimeout(updateButtons, 100);
+            setTimeout(updateButtons, 300);
+        },
+
+        async autoSuggestByArea(area) {
+            if (area <= 0) return;
+
+            while (true) {
+                let totalLoadedArea = 0;
+                let accumulated = 0;
+                const suggestedIds = [];
+
+                for (const asset of this.warehouseAssets) {
+                    const id = Number(asset.id);
+                    const aArea = (parseFloat(asset.area_m2) || 0.25);
+                    totalLoadedArea += aArea;
+
+                    if (accumulated < area) {
+                        suggestedIds.push(id);
+                        this.selectedAssetsMap[id] = asset;
+                        accumulated += aArea;
+                    }
+                }
+
+                if (accumulated >= area) {
+                    this.state = suggestedIds;
+                    this.checkStockSufficiency();
+                    return;
+                }
+
+                if (this.hasMore && !this.loading && !this.loadingMore) {
+                    await this.fetchWarehouseAssets(this.page + 1, true);
+                } else {
+                    this.state = [];
+                    this.checkStockSufficiency();
+                    return;
+                }
             }
         }
     }"
     class="space-y-3 relative z-0 font-sans"
 >
+    <!-- Insufficient Stock Alert Banner -->
+    <template x-if="insufficientStockWarning">
+        <div class="p-3.5 bg-danger-50 dark:bg-danger-950/50 border border-danger-300 dark:border-danger-700/80 rounded-xl flex items-start gap-3 text-danger-700 dark:text-danger-300 shadow-sm animate-pulse">
+            <svg class="w-5 h-5 flex-shrink-0 text-danger-600 dark:text-danger-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+            <div class="text-xs">
+                <p class="font-bold text-sm" x-text="insufficientStockMessage"></p>
+                <p class="text-danger-600/90 dark:text-danger-400/90 mt-1">Vui lòng kiểm tra lại số lượng hoặc nhập thêm tài sản vào kho trước khi xuất đợt này.</p>
+            </div>
+        </div>
+    </template>
+
     <!-- Header with labels, counters, and action buttons -->
     <div class="flex items-center justify-between gap-3 flex-wrap">
         <div>

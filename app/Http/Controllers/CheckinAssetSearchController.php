@@ -43,7 +43,14 @@ class CheckinAssetSearchController extends Controller
         }
 
         if (filled($status) && $status !== 'all') {
-            $query->where('current_status', $status);
+            if ($status === AssetStatus::NewlyAdded->value || $status === 'newly_added') {
+                $query->where(function ($q) {
+                    $q->where('current_status', AssetStatus::NewlyAdded)
+                        ->orWhereNull('current_warehouse_id');
+                });
+            } else {
+                $query->where('current_status', $status);
+            }
         }
 
         if (filled($warehouseId) && $warehouseId !== 'all') {

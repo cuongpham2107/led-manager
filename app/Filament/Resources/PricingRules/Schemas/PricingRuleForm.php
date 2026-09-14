@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\PricingRules\Schemas;
 
 use App\Enums\CustomerType;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -17,44 +18,73 @@ class PricingRuleForm
     {
         return $schema
             ->components([
-                Section::make('Cấu hình định giá')
+                Section::make('Cấu hình định giá theo Máy / Ngày & Thời điểm')
                     ->columnSpanFull()
                     ->schema([
-                        Grid::make(2)
+                        Grid::make(3)
+                            ->schema([
+                                TextInput::make('name')
+                                    ->label('Tên đợt / Bảng giá')
+                                    ->placeholder('VD: Bảng giá tiêu chuẩn 2026, Mùa cao điểm...')
+                                    ->maxLength(255)
+                                    ->columnSpan(2),
+                                Select::make('agency_id')
+                                    ->label('Đại lý áp dụng')
+                                    ->relationship('agency', 'name')
+                                    ->searchable()
+                                    ->preload()
+                                    ->placeholder('Toàn quốc (Mặc định)')
+                                    ->columnSpan(1),
+                            ]),
+                        Grid::make(4)
                             ->schema([
                                 Select::make('product_line_id')
-                                    ->label('Dòng LED')
+                                    ->label('Dòng máy / Thiết bị LED')
                                     ->relationship('productLine', 'name')
                                     ->searchable()
                                     ->preload()
-                                    ->required(),
-                                Select::make('customer_type')
-                                    ->label('Nhóm khách hàng')
-                                    ->options(CustomerType::class)
-                                    ->placeholder('Tất cả nhóm khách hàng'),
+                                    ->required()
+                                    ->columnSpan(2),
+                                DatePicker::make('effective_from')
+                                    ->label('Áp dụng từ ngày')
+                                    ->native(false)
+                                    ->default(now()->toDateString())
+                                    ->columnSpan(1),
+                                DatePicker::make('effective_to')
+                                    ->label('Áp dụng đến ngày')
+                                    ->native(false)
+                                    ->placeholder('Vô thời hạn')
+                                    ->columnSpan(1),
                             ]),
-                        Grid::make(3)
+                        Grid::make(4)
                             ->schema([
                                 TextInput::make('base_price_per_unit_per_day')
-                                    ->label('Đơn giá thuê / tấm / ngày')
+                                    ->label('Đơn giá thuê / máy (tấm) / ngày')
                                     ->required()
                                     ->mask(RawJs::make('$money($input)'))
                                     ->stripCharacters(',')
                                     ->numeric()
                                     ->suffix(' đ')
-                                    ->default(400000),
+                                    ->default(400000)
+                                    ->columnSpan(2),
                                 TextInput::make('min_days')
-                                    ->label('Từ ngày thuê thứ')
+                                    ->label('Từ ngày thứ')
                                     ->required()
                                     ->numeric()
-                                    ->default(1),
+                                    ->default(1)
+                                    ->columnSpan(1),
                                 TextInput::make('max_days')
-                                    ->label('Đến ngày thuê thứ')
+                                    ->label('Đến ngày thứ')
                                     ->numeric()
-                                    ->placeholder('Không giới hạn'),
+                                    ->placeholder('Không giới hạn')
+                                    ->columnSpan(1),
                             ]),
                         Grid::make(4)
                             ->schema([
+                                Select::make('customer_type')
+                                    ->label('Nhóm khách hàng')
+                                    ->options(CustomerType::class)
+                                    ->placeholder('Tất cả nhóm khách hàng'),
                                 TextInput::make('discount_percent')
                                     ->label('Chiết khấu (%)')
                                     ->numeric()
@@ -74,6 +104,9 @@ class PricingRuleForm
                                     ->numeric()
                                     ->suffix(' đ')
                                     ->default(28000),
+                            ]),
+                        Grid::make(2)
+                            ->schema([
                                 TextInput::make('accessory_rate_per_m2')
                                     ->label('Phụ kiện & vật tư / m²')
                                     ->mask(RawJs::make('$money($input)'))
@@ -81,10 +114,10 @@ class PricingRuleForm
                                     ->numeric()
                                     ->suffix(' đ')
                                     ->default(50000),
+                                Toggle::make('is_active')
+                                    ->label('Đang áp dụng hiệu lực')
+                                    ->default(true),
                             ]),
-                        Toggle::make('is_active')
-                            ->label('Đang áp dụng')
-                            ->default(true),
                     ]),
             ]);
     }

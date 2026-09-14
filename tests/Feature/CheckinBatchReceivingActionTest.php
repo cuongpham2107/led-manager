@@ -190,3 +190,39 @@ test('CheckinBatchResource query includes eager loaded counts and progress calcu
     expect($batchFromQuery->items_count)->toBe(2);
     expect($batchFromQuery->received_items_count)->toBe(1);
 });
+
+test('newly selected checkin items have null condition and unreceived status until received', function () {
+    $asset = Asset::create([
+        'serial_no' => 'GE-UNRCV-001',
+        'product_line_id' => $this->productLine->id,
+        'current_warehouse_id' => null,
+        'current_status' => AssetStatus::NewlyAdded,
+        'size' => '0.5x0.5 m',
+    ]);
+
+    $item = CheckinBatchItem::create([
+        'checkin_batch_id' => $this->batch->id,
+        'asset_id' => $asset->id,
+        'condition' => null,
+        'is_received' => false,
+    ]);
+
+    expect($item->is_received)->toBeFalse()
+        ->and($item->condition)->toBeNull()
+        ->and($asset->current_status)->toBe(AssetStatus::NewlyAdded)
+        ->and($asset->current_warehouse_id)->toBeNull();
+
+    $this->actingAs($this->user)->postJson(route('filament.checkin-receive-item'), [
+        'batch_id' => $this->batch->id,
+        'asset_id' => $asset->id,
+        'condition' => 'normal',
+    ])->assertOk();
+
+    $item->refresh();
+    $asset->refresh();
+
+    expect($item->is_received)->toBeTrue()
+        ->and($item->condition)->toBe('ok')
+        ->and($asset->current_status)->toBe(AssetStatus::Ready)
+        ->and($asset->current_warehouse_id)->toBe($this->warehouse->id);
+});

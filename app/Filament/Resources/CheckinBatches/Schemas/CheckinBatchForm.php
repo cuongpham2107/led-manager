@@ -4,6 +4,7 @@ namespace App\Filament\Resources\CheckinBatches\Schemas;
 
 use App\Enums\AssetStatus;
 use App\Enums\BatchStatus;
+use App\Models\Asset;
 use App\Models\CheckinBatch;
 use App\Models\ProductLine;
 use App\Services\CodeGeneratorService;
@@ -60,7 +61,7 @@ class CheckinBatchForm
                         $isEdit = ($record instanceof CheckinBatch && $record->exists) || $operation === 'edit';
                         $initialAssets = [];
 
-                        if ($record instanceof CheckinBatch) {
+                        if ($isEdit && $record instanceof CheckinBatch) {
                             $initialAssets = $record->items()
                                 ->with('asset.productLine')
                                 ->get()
@@ -76,11 +77,14 @@ class CheckinBatchForm
                                         ? $asset->current_status->getColor()
                                         : 'success';
 
+                                    $isReceived = (bool) $item->is_received;
                                     $condition = null;
-                                    if ($item->condition === 'fault') {
-                                        $condition = 'damaged';
-                                    } elseif ($item->condition === 'ok') {
-                                        $condition = 'normal';
+                                    if ($isReceived) {
+                                        if ($item->condition === 'fault') {
+                                            $condition = 'damaged';
+                                        } elseif ($item->condition === 'ok') {
+                                            $condition = 'normal';
+                                        }
                                     }
 
                                     return [
@@ -93,14 +97,46 @@ class CheckinBatchForm
                                         'status' => (string) $statusLabel,
                                         'status_raw' => (string) ($asset->current_status instanceof AssetStatus ? $asset->current_status->value : $asset->current_status),
                                         'status_color' => (string) $statusColor,
-                                        'is_received' => (bool) $item->is_received,
+                                        'is_received' => $isReceived,
                                         'condition' => $condition,
-                                        'condition_raw' => $item->condition,
-                                        'received_at' => $item->received_at ? $item->received_at->format('d/m/Y H:i') : null,
+                                        'condition_raw' => $isReceived ? $item->condition : null,
+                                        'received_at' => ($isReceived && $item->received_at) ? $item->received_at->format('d/m/Y H:i') : null,
                                     ];
                                 })
                                 ->filter()
                                 ->values()
+                                ->toArray();
+                        } elseif (! $isEdit) {
+                            $initialAssets = Asset::where(function ($q) {
+                                $q->where('current_status', AssetStatus::NewlyAdded)
+                                    ->orWhereNull('current_warehouse_id');
+                            })
+                                ->with('productLine')
+                                ->get()
+                                ->map(function ($asset) {
+                                    $statusLabel = $asset->current_status instanceof AssetStatus
+                                        ? $asset->current_status->getLabel()
+                                        : 'Mới';
+                                    $statusColor = $asset->current_status instanceof AssetStatus
+                                        ? $asset->current_status->getColor()
+                                        : 'primary';
+
+                                    return [
+                                        'id' => (int) $asset->id,
+                                        'item_id' => null,
+                                        'serial_no' => (string) $asset->serial_no,
+                                        'product_line_id' => (int) $asset->product_line_id,
+                                        'name' => (string) ($asset->productLine?->name ?? 'LED'),
+                                        'size' => (string) ($asset->size ?? '0.5×0.5 m'),
+                                        'status' => (string) $statusLabel,
+                                        'status_raw' => (string) ($asset->current_status instanceof AssetStatus ? $asset->current_status->value : $asset->current_status),
+                                        'status_color' => (string) $statusColor,
+                                        'is_received' => false,
+                                        'condition' => null,
+                                        'condition_raw' => null,
+                                        'received_at' => null,
+                                    ];
+                                })
                                 ->toArray();
                         }
 
@@ -114,16 +150,10 @@ class CheckinBatchForm
                             ])
                             ->toArray();
 
-                        $statuses = collect(AssetStatus::cases())->map(fn (AssetStatus $s) => [
-                            'value' => $s->value,
-                            'label' => $s->getLabel(),
-                        ])->toArray();
-
                         return [
                             'isEdit' => $isEdit,
                             'initialAssets' => $initialAssets,
                             'productLines' => $productLines,
-                            'statuses' => $statuses,
                             'warehouseId' => null,
                             'apiUrl' => route('filament.checkin-assets'),
                             'batchId' => $record?->id,

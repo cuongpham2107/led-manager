@@ -16,6 +16,7 @@ use App\Filament\Resources\Orders\Actions\ViewCheckoutBatchAction;
 use App\Filament\Resources\Orders\Actions\ViewContractAction;
 use App\Filament\Resources\Orders\Actions\ViewReturnBatchAction;
 use App\Models\Order;
+use App\Models\User;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -26,13 +27,14 @@ use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Enums\RecordActionsPosition;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Auth;
 
 class OrdersTable
 {
     public static function configure(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn ($query) => $query->with(['contracts', 'customer', 'warehouse', 'quotation', 'salesUser', 'checkoutBatches.items.asset.productLine', 'checkoutBatches.returnBatches']))
+            ->modifyQueryUsing(fn ($query) => $query->with(['contracts', 'customer', 'agency', 'warehouse', 'quotation', 'salesUser', 'checkoutBatches.items.asset.productLine', 'checkoutBatches.returnBatches']))
             ->columns([
                 TextColumn::make('order_no')
                     ->label('Số đơn hàng')
@@ -45,6 +47,19 @@ class OrdersTable
                     ->description(fn (Order $record): ?string => $record->event)
                     ->searchable(['name', 'event'])
                     ->sortable(),
+                TextColumn::make('agency.name')
+                    ->label('Đại lý')
+                    ->placeholder('Trụ sở chính')
+                    ->badge()
+                    ->color('info')
+                    ->searchable()
+                    ->sortable()
+                    ->hidden(function (): bool {
+                        /** @var User|null $user */
+                        $user = Auth::user();
+
+                        return (bool) $user?->isAgencyScoped();
+                    }),
                 TextColumn::make('contract_status')
                     ->label('Hợp đồng')
                     ->badge()
@@ -274,10 +289,25 @@ class OrdersTable
                             $query->where(fn ($q) => $q->whereNull('deposit_paid')->orWhere('deposit_paid', 0));
                         }
                     }),
+                SelectFilter::make('agency_id')
+                    ->label('Đại lý')
+                    ->relationship('agency', 'name')
+                    ->placeholder('Tất cả đại lý')
+                    ->hidden(function (): bool {
+                        /** @var User|null $user */
+                        $user = Auth::user();
+
+                        return (bool) $user?->isAgencyScoped();
+                    }),
                 SelectFilter::make('warehouse_id')
                     ->label('Kho hàng')
                     ->relationship('warehouse', 'name')
-                    ->hidden(fn (): bool => (bool) auth()->user()?->getScopedWarehouseId()),
+                    ->hidden(function (): bool {
+                        /** @var User|null $user */
+                        $user = Auth::user();
+
+                        return (bool) $user?->getScopedWarehouseId();
+                    }),
                 SelectFilter::make('customer_id')
                     ->label('Khách hàng')
                     ->relationship('customer', 'name'),

@@ -19,6 +19,7 @@ import {
   Alert,
   FlatList,
   Modal,
+  Platform,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -123,32 +124,51 @@ export const CheckinDetailScreen: React.FC<CheckinDetailScreenProps> = ({
     }
   };
 
+  const executeCompleteCheckin = async () => {
+    setIsCompleting(true);
+    try {
+      const response = await apiClient.post(`/checkin-batches/${batchId}/complete`);
+      if (response.data?.success) {
+        if (Platform.OS === 'web') {
+          window.alert(response.data.message || 'Đã hoàn tất nhập kho!');
+        } else {
+          Alert.alert('Thành công', response.data.message);
+        }
+        await fetchBatchDetail();
+      }
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Không thể hoàn tất nhập kho.';
+      if (Platform.OS === 'web') {
+        window.alert(msg);
+      } else {
+        Alert.alert('Lỗi', msg);
+      }
+    } finally {
+      setIsCompleting(false);
+    }
+  };
+
   const handleCompleteCheckin = () => {
-    Alert.alert(
-      'Xác nhận hoàn tất nhập kho',
-      `Bạn có chắc chắn muốn hoàn tất đợt nhập ${batch?.code}? Toàn bộ thiết bị đã quét sẽ chuyển sang trạng thái "Sẵn sàng" (Ready).`,
-      [
-        { text: 'Kiểm tra lại', style: 'cancel' },
-        {
-          text: 'Xác nhận hoàn tất',
-          onPress: async () => {
-            setIsCompleting(true);
-            try {
-              const response = await apiClient.post(`/checkin-batches/${batchId}/complete`);
-              if (response.data?.success) {
-                Alert.alert('Thành công', response.data.message);
-                await fetchBatchDetail();
-              }
-            } catch (err: any) {
-              const msg = err?.response?.data?.message || 'Không thể hoàn tất nhập kho.';
-              Alert.alert('Lỗi', msg);
-            } finally {
-              setIsCompleting(false);
-            }
+    const title = 'Xác nhận hoàn tất nhập kho';
+    const message = `Bạn có chắc chắn muốn hoàn tất đợt nhập ${batch?.code}? Toàn bộ thiết bị đã quét sẽ chuyển sang trạng thái "Sẵn sàng" (Ready).`;
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(`${title}\n\n${message}`)) {
+        executeCompleteCheckin();
+      }
+    } else {
+      Alert.alert(
+        title,
+        message,
+        [
+          { text: 'Kiểm tra lại', style: 'cancel' },
+          {
+            text: 'Xác nhận hoàn tất',
+            onPress: executeCompleteCheckin,
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
 
   if (isLoading || !batch) {
@@ -351,6 +371,7 @@ export const CheckinDetailScreen: React.FC<CheckinDetailScreenProps> = ({
         title={`Quét Nhập Kho: ${batch.code}`}
         subtitle="Bắn mã QR để kiểm tra tình trạng thiết bị"
         continuousModeDefault={false}
+        pendingCodes={batch.items?.filter(i => !i.is_received && Boolean(i.asset?.serial_no)).map(i => i.asset?.serial_no ?? '').filter(Boolean) || []}
       />
 
       {/* Condition Inspection Bottom Sheet Modal */}

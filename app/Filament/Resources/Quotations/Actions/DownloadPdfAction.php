@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\Quotations\Actions;
 
 use App\Models\Quotation;
-use App\Services\QuotationPdfService;
 use Filament\Actions\Action;
 
 class DownloadPdfAction extends Action
@@ -22,6 +21,7 @@ class DownloadPdfAction extends Action
             ->label('Tải Báo giá PDF')
             ->icon('heroicon-o-arrow-down-tray')
             ->color('gray')
-            ->action(fn (Quotation $record) => app(QuotationPdfService::class)->downloadPdf($record));
+            ->url(fn (Quotation $record): string => route('admin.quotations.pdf', $record))
+            ->openUrlInNewTab();
     }
 }

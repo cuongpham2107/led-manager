@@ -72,8 +72,8 @@ class CheckinBatchResource extends Resource
     {
         return [
             'index' => ListCheckinBatches::route('/'),
-            'create' => CreateCheckinBatch::route('/create'),
-            'edit' => EditCheckinBatch::route('/{record}/edit'),
+            // 'create' => CreateCheckinBatch::route('/create'),
+            // 'edit' => EditCheckinBatch::route('/{record}/edit'),
         ];
     }
 }

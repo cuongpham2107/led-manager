@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\InventoryStocks;
 
+use App\Enums\AssetStatus;
 use App\Filament\Resources\InventoryStocks\Pages\ListInventoryStocks;
 use App\Filament\Resources\InventoryStocks\Schemas\InventoryStockForm;
 use App\Filament\Resources\InventoryStocks\Tables\InventoryStocksTable;
@@ -36,7 +37,9 @@ class InventoryStockResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         $query = parent::getEloquentQuery()
-            ->with(['currentWarehouse', 'warehouseLocation', 'productLine']);
+            ->with(['currentWarehouse', 'warehouseLocation', 'productLine'])
+            ->whereNotNull('assets.current_warehouse_id')
+            ->where('assets.current_status', '!=', AssetStatus::NewlyAdded);
 
         /** @var User|null $user */
         $user = auth()->user();
