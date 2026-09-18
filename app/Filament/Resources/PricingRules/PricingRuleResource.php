@@ -6,11 +6,14 @@ use App\Filament\Resources\PricingRules\Pages\ListPricingRules;
 use App\Filament\Resources\PricingRules\Schemas\PricingRuleForm;
 use App\Filament\Resources\PricingRules\Tables\PricingRulesTable;
 use App\Models\PricingRule;
+use App\Models\User;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 use UnitEnum;
 
 class PricingRuleResource extends Resource
@@ -28,6 +31,20 @@ class PricingRuleResource extends Resource
     protected static ?int $navigationSort = 0;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCurrencyDollar;
+
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+
+        /** @var User|null $user */
+        $user = Auth::user();
+
+        if ($agencyId = $user?->getScopedAgencyId()) {
+            $query->where('pricing_rules.agency_id', $agencyId);
+        }
+
+        return $query;
+    }
 
     public static function form(Schema $schema): Schema
     {

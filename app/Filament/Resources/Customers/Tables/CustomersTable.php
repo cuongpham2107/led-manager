@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Customers\Tables;
 
 use App\Enums\CustomerType;
+use App\Models\User;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -14,6 +15,7 @@ use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Enums\RecordActionsPosition;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Auth;
 
 class CustomersTable
 {
@@ -53,6 +55,18 @@ class CustomersTable
                 TextColumn::make('contact_person')
                     ->label('Người liên hệ')
                     ->searchable(),
+                TextColumn::make('agency.name')
+                    ->label('Đại lý')
+                    ->placeholder('Tổng công ty (HQ)')
+                    ->badge()
+                    ->color('info')
+                    ->searchable()
+                    ->sortable()
+                    ->hidden(function (): bool {
+                        $user = Auth::user();
+
+                        return (bool) ($user instanceof User && $user->isAgencyScoped());
+                    }),
                 IconColumn::make('is_active')
                     ->label('Hoạt động')
                     ->boolean(),
@@ -61,6 +75,15 @@ class CustomersTable
                 SelectFilter::make('type')
                     ->label('Phân loại khách hàng')
                     ->options(CustomerType::class),
+                SelectFilter::make('agency_id')
+                    ->label('Đại lý quản lý')
+                    ->relationship('agency', 'name')
+                    ->placeholder('Tất cả đại lý')
+                    ->hidden(function (): bool {
+                        $user = Auth::user();
+
+                        return (bool) ($user instanceof User && $user->isAgencyScoped());
+                    }),
             ], layout: FiltersLayout::AboveContent)
             ->deferFilters(false)
             ->recordActions([

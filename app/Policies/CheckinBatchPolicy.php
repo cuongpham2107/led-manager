@@ -24,6 +24,10 @@ class CheckinBatchPolicy
 
     public function create(AuthUser $authUser): bool
     {
+        if (method_exists($authUser, 'isAgencyScoped') && $authUser->isAgencyScoped()) {
+            return false;
+        }
+
         return $authUser->can('Create:CheckinBatch');
     }
 
@@ -34,11 +38,19 @@ class CheckinBatchPolicy
 
     public function delete(AuthUser $authUser, CheckinBatch $checkinBatch): bool
     {
+        if (method_exists($authUser, 'isAgencyScoped') && $authUser->isAgencyScoped()) {
+            return false;
+        }
+
         return $authUser->can('Delete:CheckinBatch');
     }
 
     public function deleteAny(AuthUser $authUser): bool
     {
+        if (method_exists($authUser, 'isAgencyScoped') && $authUser->isAgencyScoped()) {
+            return false;
+        }
+
         return $authUser->can('DeleteAny:CheckinBatch');
     }
 

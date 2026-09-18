@@ -45,7 +45,8 @@ class ChangeOrderAction extends Action
                     ->required(),
                 DatePicker::make('new_expected_return_date')
                     ->label('Ngày trả dự kiến mới')
-                    ->native(false)
+                    ->displayFormat('d/m/Y')
+                    ->native(true)
                     ->visible(fn (callable $get) => $get('type') === 'extend_return'),
                 Textarea::make('description')
                     ->label('Mô tả thay đổi')

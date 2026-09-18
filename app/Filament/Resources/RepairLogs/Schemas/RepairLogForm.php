@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\RepairLogs\Schemas;
 
+use App\Models\User;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -27,7 +28,12 @@ class RepairLogForm
                             ->schema([
                                 Select::make('asset_id')
                                     ->label('Thiết bị (Serial No)')
-                                    ->relationship('asset', 'serial_no')
+                                    ->relationship('asset', 'serial_no', modifyQueryUsing: function ($query) {
+                                        $user = Auth::user();
+                                        if ($whId = ($user instanceof User ? $user->getScopedWarehouseId() : null)) {
+                                            $query->where('current_warehouse_id', $whId);
+                                        }
+                                    })
                                     ->searchable()
                                     ->preload()
                                     ->required(),
@@ -54,12 +60,14 @@ class RepairLogForm
                             ->schema([
                                 DatePicker::make('start_date')
                                     ->label('Ngày bắt đầu bảo dưỡng')
-                                    ->native(false)
+                                    ->displayFormat('d/m/Y')
+                                    ->native(true)
                                     ->required()
                                     ->default(now()->toDateString()),
                                 DatePicker::make('end_date')
                                     ->label('Ngày hoàn thành')
-                                    ->native(false),
+                                    ->displayFormat('d/m/Y')
+                                    ->native(true),
                                 Select::make('created_by')
                                     ->label('Kỹ thuật viên phụ trách')
                                     ->relationship('creator', 'name')

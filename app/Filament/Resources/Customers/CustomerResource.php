@@ -6,11 +6,14 @@ use App\Filament\Resources\Customers\Pages\ListCustomers;
 use App\Filament\Resources\Customers\Schemas\CustomerForm;
 use App\Filament\Resources\Customers\Tables\CustomersTable;
 use App\Models\Customer;
+use App\Models\User;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 use UnitEnum;
 
 class CustomerResource extends Resource
@@ -28,6 +31,20 @@ class CustomerResource extends Resource
     protected static ?int $navigationSort = 1;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUsers;
+
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+
+        /** @var User|null $user */
+        $user = Auth::user();
+
+        if ($agencyId = $user?->getScopedAgencyId()) {
+            $query->where('customers.agency_id', $agencyId);
+        }
+
+        return $query;
+    }
 
     public static function form(Schema $schema): Schema
     {

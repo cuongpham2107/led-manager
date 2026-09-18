@@ -32,13 +32,14 @@ class AppServiceProvider extends ServiceProvider
         DatePicker::configureUsing(function (DatePicker $datePicker): void {
             $datePicker
                 ->displayFormat('d/m/Y')
-                ->native(false);
+                ->native(true);
         });
 
         DateTimePicker::configureUsing(function (DateTimePicker $dateTimePicker): void {
             $dateTimePicker
                 ->displayFormat('d/m/Y H:i')
-                ->native(false);
+                ->seconds(false)
+                ->native(true);
         });
 
         EditAction::configureUsing(function (EditAction $action): void {

@@ -14,6 +14,7 @@ use App\Models\Order;
 use App\Models\ProductLine;
 use App\Models\Quotation;
 use App\Models\User;
+use App\Models\Warehouse;
 use App\Services\AvailabilityService;
 use App\Services\PricingService;
 use Carbon\Carbon;
@@ -31,6 +32,7 @@ use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Support\RawJs;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 
@@ -46,7 +48,7 @@ class OrderForm
 
                         // ================= LEFT COLUMN: Order Info & Event Details (5 cols) =================
                         Group::make()
-                            ->columnSpan(['default' => 1, 'lg' => 5])
+                            ->columnSpan(['default' => 1, 'lg' => 4])
                             ->schema([
                                 Section::make('Thông tin đơn hàng & Khách hàng')
                                     ->description('Mã đơn hàng, khách hàng, kho xuất và người phụ trách')
@@ -65,12 +67,16 @@ class OrderForm
 
                                                     return $code;
                                                 })
+                                                ->disabled(fn () => self::isCurrentUserAgencyScoped())
+                                                ->dehydrated()
                                                 ->required()
                                                 ->columnSpan(1),
                                             Select::make('status')
                                                 ->label('Trạng thái đơn')
                                                 ->options(OrderStatus::class)
                                                 ->default(OrderStatus::Draft)
+                                                ->disabled(fn () => self::isCurrentUserAgencyScoped())
+                                                ->dehydrated()
                                                 ->required()
                                                 ->columnSpan(1),
                                         ]),
@@ -94,12 +100,7 @@ class OrderForm
 
                                                 return $user?->getScopedAgencyId();
                                             })
-                                            ->disabled(function () {
-                                                /** @var User|null $user */
-                                                $user = Auth::user();
-
-                                                return (bool) $user?->isAgencyScoped();
-                                            })
+                                            ->disabled(fn () => self::isCurrentUserAgencyScoped())
                                             ->dehydrated()
                                             ->live()
                                             ->afterStateUpdated(function ($state, Set $set) {
@@ -108,13 +109,55 @@ class OrderForm
                                                     if ($agency && $agency->warehouse_id) {
                                                         $set('warehouse_id', $agency->warehouse_id);
                                                     }
+                                                    $set('commission_rate', $agency ? (float) $agency->commission_rate : null);
+                                                } else {
+                                                    $set('commission_rate', null);
                                                 }
                                             }),
+                                        TextInput::make('commission_rate')
+                                            ->label('% Hoa hồng đại lý (snapshot)')
+                                            ->numeric()
+                                            ->suffix('%')
+                                            ->readOnly()
+                                            ->dehydrated()
+                                            ->default(function () {
+                                                /** @var User|null $user */
+                                                $user = Auth::user();
+                                                if ($agencyId = $user?->getScopedAgencyId()) {
+                                                    return Agency::find($agencyId)?->commission_rate;
+                                                }
+
+                                                return null;
+                                            })
+                                            ->hidden(fn (Get $get): bool => empty($get('agency_id')))
+                                            ->helperText('Tỷ lệ hoa hồng tại thời điểm tạo đơn — không thay đổi khi agency cập nhật rate'),
                                         Select::make('warehouse_id')
                                             ->label('Kho xuất hàng')
-                                            ->relationship('warehouse', 'name')
+                                            ->options(function () {
+                                                return Warehouse::with('agency')
+                                                    ->where('is_active', true)
+                                                    ->get()
+                                                    ->mapWithKeys(function ($wh) {
+                                                        $label = $wh->agency
+                                                            ? "{$wh->name} — [Đại lý: {$wh->agency->name} ({$wh->agency->code})]"
+                                                            : "{$wh->name} — [Kho Tổng HQ]";
+
+                                                        return [$wh->id => $label];
+                                                    });
+                                            })
                                             ->searchable()
                                             ->preload()
+                                            ->default(function () {
+                                                /** @var User|null $user */
+                                                $user = Auth::user();
+                                                if ($agencyId = $user?->getScopedAgencyId()) {
+                                                    return Agency::find($agencyId)?->warehouse_id;
+                                                }
+
+                                                return null;
+                                            })
+                                            ->disabled(fn () => self::isCurrentUserAgencyScoped())
+                                            ->dehydrated()
                                             ->required(),
                                         Grid::make(2)->schema([
                                             Select::make('quotation_id')
@@ -123,6 +166,8 @@ class OrderForm
                                                 ->searchable()
                                                 ->preload()
                                                 ->placeholder('— Đơn tạo trực tiếp —')
+                                                ->disabled(fn () => self::isCurrentUserAgencyScoped())
+                                                ->dehydrated()
                                                 ->live()
                                                 ->afterStateUpdated(function ($state, Set $set) {
                                                     if ($state) {
@@ -141,8 +186,25 @@ class OrderForm
                                                 ->columnSpan(1),
                                             Select::make('sales_user_id')
                                                 ->label('Sales phụ trách')
-                                                ->relationship('salesUser', 'name')
+                                                ->relationship(
+                                                    name: 'salesUser',
+                                                    titleAttribute: 'name',
+                                                    modifyQueryUsing: function (Builder $query, Get $get) {
+                                                        /** @var User|null $currentUser */
+                                                        $currentUser = Auth::user();
+                                                        $agencyId = $get('agency_id')
+                                                            ?: $currentUser?->getScopedAgencyId();
+
+                                                        if ($agencyId) {
+                                                            return $query->where('agency_id', $agencyId);
+                                                        }
+
+                                                        return $query->whereNull('agency_id');
+                                                    }
+                                                )
                                                 ->default(fn () => Auth::id())
+                                                ->disabled(fn () => self::isCurrentUserAgencyScoped())
+                                                ->dehydrated()
                                                 ->searchable()
                                                 ->preload()
                                                 ->columnSpan(1),
@@ -173,7 +235,9 @@ class OrderForm
                                         ]),
                                         DateTimePicker::make('paid_at')
                                             ->label('Ngày thu gần nhất')
-                                            ->native(false)
+                                            ->displayFormat('d/m/Y H:i')
+                                            ->seconds(false)
+                                            ->native(true)
                                             ->columnSpanFull(),
                                     ]),
 
@@ -192,18 +256,23 @@ class OrderForm
                                                 ->numeric()
                                                 ->suffix(' đ')
                                                 ->default(0)
+                                                ->disabled(fn () => self::isCurrentUserAgencyScoped())
+                                                ->dehydrated()
                                                 ->columnSpan(1),
                                             TextInput::make('area_m2')
                                                 ->label('Tổng diện tích màn hình')
                                                 ->numeric()
                                                 ->suffix(' m²')
                                                 ->default(0)
+                                                ->disabled(fn () => self::isCurrentUserAgencyScoped())
+                                                ->dehydrated()
                                                 ->columnSpan(1),
                                         ]),
                                         Grid::make(2)->schema([
                                             DatePicker::make('request_date')
                                                 ->label('Ngày bắt đầu sự kiện')
-                                                ->native(false)
+                                                ->displayFormat('d/m/Y')
+                                                ->native(true)
                                                 ->default(now()->toDateString())
                                                 ->live()
                                                 ->afterStateUpdated(function (Get $get, Set $set) {
@@ -212,7 +281,8 @@ class OrderForm
                                                 ->columnSpan(1),
                                             DatePicker::make('expected_return_date')
                                                 ->label('Ngày dự kiến hoàn trả')
-                                                ->native(false)
+                                                ->displayFormat('d/m/Y')
+                                                ->native(true)
                                                 ->default(now()->addDays(3)->toDateString())
                                                 ->live()
                                                 ->afterStateUpdated(function (Get $get, Set $set) {
@@ -229,7 +299,7 @@ class OrderForm
 
                         // ================= RIGHT COLUMN: Repeaters (BOM, Crew, Milestones) (7 cols) =================
                         Group::make()
-                            ->columnSpan(['default' => 1, 'lg' => 7])
+                            ->columnSpan(['default' => 1, 'lg' => 8])
                             ->schema([
                                 Section::make('Danh mục thiết bị cần xuất kho (Bill of Materials - Order Items)')
                                     ->description('Định mức toàn bộ thiết bị cần xuất kho cho đơn hàng thuê này')
@@ -240,7 +310,7 @@ class OrderForm
                                             ->label('Danh sách thiết bị định mức xuất kho')
                                             ->table([
                                                 TableColumn::make('Thiết bị / Vật tư kho'),
-                                                TableColumn::make('SL Cần Xuất'),
+                                                TableColumn::make('SL Cần Xuất')->alignCenter(),
                                                 TableColumn::make('Đơn giá (VND)'),
                                                 TableColumn::make('Ghi chú / Quy cách'),
                                             ])
@@ -257,11 +327,19 @@ class OrderForm
                                                             return;
                                                         }
                                                         $reqDate = $get('../../request_date');
+                                                        $retDate = $get('../../expected_return_date') ?: $reqDate;
                                                         $agencyId = $get('../../agency_id');
+
+                                                        $rentalDays = null;
+                                                        if ($reqDate && $retDate) {
+                                                            $rentalDays = max(1, (int) Carbon::parse($reqDate)->diffInDays(Carbon::parse($retDate)));
+                                                        }
+
                                                         $unitPrice = app(PricingService::class)->resolveUnitPrice(
-                                                            (int) $state,
-                                                            $reqDate,
-                                                            $agencyId ? (int) $agencyId : null
+                                                            productLineId: (int) $state,
+                                                            requestDate: $reqDate,
+                                                            agencyId: $agencyId ? (int) $agencyId : null,
+                                                            rentalDays: $rentalDays,
                                                         );
                                                         $set('unit_price', $unitPrice);
                                                         self::recalculateOrderValue($get, $set);
@@ -318,6 +396,8 @@ class OrderForm
                                                     ->numeric()
                                                     ->suffix(' đ')
                                                     ->default(0)
+                                                    ->disabled(fn () => self::isCurrentUserAgencyScoped())
+                                                    ->dehydrated()
                                                     ->live(onBlur: true)
                                                     ->afterStateUpdated(function (Get $get, Set $set) {
                                                         self::recalculateOrderValue($get, $set);
@@ -363,7 +443,7 @@ class OrderForm
                                             ->label('Danh sách nhân sự phân công')
                                             ->live()
                                             ->table([
-                                                TableColumn::make('Nhân viên / Kỹ thuật'),
+                                                TableColumn::make('Nhân viên / Kỹ thuật')->width('250px'),
                                                 TableColumn::make('Vai trò'),
                                                 TableColumn::make('Từ ngày'),
                                                 TableColumn::make('Đến ngày'),
@@ -372,7 +452,22 @@ class OrderForm
                                             ->schema([
                                                 Select::make('user_id')
                                                     ->label('Nhân sự')
-                                                    ->relationship('user', 'name')
+                                                    ->relationship(
+                                                        name: 'user',
+                                                        titleAttribute: 'name',
+                                                        modifyQueryUsing: function (Builder $query, Get $get) {
+                                                            /** @var User|null $currentUser */
+                                                            $currentUser = Auth::user();
+                                                            $agencyId = $get('../../agency_id')
+                                                                ?: $currentUser?->getScopedAgencyId();
+
+                                                            if ($agencyId) {
+                                                                return $query->where('agency_id', $agencyId);
+                                                            }
+
+                                                            return $query->whereNull('agency_id');
+                                                        }
+                                                    )
                                                     ->searchable()
                                                     ->preload()
                                                     ->required(),
@@ -383,10 +478,12 @@ class OrderForm
                                                     ->required(),
                                                 DatePicker::make('start_date')
                                                     ->label('Bắt đầu')
-                                                    ->native(false),
+                                                    ->displayFormat('d/m/Y')
+                                                    ->native(true),
                                                 DatePicker::make('end_date')
                                                     ->label('Kết thúc')
-                                                    ->native(false),
+                                                    ->displayFormat('d/m/Y')
+                                                    ->native(true),
                                                 TextInput::make('note')
                                                     ->label('Ghi chú')
                                                     ->placeholder('Nhiệm vụ cụ thể...'),
@@ -415,11 +512,15 @@ class OrderForm
                                                     ->required(),
                                                 DateTimePicker::make('planned_at')
                                                     ->label('Kế hoạch')
-                                                    ->native(false)
+                                                    ->displayFormat('d/m/Y H:i')
+                                                    ->seconds(false)
+                                                    ->native(true)
                                                     ->required(),
                                                 DateTimePicker::make('actual_at')
                                                     ->label('Thực tế')
-                                                    ->native(false),
+                                                    ->displayFormat('d/m/Y H:i')
+                                                    ->seconds(false)
+                                                    ->native(true),
                                                 Select::make('status')
                                                     ->label('Trạng thái')
                                                     ->options(MilestoneStatus::class)
@@ -533,5 +634,16 @@ class OrderForm
             $set('../../area_m2', round($totalArea, 2));
             $set('area_m2', round($totalArea, 2));
         }
+    }
+
+    /**
+     * Check if the currently authenticated user is scoped to an agency.
+     */
+    public static function isCurrentUserAgencyScoped(): bool
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+
+        return (bool) $user?->isAgencyScoped();
     }
 }

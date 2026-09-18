@@ -45,7 +45,8 @@ class SendToMaintenanceAction extends Action
                     DatePicker::make('start_date')
                         ->label('Ngày bắt đầu bảo dưỡng')
                         ->default(now()->toDateString())
-                        ->native(false)
+                        ->displayFormat('d/m/Y')
+                        ->native(true)
                         ->required(),
                     Select::make('created_by')
                         ->label('Kỹ thuật viên phụ trách')

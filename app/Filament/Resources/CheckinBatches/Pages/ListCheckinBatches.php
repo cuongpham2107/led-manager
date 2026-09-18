@@ -30,6 +30,7 @@ class ListCheckinBatches extends ListRecords
         return [
             CreateAction::make()
                 ->label('Tạo đợt nhập')
+                ->visible(fn (): bool => CheckinBatchResource::canCreate())
                 ->icon('heroicon-o-plus')
                 ->modalHeading('Tạo đợt nhập kho mới')
                 ->modalWidth(Width::FourExtraLarge)

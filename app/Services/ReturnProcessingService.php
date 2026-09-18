@@ -8,6 +8,7 @@ use App\Enums\OrderStatus;
 use App\Enums\RepairResultStatus;
 use App\Enums\ReturnBatchStatus;
 use App\Enums\ReturnGrade;
+use App\Models\Agency;
 use App\Models\Asset;
 use App\Models\AssetStatusLog;
 use App\Models\CheckoutBatch;
@@ -47,7 +48,8 @@ class ReturnProcessingService
                     ->label('Ngày trả thực tế')
                     ->default(now()->toDateString())
                     ->required()
-                    ->native(false),
+                    ->displayFormat('d/m/Y')
+                    ->native(true),
                 Select::make('received_by')
                     ->label('Người tiếp nhận kho')
                     ->options(User::pluck('name', 'id'))
@@ -156,10 +158,16 @@ class ReturnProcessingService
             $code = CodeGeneratorService::generate('RET', 'return_batches');
             $receivedBy = $receivedBy ?? Auth::id();
             $targetWarehouseId = $warehouseId ?? $order?->warehouse_id;
+            $agencyId = $order?->agency_id;
+            if (! $agencyId && $targetWarehouseId) {
+                $agencyId = Agency::where('warehouse_id', $targetWarehouseId)->value('id');
+            }
 
             $returnBatch = ReturnBatch::create([
                 'code' => $code,
                 'checkout_batch_id' => ! empty($completeBatchIds) ? $completeBatchIds[0] : null,
+                'agency_id' => $agencyId,
+                'warehouse_id' => $targetWarehouseId,
                 'return_date' => $returnDate ?? now()->toDateString(),
                 'note' => $note,
                 'status' => ReturnBatchStatus::Completed,

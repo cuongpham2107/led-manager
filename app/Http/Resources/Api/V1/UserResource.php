@@ -16,18 +16,27 @@ class UserResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $warehouse = $this->warehouse ?? $this->agency?->warehouse;
+
         return [
             'id' => $this->id,
             'name' => $this->name,
             'email' => $this->email,
             'phone' => $this->phone,
             'is_active' => (bool) $this->is_active,
-            'warehouse' => $this->warehouse ? [
-                'id' => $this->warehouse->id,
-                'code' => $this->warehouse->code,
-                'name' => $this->warehouse->name,
-                'city' => $this->warehouse->city,
+            'warehouse' => $warehouse ? [
+                'id' => $warehouse->id,
+                'code' => $warehouse->code,
+                'name' => $warehouse->name,
+                'city' => $warehouse->city,
             ] : null,
+            'agency' => $this->agency ? [
+                'id' => $this->agency->id,
+                'name' => $this->agency->name,
+                'code' => $this->agency->code,
+                'is_active' => (bool) $this->agency->is_active,
+            ] : null,
+            'is_agency' => $this->isAgencyScoped(),
             'roles' => $this->roles->pluck('name'),
         ];
     }

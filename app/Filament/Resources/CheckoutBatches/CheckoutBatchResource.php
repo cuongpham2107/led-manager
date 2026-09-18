@@ -39,7 +39,9 @@ class CheckoutBatchResource extends Resource
         /** @var User|null $user */
         $user = Auth::user();
 
-        if ($whId = $user?->getScopedWarehouseId()) {
+        if ($agencyId = $user?->getScopedAgencyId()) {
+            $query->where('checkout_batches.agency_id', $agencyId);
+        } elseif ($whId = $user?->getScopedWarehouseId()) {
             $query->where('checkout_batches.warehouse_id', $whId);
         }
 

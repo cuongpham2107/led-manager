@@ -40,11 +40,12 @@ class WarehousesTable
                 TextColumn::make('phone')
                     ->label('Số điện thoại')
                     ->searchable(),
-                TextColumn::make('locations_count')
-                    ->label('Vị trí / Kệ')
-                    ->counts('locations')
+                TextColumn::make('agency.name')
+                    ->label('Đại lý trực thuộc')
+                    ->placeholder('Kho Tổng (HQ)')
                     ->badge()
-                    ->color('info')
+                    ->color(fn ($record) => $record->agency ? 'warning' : 'gray')
+                    ->searchable()
                     ->sortable(),
                 TextColumn::make('ready_assets_count')
                     ->label('Sẵn sàng')
@@ -80,8 +81,8 @@ class WarehousesTable
             ->recordActions([
                 EditAction::make()
                     ->modalHeading('Cập nhật thông tin kho hàng')
-                    ->modalDescription('Chỉnh sửa tên, địa chỉ, người quản lý và số điện thoại liên hệ của kho.')
-                    ->modalWidth(Width::SevenExtraLarge),
+                    ->modalDescription('Chỉnh sửa tên, địa chỉ và số điện thoại liên hệ của kho.')
+                    ->modalWidth(Width::TwoExtraLarge),
             ], position: RecordActionsPosition::BeforeCells)
             ->toolbarActions([
                 BulkActionGroup::make([

@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\CheckinBatches\Actions;
 
 use App\Filament\Resources\CheckinBatches\CheckinBatchResource;
+use App\Models\Agency;
 use App\Models\ProductLine;
 use App\Models\User;
 use App\Models\Warehouse;
@@ -52,12 +53,27 @@ class CreateProductionBatchAction extends Action
                             ->helperText('Áp dụng tự động nếu ô "Dòng sản phẩm" để trống'),
 
                         Select::make('default_warehouse_id')
-                            ->label('Kho lưu trữ (Gợi ý / Mặc định)')
-                            ->options(fn () => Warehouse::where('is_active', true)->pluck('name', 'id'))
+                            ->label('Kho lưu trữ thiết bị')
+                            ->options(function () {
+                                $user = Auth::user();
+                                $scopedId = $user instanceof User ? $user->getScopedWarehouseId() : null;
+
+                                return Warehouse::query()
+                                    ->when($scopedId, fn ($q) => $q->where('id', $scopedId))
+                                    ->orderBy('name')
+                                    ->get()
+                                    ->mapWithKeys(function (Warehouse $w): array {
+                                        $agency = Agency::where('warehouse_id', $w->id)->first();
+                                        $label = $agency ? "{$w->name} [Đại lý: {$agency->name} ({$agency->code})]" : "{$w->name} [Tổng công ty]";
+
+                                        return [$w->id => $label];
+                                    })
+                                    ->toArray();
+                            })
                             ->default(function () {
                                 $user = Auth::user();
 
-                                return ($user instanceof User ? $user->getScopedWarehouseId() : null) ?? Warehouse::where('is_active', true)->first()?->id;
+                                return $user instanceof User ? $user->getScopedWarehouseId() : null;
                             })
                             ->disabled(function () {
                                 $user = Auth::user();
@@ -68,29 +84,23 @@ class CreateProductionBatchAction extends Action
                             ->searchable()
                             ->preload()
                             ->live()
-                            ->afterStateUpdated(fn (callable $set) => $set('default_warehouse_location_id', null))
-                            ->placeholder('Chọn kho lưu trữ...')
-                            ->helperText('Áp dụng tự động nếu ô "Kho lưu trữ" để trống')
-                            ->required(),
-
-                        Select::make('default_warehouse_location_id')
-                            ->label('Vị trí kho (Gợi ý / Mặc định)')
-                            ->options(function (callable $get) {
-                                $user = Auth::user();
-                                $scopedId = $user instanceof User ? $user->getScopedWarehouseId() : null;
-                                $whId = $get('default_warehouse_id') ?: $scopedId;
+                            ->helperText(function (callable $get) {
+                                $whId = $get('default_warehouse_id');
                                 if (! $whId) {
-                                    return [];
+                                    return 'Áp dụng tự động nếu ô "Kho lưu trữ" để trống';
+                                }
+                                $agency = Agency::where('warehouse_id', $whId)->first();
+                                if ($agency) {
+                                    $allocated = (float) $agency->allocated_area_m2;
+                                    $current = $agency->current_inventory_area;
+                                    $remaining = max(0, round($allocated - $current, 2));
+
+                                    return "🏢 Kho Đại lý: {$agency->name} | Định mức: {$allocated} m² | Đang chứa: {$current} m² | Còn trống: {$remaining} m²";
                                 }
 
-                                return WarehouseLocation::where('warehouse_id', $whId)
-                                    ->where('is_active', true)
-                                    ->pluck('name', 'id');
+                                return 'Kho tổng HQ (không giới hạn hạn mức). Áp dụng tự động nếu ô "Kho lưu trữ" để trống';
                             })
-                            ->searchable()
-                            ->preload()
-                            ->placeholder('Chọn vị trí...')
-                            ->helperText('Áp dụng tự động nếu ô "Vị trí" để trống'),
+                            ->required(),
                     ]),
 
                 Grid::make(2)
@@ -98,8 +108,8 @@ class CreateProductionBatchAction extends Action
                         DatePicker::make('expected_date')
                             ->label('Ngày dự kiến')
                             ->default(now()->toDateString())
-                            ->native(false)
                             ->displayFormat('d/m/Y')
+                            ->native(true)
                             ->placeholder('DD/MM/YYYY')
                             ->helperText('Ngày dự kiến hoàn thành sản xuất / nhập kho'),
 

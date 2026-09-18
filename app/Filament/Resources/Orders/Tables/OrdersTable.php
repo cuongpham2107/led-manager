@@ -316,12 +316,12 @@ class OrdersTable
             ->recordActions([
                 EditAction::make(),
                 ActionGroup::make([
-                    CreateContractAction::make(),
-                    ViewContractAction::make(),
                     CreateCheckoutBatchAction::make(),
-                    ViewCheckoutBatchAction::make(),
                     DispatchOrderAction::make(),
                     ReturnOrderAction::make(),
+                    CreateContractAction::make(),
+                    ViewContractAction::make(),
+                    ViewCheckoutBatchAction::make(),
                     ViewReturnBatchAction::make(),
                     ChangeOrderAction::make(),
                     AssignCrewAction::make(),

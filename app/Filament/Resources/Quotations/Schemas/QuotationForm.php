@@ -83,7 +83,8 @@ class QuotationForm
                                             DatePicker::make('event_start_date')
                                                 ->label('Ngày bắt đầu')
                                                 ->default(fn () => now()->addDays(3)->toDateString())
-                                                ->native(false)
+                                                ->displayFormat('d/m/Y')
+                                                ->native(true)
                                                 ->live()
                                                 ->afterStateUpdated(function (Get $get, Set $set, ?Quotation $record) {
                                                     self::updateRentalDaysFromDates($get, $set);
@@ -92,7 +93,8 @@ class QuotationForm
                                             DatePicker::make('event_end_date')
                                                 ->label('Ngày kết thúc')
                                                 ->default(fn () => now()->addDays(6)->toDateString())
-                                                ->native(false)
+                                                ->displayFormat('d/m/Y')
+                                                ->native(true)
                                                 ->live()
                                                 ->afterStateUpdated(function (Get $get, Set $set, ?Quotation $record) {
                                                     self::updateRentalDaysFromDates($get, $set);

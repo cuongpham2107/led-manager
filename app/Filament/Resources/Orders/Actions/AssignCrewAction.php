@@ -37,8 +37,10 @@ class AssignCrewAction extends Action
             ->form(fn (Order $record): array => [
                 Select::make('user_id')
                     ->label('Nhân sự / Kỹ thuật viên')
-                    ->relationship('salesUser', 'name')
-                    ->options(User::pluck('name', 'id'))
+                    ->options(fn () => $record->agency_id
+                        ? User::where('agency_id', $record->agency_id)->pluck('name', 'id')
+                        : User::whereNull('agency_id')->pluck('name', 'id')
+                    )
                     ->searchable()
                     ->preload()
                     ->required(),
@@ -49,13 +51,15 @@ class AssignCrewAction extends Action
                     ->required(),
                 DatePicker::make('start_date')
                     ->label('Ngày bắt đầu')
+                    ->displayFormat('d/m/Y')
+                    ->native(true)
                     ->default($record->request_date?->toDateString() ?? now()->toDateString())
-                    ->native(false)
                     ->required(),
                 DatePicker::make('end_date')
                     ->label('Ngày kết thúc')
+                    ->displayFormat('d/m/Y')
+                    ->native(true)
                     ->default($record->expected_return_date?->toDateString() ?? $record->request_date?->toDateString() ?? now()->toDateString())
-                    ->native(false)
                     ->required(),
                 Textarea::make('note')
                     ->label('Nhiệm vụ / Lưu ý hiện trường')

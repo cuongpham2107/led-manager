@@ -14,6 +14,7 @@ class RepairLog extends Model
 
     protected $fillable = [
         'asset_id',
+        'agency_id',
         'start_date',
         'end_date',
         'repair_note',
@@ -41,6 +42,24 @@ class RepairLog extends Model
     public function asset(): BelongsTo
     {
         return $this->belongsTo(Asset::class);
+    }
+
+    /**
+     * @return BelongsTo<Agency, $this>
+     */
+    public function agency(): BelongsTo
+    {
+        return $this->belongsTo(Agency::class);
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (RepairLog $log) {
+            if (! $log->agency_id && $log->asset_id) {
+                $asset = Asset::with('currentWarehouse.agency')->find($log->asset_id);
+                $log->agency_id = $asset?->currentWarehouse?->agency?->id;
+            }
+        });
     }
 
     /**

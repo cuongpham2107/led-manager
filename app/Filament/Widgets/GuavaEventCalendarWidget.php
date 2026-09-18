@@ -5,11 +5,13 @@ namespace App\Filament\Widgets;
 use App\Enums\OrderStatus;
 use App\Models\EventMilestone;
 use App\Models\Order;
+use App\Models\User;
 use Guava\Calendar\Enums\CalendarViewType;
 use Guava\Calendar\Filament\CalendarWidget;
 use Guava\Calendar\ValueObjects\FetchInfo;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 
 class GuavaEventCalendarWidget extends CalendarWidget
 {
@@ -25,21 +27,50 @@ class GuavaEventCalendarWidget extends CalendarWidget
 
     protected function getEvents(FetchInfo $info): Collection|array|Builder
     {
-        $orders = Order::query()
+        /** @var User|null $user */
+        $user = Auth::user();
+        $agencyId = $user?->getScopedAgencyId();
+        $whId = $user?->getScopedWarehouseId();
+
+        $orderQuery = Order::query()
             ->with('customer')
             ->where('status', '!=', OrderStatus::Cancelled)
             ->whereDate('request_date', '<=', $info->end)
             ->where(function ($q) use ($info) {
                 $q->whereNull('expected_return_date')
                     ->orWhereDate('expected_return_date', '>=', $info->start);
-            })
-            ->get();
+            });
 
-        $milestones = EventMilestone::query()
+        if ($agencyId) {
+            $orderQuery->where(function ($q) use ($agencyId, $whId) {
+                $q->where('agency_id', $agencyId);
+                if ($whId) {
+                    $q->orWhere('warehouse_id', $whId);
+                }
+            });
+        } elseif ($whId) {
+            $orderQuery->where('warehouse_id', $whId);
+        }
+
+        $orders = $orderQuery->get();
+
+        $milestoneQuery = EventMilestone::query()
             ->with(['order.customer'])
             ->whereDate('planned_at', '>=', $info->start)
-            ->whereDate('planned_at', '<=', $info->end)
-            ->get();
+            ->whereDate('planned_at', '<=', $info->end);
+
+        if ($agencyId) {
+            $milestoneQuery->whereHas('order', function ($q) use ($agencyId, $whId) {
+                $q->where('agency_id', $agencyId);
+                if ($whId) {
+                    $q->orWhere('warehouse_id', $whId);
+                }
+            });
+        } elseif ($whId) {
+            $milestoneQuery->whereHas('order', fn ($q) => $q->where('warehouse_id', $whId));
+        }
+
+        $milestones = $milestoneQuery->get();
 
         return collect()
             ->push(...$orders)

@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\PricingRules\Schemas;
 
 use App\Enums\CustomerType;
+use App\Models\User;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -11,6 +12,7 @@ use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\RawJs;
+use Illuminate\Support\Facades\Auth;
 
 class PricingRuleForm
 {
@@ -34,6 +36,17 @@ class PricingRuleForm
                                     ->searchable()
                                     ->preload()
                                     ->placeholder('Toàn quốc (Mặc định)')
+                                    ->default(function () {
+                                        $user = Auth::user();
+
+                                        return $user instanceof User ? $user->getScopedAgencyId() : null;
+                                    })
+                                    ->disabled(function () {
+                                        $user = Auth::user();
+
+                                        return (bool) ($user instanceof User && $user->getScopedAgencyId());
+                                    })
+                                    ->dehydrated()
                                     ->columnSpan(1),
                             ]),
                         Grid::make(4)
@@ -47,12 +60,14 @@ class PricingRuleForm
                                     ->columnSpan(2),
                                 DatePicker::make('effective_from')
                                     ->label('Áp dụng từ ngày')
-                                    ->native(false)
+                                    ->displayFormat('d/m/Y')
+                                    ->native(true)
                                     ->default(now()->toDateString())
                                     ->columnSpan(1),
                                 DatePicker::make('effective_to')
                                     ->label('Áp dụng đến ngày')
-                                    ->native(false)
+                                    ->displayFormat('d/m/Y')
+                                    ->native(true)
                                     ->placeholder('Vô thời hạn')
                                     ->columnSpan(1),
                             ]),

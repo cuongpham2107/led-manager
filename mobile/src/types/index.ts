@@ -11,6 +11,13 @@ export interface User {
     name: string;
     city?: string;
   } | null;
+  agency?: {
+    id: number;
+    name: string;
+    code: string;
+    is_active: boolean;
+  } | null;
+  is_agency?: boolean;
   roles: string[];
 }
 

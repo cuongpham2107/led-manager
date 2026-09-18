@@ -217,7 +217,9 @@ class MovementHistoryReport extends Page implements HasTable
                         return $query
                             ->when($data['from'], fn (Builder $q, $date) => $q->whereDate('created_at', '>=', $date))
                             ->when($data['until'], fn (Builder $q, $date) => $q->whereDate('created_at', '<=', $date));
-                    }),
+                    })
+                    ->columns(2)
+                    ->columnSpan(2),
 
                 SelectFilter::make('warehouse')
                     ->label('Kho tiếp nhận / liên quan')

@@ -8,6 +8,7 @@ use App\Enums\OrderStatus;
 use App\Filament\Resources\Orders\OrderResource;
 use App\Models\EventMilestone;
 use App\Models\Order;
+use App\Models\User;
 use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DateTimePicker;
@@ -17,6 +18,7 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\HtmlString;
 use Saade\FilamentFullCalendar\Data\EventData;
 use Saade\FilamentFullCalendar\Widgets\FullCalendarWidget;
@@ -43,7 +45,19 @@ class EventCalendarWidget extends FullCalendarWidget
                     ->orWhereDate('expected_return_date', '>=', $info['start']);
             });
 
-        if ($whId = auth()->user()?->getScopedWarehouseId()) {
+        /** @var User|null $user */
+        $user = Auth::user();
+        $agencyId = $user?->getScopedAgencyId();
+        $whId = $user?->getScopedWarehouseId();
+
+        if ($agencyId) {
+            $orderQuery->where(function ($q) use ($agencyId, $whId) {
+                $q->where('agency_id', $agencyId);
+                if ($whId) {
+                    $q->orWhere('warehouse_id', $whId);
+                }
+            });
+        } elseif ($whId) {
             $orderQuery->where('warehouse_id', $whId);
         }
 
@@ -76,11 +90,23 @@ class EventCalendarWidget extends FullCalendarWidget
         }
 
         // 2. Event Milestones (Các mốc lịch trình thi công, lắp đặt, chạy thử)
-        $milestones = EventMilestone::query()
+        $milestoneQuery = EventMilestone::query()
             ->with(['order.customer'])
             ->whereDate('planned_at', '>=', $info['start'])
-            ->whereDate('planned_at', '<=', $info['end'])
-            ->get();
+            ->whereDate('planned_at', '<=', $info['end']);
+
+        if ($agencyId) {
+            $milestoneQuery->whereHas('order', function ($q) use ($agencyId, $whId) {
+                $q->where('agency_id', $agencyId);
+                if ($whId) {
+                    $q->orWhere('warehouse_id', $whId);
+                }
+            });
+        } elseif ($whId) {
+            $milestoneQuery->whereHas('order', fn ($q) => $q->where('warehouse_id', $whId));
+        }
+
+        $milestones = $milestoneQuery->get();
 
         foreach ($milestones as $ms) {
             $start = $ms->planned_at?->toIso8601String() ?? now()->toIso8601String();
@@ -127,7 +153,26 @@ class EventCalendarWidget extends FullCalendarWidget
                 ->schema([
                     Select::make('order_id')
                         ->label('Đơn hàng sự kiện')
-                        ->options(fn () => Order::pluck('order_no', 'id'))
+                        ->options(function () {
+                            /** @var User|null $user */
+                            $user = Auth::user();
+                            $agencyId = $user?->getScopedAgencyId();
+                            $whId = $user?->getScopedWarehouseId();
+
+                            $query = Order::query();
+                            if ($agencyId) {
+                                $query->where(function ($q) use ($agencyId, $whId) {
+                                    $q->where('agency_id', $agencyId);
+                                    if ($whId) {
+                                        $q->orWhere('warehouse_id', $whId);
+                                    }
+                                });
+                            } elseif ($whId) {
+                                $query->where('warehouse_id', $whId);
+                            }
+
+                            return $query->pluck('order_no', 'id');
+                        })
                         ->searchable()
                         ->required(),
                     Select::make('type')
@@ -179,9 +224,25 @@ class EventCalendarWidget extends FullCalendarWidget
             ->modalCancelActionLabel('Đóng')
             ->extraModalFooterActions(function (array $arguments): array {
                 $idStr = $arguments['event']['id'] ?? '';
+                /** @var User|null $user */
+                $user = Auth::user();
+                $agencyId = $user?->getScopedAgencyId();
+                $whId = $user?->getScopedWarehouseId();
+
                 if (str_starts_with($idStr, 'order_')) {
                     $orderId = (int) str_replace('order_', '', $idStr);
-                    $order = Order::find($orderId);
+                    $query = Order::query();
+                    if ($agencyId) {
+                        $query->where(function ($q) use ($agencyId, $whId) {
+                            $q->where('agency_id', $agencyId);
+                            if ($whId) {
+                                $q->orWhere('warehouse_id', $whId);
+                            }
+                        });
+                    } elseif ($whId) {
+                        $query->where('warehouse_id', $whId);
+                    }
+                    $order = $query->find($orderId);
                     if (! $order) {
                         return [];
                     }
@@ -197,7 +258,18 @@ class EventCalendarWidget extends FullCalendarWidget
 
                 if (str_starts_with($idStr, 'milestone_')) {
                     $msId = (int) str_replace('milestone_', '', $idStr);
-                    $ms = EventMilestone::with('order')->find($msId);
+                    $query = EventMilestone::with('order');
+                    if ($agencyId) {
+                        $query->whereHas('order', function ($q) use ($agencyId, $whId) {
+                            $q->where('agency_id', $agencyId);
+                            if ($whId) {
+                                $q->orWhere('warehouse_id', $whId);
+                            }
+                        });
+                    } elseif ($whId) {
+                        $query->whereHas('order', fn ($q) => $q->where('warehouse_id', $whId));
+                    }
+                    $ms = $query->find($msId);
                     if (! $ms?->order) {
                         return [];
                     }
@@ -215,9 +287,25 @@ class EventCalendarWidget extends FullCalendarWidget
             })
             ->schema(function (array $arguments): array {
                 $idStr = $arguments['event']['id'] ?? '';
+                /** @var User|null $user */
+                $user = Auth::user();
+                $agencyId = $user?->getScopedAgencyId();
+                $whId = $user?->getScopedWarehouseId();
+
                 if (str_starts_with($idStr, 'order_')) {
                     $orderId = (int) str_replace('order_', '', $idStr);
-                    $order = Order::with(['customer', 'warehouse', 'salesUser', 'milestones'])->find($orderId);
+                    $query = Order::with(['customer', 'warehouse', 'salesUser', 'milestones']);
+                    if ($agencyId) {
+                        $query->where(function ($q) use ($agencyId, $whId) {
+                            $q->where('agency_id', $agencyId);
+                            if ($whId) {
+                                $q->orWhere('warehouse_id', $whId);
+                            }
+                        });
+                    } elseif ($whId) {
+                        $query->where('warehouse_id', $whId);
+                    }
+                    $order = $query->find($orderId);
                     if (! $order) {
                         return [TextEntry::make('err')->state('Không tìm thấy thông tin đơn hàng.')];
                     }
@@ -237,7 +325,18 @@ class EventCalendarWidget extends FullCalendarWidget
 
                 if (str_starts_with($idStr, 'milestone_')) {
                     $msId = (int) str_replace('milestone_', '', $idStr);
-                    $ms = EventMilestone::with(['order.customer'])->find($msId);
+                    $query = EventMilestone::with(['order.customer']);
+                    if ($agencyId) {
+                        $query->whereHas('order', function ($q) use ($agencyId, $whId) {
+                            $q->where('agency_id', $agencyId);
+                            if ($whId) {
+                                $q->orWhere('warehouse_id', $whId);
+                            }
+                        });
+                    } elseif ($whId) {
+                        $query->whereHas('order', fn ($q) => $q->where('warehouse_id', $whId));
+                    }
+                    $ms = $query->find($msId);
                     if (! $ms) {
                         return [TextEntry::make('err')->state('Không tìm thấy thông tin mốc thi công.')];
                     }
@@ -263,10 +362,25 @@ class EventCalendarWidget extends FullCalendarWidget
     {
         $idStr = $event['id'] ?? '';
         $deltaDays = (int) ($delta['days'] ?? 0);
+        /** @var User|null $user */
+        $user = Auth::user();
+        $agencyId = $user?->getScopedAgencyId();
+        $whId = $user?->getScopedWarehouseId();
 
         if (str_starts_with($idStr, 'order_')) {
             $orderId = (int) str_replace('order_', '', $idStr);
-            $order = Order::find($orderId);
+            $query = Order::query();
+            if ($agencyId) {
+                $query->where(function ($q) use ($agencyId, $whId) {
+                    $q->where('agency_id', $agencyId);
+                    if ($whId) {
+                        $q->orWhere('warehouse_id', $whId);
+                    }
+                });
+            } elseif ($whId) {
+                $query->where('warehouse_id', $whId);
+            }
+            $order = $query->find($orderId);
             if ($order && $deltaDays !== 0) {
                 if ($order->request_date) {
                     $order->request_date = Carbon::parse($order->request_date)->addDays($deltaDays);
@@ -284,7 +398,18 @@ class EventCalendarWidget extends FullCalendarWidget
             }
         } elseif (str_starts_with($idStr, 'milestone_')) {
             $msId = (int) str_replace('milestone_', '', $idStr);
-            $ms = EventMilestone::find($msId);
+            $query = EventMilestone::query();
+            if ($agencyId) {
+                $query->whereHas('order', function ($q) use ($agencyId, $whId) {
+                    $q->where('agency_id', $agencyId);
+                    if ($whId) {
+                        $q->orWhere('warehouse_id', $whId);
+                    }
+                });
+            } elseif ($whId) {
+                $query->whereHas('order', fn ($q) => $q->where('warehouse_id', $whId));
+            }
+            $ms = $query->find($msId);
             if ($ms && $ms->planned_at && $deltaDays !== 0) {
                 $ms->planned_at = Carbon::parse($ms->planned_at)->addDays($deltaDays);
                 $ms->save();

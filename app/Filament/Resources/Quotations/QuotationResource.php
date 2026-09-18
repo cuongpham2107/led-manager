@@ -8,11 +8,12 @@ use App\Filament\Resources\Quotations\Pages\ListQuotations;
 use App\Filament\Resources\Quotations\Schemas\QuotationForm;
 use App\Filament\Resources\Quotations\Tables\QuotationsTable;
 use App\Models\Quotation;
-use BackedEnum;
+use App\Models\User;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
-use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 use UnitEnum;
 
 class QuotationResource extends Resource
@@ -29,7 +30,19 @@ class QuotationResource extends Resource
 
     protected static ?int $navigationSort = 1;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentText;
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+
+        /** @var User|null $user */
+        $user = Auth::user();
+
+        if ($agencyId = $user?->getScopedAgencyId()) {
+            $query->whereHas('salesUser', fn ($q) => $q->where('agency_id', $agencyId));
+        }
+
+        return $query;
+    }
 
     public static function form(Schema $schema): Schema
     {

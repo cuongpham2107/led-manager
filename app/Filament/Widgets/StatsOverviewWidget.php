@@ -8,9 +8,11 @@ use App\Enums\QuotationStatus;
 use App\Models\Asset;
 use App\Models\Order;
 use App\Models\Quotation;
+use App\Models\User;
 use Carbon\Carbon;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
+use Illuminate\Support\Facades\Auth;
 
 class StatsOverviewWidget extends BaseWidget
 {
@@ -22,12 +24,27 @@ class StatsOverviewWidget extends BaseWidget
 
     protected function getStats(): array
     {
-        $whId = auth()->user()?->getScopedWarehouseId();
+        /** @var User|null $user */
+        $user = Auth::user();
+        $agencyId = $user?->getScopedAgencyId();
+        $whId = $user?->getScopedWarehouseId();
 
         $orderQuery = Order::query();
         $assetQuery = Asset::query();
+        $quotationQuery = Quotation::query();
 
-        if ($whId) {
+        if ($agencyId) {
+            $orderQuery->where(function ($q) use ($agencyId, $whId) {
+                $q->where('agency_id', $agencyId);
+                if ($whId) {
+                    $q->orWhere('warehouse_id', $whId);
+                }
+            });
+            if ($whId) {
+                $assetQuery->where('current_warehouse_id', $whId);
+            }
+            $quotationQuery->whereHas('salesUser', fn ($q) => $q->where('agency_id', $agencyId));
+        } elseif ($whId) {
             $orderQuery->where('warehouse_id', $whId);
             $assetQuery->where('current_warehouse_id', $whId);
         }
@@ -44,7 +61,7 @@ class StatsOverviewWidget extends BaseWidget
         $readyAssets = (clone $assetQuery)->where('current_status', AssetStatus::Ready)->count();
         $utilizationRate = $totalAssets > 0 ? round((($totalAssets - $readyAssets) / $totalAssets) * 100, 1) : 0;
 
-        $pendingQuotations = Quotation::whereNotIn('status', [
+        $pendingQuotations = $quotationQuery->whereNotIn('status', [
             QuotationStatus::Converted,
             QuotationStatus::Expired,
             QuotationStatus::Rejected,

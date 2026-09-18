@@ -6,7 +6,9 @@ use App\Enums\AssetStatus;
 use App\Filament\Resources\Assets\Actions\CompleteMaintenanceBulkAction;
 use App\Filament\Resources\Assets\Actions\SendToMaintenanceBulkAction;
 use App\Filament\Resources\Assets\Actions\ViewQrCodeAction;
+use App\Models\Agency;
 use App\Models\ProductLine;
+use App\Models\User;
 use App\Models\Warehouse;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -18,13 +20,15 @@ use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Enums\RecordActionsPosition;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 
 class AssetsTable
 {
     public static function configure(Table $table): Table
     {
         return $table
-            ->searchPlaceholder('Tìm theo số seri hoặc vị trí...')
+            ->searchPlaceholder('Tìm theo số seri hoặc kho hàng...')
             ->defaultSort('serial_no', 'asc')
             ->columns([
                 TextColumn::make('serial_no')
@@ -32,58 +36,32 @@ class AssetsTable
                     ->searchable(query: function ($query, string $search) {
                         $query->where(function ($q) use ($search) {
                             $q->where('serial_no', 'like', "%{$search}%")
-                                ->orWhereHas('warehouseLocation', fn ($lq) => $lq->where('name', 'like', "%{$search}%")->orWhere('code', 'like', "%{$search}%"))
-                                ->orWhereHas('currentWarehouse', fn ($wq) => $wq->where('name', 'like', "%{$search}%"));
+                                ->orWhereHas('currentWarehouse', fn ($wq) => $wq->where('name', 'like', "%{$search}%")->orWhereHas('agency', fn ($aq) => $aq->where('name', 'like', "%{$search}%")));
                         });
                     })
                     ->alignCenter()
                     ->color('primary')
-                    ->sortable()
-                    ->weight('bold'),
+                    ->weight('bold')
+                    ->copyable()
+                    ->sortable(),
 
-                TextColumn::make('productLine.code')
+                TextColumn::make('productLine.name')
                     ->label('DÒNG SẢN PHẨM')
-                    ->alignCenter()
-                    ->formatStateUsing(fn ($record) => $record->productLine?->code ?: $record->productLine?->name)
+                    ->badge()
+                    ->color('gray')
+                    ->sortable(),
+
+                TextColumn::make('batch_no')
+                    ->label('LÔ SẢN XUẤT')
                     ->placeholder('—')
                     ->sortable(),
 
-                TextColumn::make('size')
-                    ->label('KÍCH THƯỚC')
-                    ->alignCenter()
-                    ->formatStateUsing(fn (?string $state): string => $state ? str_replace('x', '×', $state).(str_ends_with($state, 'm') ? '' : ' m') : '—')
-                    ->placeholder('—')
+                TextColumn::make('current_status')
+                    ->label('TRẠNG THÁI')
+                    ->badge()
+                    ->formatStateUsing(fn ($state): string => $state instanceof AssetStatus ? $state->getLabel() : (string) $state)
+                    ->color(fn ($state): string => $state instanceof AssetStatus ? $state->getColor() : 'gray')
                     ->sortable(),
-
-                // TextColumn::make('current_status')
-                //     ->label('TRẠNG THÁI')
-                //     ->badge()
-                //     ->formatStateUsing(fn ($state) => $state instanceof AssetStatus ? $state->getLabel() : ($state?->value ?? (string) $state))
-                //     ->color(fn ($state) => $state instanceof AssetStatus ? $state->getColor() : 'gray')
-                //     ->sortable(),
-
-                // TextColumn::make('currentWarehouse.name')
-                //     ->label('KHO HÀNG')
-                //     ->badge()
-                //     ->color('info')
-                //     ->sortable(),
-
-                // TextColumn::make('warehouseLocation.name')
-                //     ->label('VỊ TRÍ KHO')
-                //     ->placeholder('Chưa xếp vị trí')
-                //     ->sortable(),
-
-                // TextColumn::make('operating_hours')
-                //     ->label('SỐ GIỜ CHẠY')
-                //     ->formatStateUsing(fn ($state): string => number_format((float) ($state ?: 0), 0, ',', '.').' h')
-                //     ->sortable()
-                //     ->alignCenter(),
-
-                // TextColumn::make('rental_count')
-                //     ->label('SỐ LẦN CHO THUÊ')
-                //     ->formatStateUsing(fn ($state): string => number_format((int) ($state ?: 0), 0, ',', '.'))
-                //     ->sortable()
-                //     ->alignCenter(),
 
                 TextColumn::make('manufactured_date')
                     ->label('NGÀY SẢN XUẤT')
@@ -96,19 +74,44 @@ class AssetsTable
                 SelectFilter::make('current_warehouse_id')
                     ->label('Kho hàng')
                     ->options(fn (): array => Warehouse::query()->pluck('name', 'id')->toArray())
-                    ->hidden(fn (): bool => (bool) auth()->user()?->getScopedWarehouseId()),
+                    ->hidden(function (): bool {
+                        $user = Auth::user();
 
-                SelectFilter::make('warehouse_location_id')
-                    ->label('Vị trí kho')
-                    ->relationship('warehouseLocation', 'name', modifyQueryUsing: function ($query, $livewire) {
-                        $whId = auth()->user()?->getScopedWarehouseId()
-                            ?: ($livewire?->getTableFilterState('current_warehouse_id')['value'] ?? null);
+                        return $user instanceof User && (bool) $user->getScopedWarehouseId();
+                    }),
 
-                        if ($whId) {
-                            $query->where('warehouse_id', $whId);
+                SelectFilter::make('agency_filter')
+                    ->label('Đại lý / Đơn vị')
+                    ->options(function (): array {
+                        $options = ['hq' => 'Tổng công ty (HQ)'];
+                        $agencies = Agency::query()->orderBy('name')->pluck('name', 'id')->toArray();
+                        foreach ($agencies as $id => $name) {
+                            $options[(string) $id] = $name;
                         }
+
+                        return $options;
                     })
-                    ->preload(),
+                    ->query(function (Builder $query, array $data): Builder {
+                        $val = $data['value'] ?? null;
+                        if (! $val) {
+                            return $query;
+                        }
+
+                        if ($val === 'hq') {
+                            return $query->whereHas('currentWarehouse', function ($wq) {
+                                $wq->whereDoesntHave('agency');
+                            });
+                        }
+
+                        return $query->whereHas('currentWarehouse.agency', function ($aq) use ($val) {
+                            $aq->where('id', (int) $val);
+                        });
+                    })
+                    ->hidden(function (): bool {
+                        $user = Auth::user();
+
+                        return $user instanceof User && (bool) $user->getScopedWarehouseId();
+                    }),
 
                 SelectFilter::make('current_status')
                     ->label('Tất cả trạng thái')

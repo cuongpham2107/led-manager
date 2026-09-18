@@ -4,8 +4,10 @@ namespace App\Filament\Widgets;
 
 use App\Enums\OrderStatus;
 use App\Models\Order;
+use App\Models\User;
 use Carbon\Carbon;
 use Filament\Widgets\ChartWidget;
+use Illuminate\Support\Facades\Auth;
 
 class MonthlyRevenueChartWidget extends ChartWidget
 {
@@ -26,16 +28,32 @@ class MonthlyRevenueChartWidget extends ChartWidget
         $months = [];
         $values = [];
 
+        /** @var User|null $user */
+        $user = Auth::user();
+        $agencyId = $user?->getScopedAgencyId();
+        $whId = $user?->getScopedWarehouseId();
+
         for ($i = 5; $i >= 0; $i--) {
             $month = Carbon::now()->subMonths($i);
             $monthLabel = 'T'.$month->format('m/Y');
             $months[] = $monthLabel;
 
-            $monthTotal = Order::where('status', '!=', OrderStatus::Cancelled)
+            $q = Order::where('status', '!=', OrderStatus::Cancelled)
                 ->whereYear('request_date', $month->year)
-                ->whereMonth('request_date', $month->month)
-                ->sum('value');
+                ->whereMonth('request_date', $month->month);
 
+            if ($agencyId) {
+                $q->where(function ($sub) use ($agencyId, $whId) {
+                    $sub->where('agency_id', $agencyId);
+                    if ($whId) {
+                        $sub->orWhere('warehouse_id', $whId);
+                    }
+                });
+            } elseif ($whId) {
+                $q->where('warehouse_id', $whId);
+            }
+
+            $monthTotal = $q->sum('value');
             $values[] = round($monthTotal / 1000000, 1);
         }
 

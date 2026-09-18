@@ -14,6 +14,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 use UnitEnum;
 
 class InventoryStockResource extends Resource
@@ -22,11 +23,11 @@ class InventoryStockResource extends Resource
 
     protected static string|UnitEnum|null $navigationGroup = 'Quản lý kho';
 
-    protected static ?string $navigationLabel = 'Vị trí & tồn kho';
+    protected static ?string $navigationLabel = 'Tồn kho thiết bị';
 
-    protected static ?string $modelLabel = 'Tài sản trong kho';
+    protected static ?string $modelLabel = 'Tồn kho thiết bị';
 
-    protected static ?string $pluralModelLabel = 'Tất cả tài sản trong kho';
+    protected static ?string $pluralModelLabel = 'Tồn kho thiết bị';
 
     protected static ?string $slug = 'vi-tri-ton-kho';
 
@@ -37,14 +38,13 @@ class InventoryStockResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         $query = parent::getEloquentQuery()
-            ->with(['currentWarehouse', 'warehouseLocation', 'productLine'])
+            ->with(['currentWarehouse.agency', 'productLine'])
             ->whereNotNull('assets.current_warehouse_id')
             ->where('assets.current_status', '!=', AssetStatus::NewlyAdded);
 
-        /** @var User|null $user */
-        $user = auth()->user();
+        $user = Auth::user();
 
-        if ($whId = $user?->getScopedWarehouseId()) {
+        if ($whId = ($user instanceof User ? $user->getScopedWarehouseId() : null)) {
             $query->where('assets.current_warehouse_id', $whId);
         }
 

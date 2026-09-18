@@ -96,6 +96,8 @@ class ListReturnBatches extends ListRecords
                         $returnBatch = ReturnBatch::create([
                             'code' => $code,
                             'checkout_batch_id' => $checkoutBatch->id,
+                            'agency_id' => $checkoutBatch->agency_id ?? $checkoutBatch->warehouse?->agency?->id,
+                            'warehouse_id' => $checkoutBatch->warehouse_id,
                             'return_date' => now()->toDateString(),
                             'note' => $data['note'] ?? null,
                             'status' => ReturnBatchStatus::InProgress,

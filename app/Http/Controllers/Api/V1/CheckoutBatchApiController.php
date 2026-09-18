@@ -27,6 +27,19 @@ class CheckoutBatchApiController extends Controller
         $query = CheckoutBatch::with(['order', 'customer', 'warehouse', 'creator', 'items.asset.productLine'])
             ->latest();
 
+        if ($request->user()->isAgencyScoped()) {
+            $agencyId = $request->user()->getScopedAgencyId();
+            $whId = $request->user()->getScopedWarehouseId();
+            $query->where(function ($q) use ($agencyId, $whId) {
+                if ($whId) {
+                    $q->where('warehouse_id', $whId);
+                }
+                if ($agencyId) {
+                    $q->orWhereHas('order', fn ($oq) => $oq->where('agency_id', $agencyId));
+                }
+            });
+        }
+
         if ($warehouseId = $request->input('warehouse_id')) {
             $query->where('warehouse_id', $warehouseId);
         }
@@ -69,7 +82,7 @@ class CheckoutBatchApiController extends Controller
     /**
      * Get single checkout batch details with all items.
      */
-    public function show(int $id): JsonResponse
+    public function show(Request $request, int $id): JsonResponse
     {
         $batch = CheckoutBatch::with([
             'order',
@@ -85,6 +98,10 @@ class CheckoutBatchApiController extends Controller
                 'success' => false,
                 'message' => 'Không tìm thấy đợt xuất kho.',
             ], 404);
+        }
+
+        if ($accessError = $this->checkAgencyAccess($request, $batch)) {
+            return $accessError;
         }
 
         return response()->json([
@@ -109,6 +126,10 @@ class CheckoutBatchApiController extends Controller
                 'success' => false,
                 'message' => 'Không tìm thấy đợt xuất kho.',
             ], 404);
+        }
+
+        if ($accessError = $this->checkAgencyAccess($request, $batch)) {
+            return $accessError;
         }
 
         if (in_array($batch->status, [BatchStatus::Cancelled, BatchStatus::Completed])) {
@@ -136,6 +157,13 @@ class CheckoutBatchApiController extends Controller
                 'success' => false,
                 'message' => "Không tìm thấy thiết bị nào khớp với mã: '{$code}'.",
             ], 404);
+        }
+
+        if ($request->user()->isAgencyScoped() && $batch->warehouse_id && (int) $asset->current_warehouse_id !== (int) $batch->warehouse_id) {
+            return response()->json([
+                'success' => false,
+                'message' => "Thiết bị {$asset->serial_no} hiện không thuộc kho của đại lý.",
+            ], 422);
         }
 
         if (in_array($asset->current_status, [AssetStatus::Repairing, AssetStatus::Disposed])) {
@@ -230,6 +258,10 @@ class CheckoutBatchApiController extends Controller
             ], 404);
         }
 
+        if ($accessError = $this->checkAgencyAccess($request, $batch)) {
+            return $accessError;
+        }
+
         return DB::transaction(function () use ($batch) {
             $batch->update([
                 'status' => BatchStatus::Dispatched,
@@ -267,5 +299,28 @@ class CheckoutBatchApiController extends Controller
                 'data' => new CheckoutBatchResource($batch->fresh(['order', 'customer', 'warehouse', 'items.asset'])),
             ]);
         });
+    }
+
+    /**
+     * Check if user has permission to access this checkout batch based on agency scoping.
+     */
+    private function checkAgencyAccess(Request $request, CheckoutBatch $batch): ?JsonResponse
+    {
+        if ($request->user()->isAgencyScoped()) {
+            $agencyId = $request->user()->getScopedAgencyId();
+            $whId = $request->user()->getScopedWarehouseId();
+            $batch->loadMissing('order');
+            $isAllowed = ($whId && (int) $batch->warehouse_id === (int) $whId)
+                || ($agencyId && $batch->order && (int) $batch->order->agency_id === (int) $agencyId);
+
+            if (! $isAllowed) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Bạn không có quyền truy cập đợt xuất kho này.',
+                ], 403);
+            }
+        }
+
+        return null;
     }
 }

@@ -15,9 +15,15 @@ class WarehouseApiController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $warehouses = Warehouse::withCount('assets')
-            ->where('is_active', true)
-            ->get();
+        $query = Warehouse::withCount('assets')
+            ->where('is_active', true);
+
+        if ($request->user()->isAgencyScoped()) {
+            $scopedWarehouseId = $request->user()->getScopedWarehouseId();
+            $query->where('id', $scopedWarehouseId);
+        }
+
+        $warehouses = $query->get();
 
         return response()->json([
             'success' => true,

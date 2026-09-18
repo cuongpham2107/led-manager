@@ -44,7 +44,8 @@ class CompleteMaintenanceAction extends Action
                     DatePicker::make('end_date')
                         ->label('Ngày hoàn thành')
                         ->default(now()->toDateString())
-                        ->native(false)
+                        ->displayFormat('d/m/Y')
+                        ->native(true)
                         ->required(),
                     Select::make('result_status')
                         ->label('Kết quả bảo trì')

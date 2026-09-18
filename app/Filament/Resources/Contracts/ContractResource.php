@@ -8,11 +8,14 @@ use App\Filament\Resources\Contracts\Pages\ListContracts;
 use App\Filament\Resources\Contracts\Schemas\ContractForm;
 use App\Filament\Resources\Contracts\Tables\ContractsTable;
 use App\Models\Contract;
+use App\Models\User;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 use UnitEnum;
 
 class ContractResource extends Resource
@@ -29,7 +32,24 @@ class ContractResource extends Resource
 
     protected static ?int $navigationSort = 2;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentCheck;
+    // protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentCheck;
+
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+
+        /** @var User|null $user */
+        $user = Auth::user();
+
+        if ($agencyId = $user?->getScopedAgencyId()) {
+            $query->where(function (Builder $q) use ($agencyId) {
+                $q->whereHas('order', fn ($oq) => $oq->where('agency_id', $agencyId))
+                    ->orWhereHas('salesUser', fn ($sq) => $sq->where('agency_id', $agencyId));
+            });
+        }
+
+        return $query;
+    }
 
     public static function form(Schema $schema): Schema
     {

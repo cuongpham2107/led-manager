@@ -5,7 +5,9 @@ namespace App\Models;
 use App\Enums\CustomerType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Auth;
 
 class Customer extends Model
 {
@@ -15,6 +17,8 @@ class Customer extends Model
         'name',
         'code',
         'type',
+        'agency_id',
+        'created_by',
         'phone',
         'email',
         'tax_code',
@@ -33,6 +37,37 @@ class Customer extends Model
             'type' => CustomerType::class,
             'is_active' => 'boolean',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (Customer $customer) {
+            $user = Auth::user();
+            if ($user instanceof User) {
+                if (! $customer->created_by) {
+                    $customer->created_by = $user->id;
+                }
+                if (! $customer->agency_id && $user->getScopedAgencyId()) {
+                    $customer->agency_id = $user->getScopedAgencyId();
+                }
+            }
+        });
+    }
+
+    /**
+     * @return BelongsTo<Agency, $this>
+     */
+    public function agency(): BelongsTo
+    {
+        return $this->belongsTo(Agency::class);
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     /**

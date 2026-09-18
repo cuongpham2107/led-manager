@@ -43,8 +43,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
   });
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
-  const warehouseName = user?.warehouse?.name || 'Kho chính';
-  const warehouseCode = user?.warehouse?.code || 'WH';
+  const isAgency = !!(user?.is_agency || user?.agency);
+  const agencyName = user?.agency?.name;
+  const warehouseName = user?.warehouse?.name || (isAgency ? 'Kho đại lý' : 'Kho chính');
+  const warehouseCode = user?.warehouse?.code || (isAgency ? 'AGENCY' : 'WH');
 
   const fetchDashboardStats = async () => {
     try {
@@ -101,7 +103,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
           <View style={styles.warehouseChip}>
             <MapPin color="#2563EB" size={13} style={{ marginRight: 4 }} />
             <Text style={styles.warehouseChipText}>
-              {warehouseName} ({warehouseCode})
+              {agencyName ? `${agencyName} · ` : ''}{warehouseName} ({warehouseCode})
             </Text>
           </View>
         </View>
@@ -134,7 +136,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
             </View>
             <View style={styles.actionTextBox}>
               <View style={styles.actionTitleRow}>
-                <Text style={styles.actionTitle}>Nhập Kho Sản Xuất</Text>
+                <Text style={styles.actionTitle}>
+                  {isAgency ? 'Nhập Kho Điều Phối' : 'Nhập Kho Sản Xuất'}
+                </Text>
                 {stats.pendingCheckin > 0 && (
                   <View style={[styles.badgeCount, { backgroundColor: '#D1FAE5' }]}>
                     <Text style={[styles.badgeCountText, { color: '#047857' }]}>
@@ -144,7 +148,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate }) => {
                 )}
               </View>
               <Text style={styles.actionDesc}>
-                Quét QR/Serial thiết bị mới sản xuất xong, nhập kho nhanh 1 thao tác
+                {isAgency
+                  ? 'Quét QR/Serial nhận thiết bị điều phối từ tổng kho về kho đại lý'
+                  : 'Quét QR/Serial thiết bị mới sản xuất xong, nhập kho nhanh 1 thao tác'}
               </Text>
             </View>
             <ChevronRight color="#94A3B8" size={20} />

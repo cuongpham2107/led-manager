@@ -4,9 +4,12 @@ namespace App\Filament\Resources\CheckinBatches\Schemas;
 
 use App\Enums\AssetStatus;
 use App\Enums\BatchStatus;
+use App\Models\Agency;
 use App\Models\Asset;
 use App\Models\CheckinBatch;
 use App\Models\ProductLine;
+use App\Models\User;
+use App\Models\Warehouse;
 use App\Services\CodeGeneratorService;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
@@ -14,7 +17,9 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\ViewField;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Facades\Auth;
 
 class CheckinBatchForm
 {
@@ -34,20 +39,101 @@ class CheckinBatchForm
                     ->placeholder('Thu hồi sau sự kiện ABC Corp / XYZ / Rex Hotel')
                     ->columnSpanFull(),
 
-                Grid::make(2)
+                Grid::make(['default' => 1, 'md' => 3])
                     ->schema([
-                        Select::make('warehouse_id')
-                            ->label('Kho hàng')
-                            ->relationship('warehouse', 'name')
+                        Select::make('agency_id')
+                            ->label('Đại lý tiếp nhận (Nếu có)')
+                            ->placeholder('— Nhập về Kho Tổng (HQ) —')
+                            ->options(fn () => Agency::where('is_active', true)->orderBy('name')->pluck('name', 'id'))
                             ->searchable()
                             ->preload()
                             ->live()
-                            ->required(),
+                            ->default(function (?CheckinBatch $record) {
+                                if ($record) {
+                                    return $record->agency_id ?? $record->warehouse?->agency?->id;
+                                }
+                                $user = Auth::user();
+
+                                return $user instanceof User ? $user->getScopedAgencyId() : null;
+                            })
+                            ->disabled(function () {
+                                $user = Auth::user();
+
+                                return (bool) ($user instanceof User && $user->getScopedAgencyId());
+                            })
+                            ->dehydrated()
+                            ->afterStateUpdated(function ($state, Set $set) {
+                                if ($state) {
+                                    $agency = Agency::find($state);
+                                    if ($agency && $agency->warehouse_id) {
+                                        $set('warehouse_id', $agency->warehouse_id);
+                                    }
+                                } else {
+                                    $defaultHq = Warehouse::whereDoesntHave('agency')->where('is_active', true)->first();
+                                    $set('warehouse_id', $defaultHq?->id);
+                                }
+                            }),
+
+                        Select::make('warehouse_id')
+                            ->label('Kho lưu trữ tiếp nhận')
+                            ->options(function (Get $get) {
+                                $agencyId = $get('agency_id');
+                                if ($agencyId) {
+                                    $agency = Agency::find($agencyId);
+
+                                    return $agency && $agency->warehouse
+                                        ? [$agency->warehouse_id => "{$agency->warehouse->name} [Đại lý: {$agency->name}]"]
+                                        : [];
+                                }
+
+                                return Warehouse::whereDoesntHave('agency')
+                                    ->where('is_active', true)
+                                    ->pluck('name', 'id');
+                            })
+                            ->default(function (?CheckinBatch $record) {
+                                if ($record) {
+                                    return $record->warehouse_id;
+                                }
+                                $user = Auth::user();
+                                if ($user instanceof User && $user->getScopedWarehouseId()) {
+                                    return $user->getScopedWarehouseId();
+                                }
+
+                                return Warehouse::whereDoesntHave('agency')->where('is_active', true)->first()?->id;
+                            })
+                            ->disabled(function (Get $get) {
+                                $user = Auth::user();
+                                if ($user instanceof User && $user->getScopedWarehouseId()) {
+                                    return true;
+                                }
+
+                                return (bool) $get('agency_id');
+                            })
+                            ->dehydrated()
+                            ->required()
+                            ->live()
+                            ->helperText(function (Get $get) {
+                                $whId = $get('warehouse_id');
+                                if (! $whId) {
+                                    return 'Chọn kho tiếp nhận để kiểm tra đơn vị quản lý và hạn mức khả dụng.';
+                                }
+                                $agency = Agency::where('warehouse_id', $whId)->first();
+                                if (! $agency) {
+                                    return '🏢 Kho Tổng công ty (HQ) — Không áp dụng giới hạn định mức đại lý.';
+                                }
+                                $allocated = (float) $agency->allocated_area_m2;
+                                $current = $agency->current_inventory_area;
+                                $remaining = max(0, round($allocated - $current, 2));
+                                $percent = $allocated > 0 ? round(($current / $allocated) * 100, 1) : 0;
+                                $contact = $agency->contact_person ? " | LH: {$agency->contact_person} ({$agency->phone})" : '';
+
+                                return "🏢 Phân phối cho: {$agency->name} ({$agency->code}){$contact} | Định mức: {$allocated} m² | Đang chứa: {$current} m² ({$percent}%) | Còn trống: {$remaining} m²";
+                            }),
 
                         DatePicker::make('expected_date')
                             ->label('Ngày dự kiến')
-                            ->native(false)
                             ->displayFormat('d/m/Y')
+                            ->native(true)
                             ->placeholder('DD/MM/YYYY'),
                     ])
                     ->extraAttributes(['class' => 'relative z-30', 'style' => 'position: relative; z-index: 30;'])

@@ -15,6 +15,8 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 use UnitEnum;
 
 class CheckinBatchResource extends Resource
@@ -42,13 +44,51 @@ class CheckinBatchResource extends Resource
             ]);
 
         /** @var User|null $user */
-        $user = auth()->user();
+        $user = Auth::user();
 
-        if ($whId = $user?->getScopedWarehouseId()) {
+        if ($agencyId = $user?->getScopedAgencyId()) {
+            $query->where('checkin_batches.agency_id', $agencyId);
+        } elseif ($whId = $user?->getScopedWarehouseId()) {
             $query->where('checkin_batches.warehouse_id', $whId);
         }
 
         return $query;
+    }
+
+    public static function canCreate(): bool
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+
+        if ($user?->isAgencyScoped()) {
+            return false;
+        }
+
+        return parent::canCreate();
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+
+        if ($user?->isAgencyScoped()) {
+            return false;
+        }
+
+        return parent::canDelete($record);
+    }
+
+    public static function canDeleteAny(): bool
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+
+        if ($user?->isAgencyScoped()) {
+            return false;
+        }
+
+        return parent::canDeleteAny();
     }
 
     public static function form(Schema $schema): Schema

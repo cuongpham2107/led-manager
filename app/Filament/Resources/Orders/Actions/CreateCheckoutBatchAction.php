@@ -76,7 +76,7 @@ class CreateCheckoutBatchAction extends Action
             ->modalHeading('Tạo Đợt Xuất Kho')
             ->modalDescription('Khởi tạo phiếu xuất kho cho đơn hàng và tuỳ chọn tự động phân bổ thiết bị sẵn sàng từ kho.')
             ->modalSubmitActionLabel('Xác nhận & Tạo đợt xuất')
-            ->visible(fn (Order $record): bool => $record->status === OrderStatus::Draft && ! $record->checkoutBatches()->exists())
+            ->visible(fn (Order $record): bool => ! $record->checkoutBatches()->exists() && in_array($record->status, [OrderStatus::Draft, OrderStatus::OutboundCreated]))
             ->form([
                 Placeholder::make('order_summary')
                     ->label('Thông tin đơn hàng & Kho xuất')

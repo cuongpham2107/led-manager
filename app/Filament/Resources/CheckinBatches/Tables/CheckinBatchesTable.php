@@ -4,8 +4,11 @@ namespace App\Filament\Resources\CheckinBatches\Tables;
 
 use App\Enums\BatchStatus;
 use App\Filament\Resources\CheckinBatches\Actions\ImportCheckinBatchItemsAction;
+use App\Filament\Resources\CheckinBatches\CheckinBatchResource;
 use App\Models\CheckinBatch;
 use App\Models\CheckinBatchItem;
+use App\Models\User;
+use App\Models\Warehouse;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -26,6 +29,7 @@ class CheckinBatchesTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn ($query) => $query->with(['warehouse.agency']))
             ->columns([
                 TextColumn::make('code')
                     ->color('primary')
@@ -38,7 +42,12 @@ class CheckinBatchesTable
                 //     ->badge()
                 //     ->sortable(),
                 TextColumn::make('warehouse.name')
-                    ->label('Kho nhận')
+                    ->label('Kho nhận / Đơn vị')
+                    ->description(function (CheckinBatch $record): ?string {
+                        $agency = $record->warehouse?->agency;
+
+                        return $agency ? "🏢 Đại lý: {$agency->name} ({$agency->code})" : 'Kho Tổng (HQ)';
+                    })
                     ->searchable()
                     ->sortable(),
                 // TextColumn::make('quantity')
@@ -151,8 +160,23 @@ class CheckinBatchesTable
                     ]),
                 SelectFilter::make('warehouse_id')
                     ->label('Kho hàng')
-                    ->relationship('warehouse', 'name')
-                    ->hidden(fn (): bool => (bool) auth()->user()?->getScopedWarehouseId()),
+                    ->options(function () {
+                        return Warehouse::with('agency')
+                            ->where('is_active', true)
+                            ->get()
+                            ->mapWithKeys(function ($wh) {
+                                $label = $wh->agency
+                                    ? "{$wh->name} — [Đại lý: {$wh->agency->name}]"
+                                    : "{$wh->name} — [Kho Tổng HQ]";
+
+                                return [$wh->id => $label];
+                            });
+                    })
+                    ->hidden(function (): bool {
+                        $user = Auth::user();
+
+                        return (bool) ($user instanceof User ? $user->getScopedWarehouseId() : null);
+                    }),
             ], layout: FiltersLayout::AboveContent)
             ->deferFilters(false)
             ->recordActions([
@@ -228,11 +252,18 @@ class CheckinBatchesTable
                         });
                     }),
                 DeleteAction::make()
-                    ->label(''),
+                    ->label('')
+                    ->visible(function (?CheckinBatch $record): bool {
+                        /** @var User|null $user */
+                        $user = Auth::user();
+
+                        return ! $user?->isAgencyScoped() && (! $record || CheckinBatchResource::canDelete($record));
+                    }),
             ], position: RecordActionsPosition::BeforeCells)
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        ->visible(fn (): bool => CheckinBatchResource::canDeleteAny()),
                 ]),
             ])
             ->defaultSort('status', 'asc');

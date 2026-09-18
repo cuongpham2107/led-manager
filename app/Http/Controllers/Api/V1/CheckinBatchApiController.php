@@ -15,6 +15,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class CheckinBatchApiController extends Controller
 {
@@ -25,6 +26,11 @@ class CheckinBatchApiController extends Controller
     {
         $query = CheckinBatch::with(['warehouse', 'productLine', 'creator', 'items.asset'])
             ->latest();
+
+        if ($request->user()->isAgencyScoped()) {
+            $whId = $request->user()->getScopedWarehouseId();
+            $query->where('warehouse_id', $whId);
+        }
 
         if ($warehouseId = $request->input('warehouse_id')) {
             $query->where('warehouse_id', $warehouseId);
@@ -70,7 +76,7 @@ class CheckinBatchApiController extends Controller
     /**
      * Get a single check-in batch with all items.
      */
-    public function show(int $id): JsonResponse
+    public function show(Request $request, int $id): JsonResponse
     {
         $batch = CheckinBatch::with([
             'warehouse',
@@ -85,6 +91,16 @@ class CheckinBatchApiController extends Controller
                 'success' => false,
                 'message' => 'Không tìm thấy đợt nhập kho.',
             ], 404);
+        }
+
+        if ($request->user()->isAgencyScoped()) {
+            $whId = $request->user()->getScopedWarehouseId();
+            if ((int) $batch->warehouse_id !== (int) $whId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Bạn không có quyền truy cập đợt nhập kho này.',
+                ], 403);
+            }
         }
 
         return response()->json([
@@ -111,6 +127,16 @@ class CheckinBatchApiController extends Controller
                 'success' => false,
                 'message' => 'Không tìm thấy đợt nhập kho.',
             ], 404);
+        }
+
+        if ($request->user()->isAgencyScoped()) {
+            $whId = $request->user()->getScopedWarehouseId();
+            if ((int) $batch->warehouse_id !== (int) $whId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Bạn không có quyền truy cập đợt nhập kho này.',
+                ], 403);
+            }
         }
 
         if (in_array($batch->status, [BatchStatus::Cancelled, BatchStatus::Completed])) {
@@ -209,10 +235,11 @@ class CheckinBatchApiController extends Controller
             $targetCount = max((int) $batch->quantity, $batch->items()->count());
 
             if ($targetCount > 0 && $scannedCount >= $targetCount && $batch->status !== BatchStatus::Completed) {
-                $batch->update([
-                    'status' => BatchStatus::Completed,
-                    'completed_at' => $now,
-                ]);
+                try {
+                    $batch->complete(Auth::user());
+                } catch (\Throwable) {
+                    // If auto-completion fails quota validation, keep batch in progress so user can review
+                }
             }
 
             return response()->json([
@@ -242,6 +269,16 @@ class CheckinBatchApiController extends Controller
             ], 404);
         }
 
+        if ($request->user()->isAgencyScoped()) {
+            $whId = $request->user()->getScopedWarehouseId();
+            if ((int) $batch->warehouse_id !== (int) $whId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Bạn không có quyền truy cập đợt nhập kho này.',
+                ], 403);
+            }
+        }
+
         if ($batch->status === BatchStatus::Completed) {
             return response()->json([
                 'success' => false,
@@ -256,58 +293,20 @@ class CheckinBatchApiController extends Controller
             ], 422);
         }
 
-        $now = now();
-
-        return DB::transaction(function () use ($batch, $now) {
-            // Đảm bảo tất cả items trong batch đều được nhận
-            $batch->items()->where('is_received', false)->update([
-                'is_received' => true,
-                'received_by' => Auth::id(),
-                'received_at' => $now,
-            ]);
-
-            // Đồng bộ tất cả asset trong batch về Ready + kho đích
-            $batch->items->each(function ($item) use ($batch, $now) {
-                $asset = $item->asset;
-
-                if (! $asset) {
-                    return;
-                }
-
-                $oldStatus = $asset->current_status;
-                $oldWarehouseId = $asset->current_warehouse_id;
-
-                if ($asset->current_status !== AssetStatus::Ready || $asset->current_warehouse_id !== $batch->warehouse_id) {
-                    $asset->update([
-                        'current_status' => AssetStatus::Ready,
-                        'current_warehouse_id' => $batch->warehouse_id,
-                    ]);
-
-                    AssetStatusLog::create([
-                        'asset_id' => $asset->id,
-                        'from_status' => $oldStatus,
-                        'to_status' => AssetStatus::Ready,
-                        'from_warehouse_id' => $oldWarehouseId,
-                        'to_warehouse_id' => $batch->warehouse_id,
-                        'source_type' => CheckinBatch::class,
-                        'source_id' => $batch->id,
-                        'changed_by' => Auth::id(),
-                        'note' => 'Hoàn tất đợt nhập kho: '.$batch->code,
-                        'created_at' => $now,
-                    ]);
-                }
-            });
-
-            $batch->update([
-                'status' => BatchStatus::Completed,
-                'completed_at' => $now,
-            ]);
-
+        try {
+            $batch->complete($request->user());
+        } catch (ValidationException $e) {
             return response()->json([
-                'success' => true,
-                'message' => "Đợt nhập kho {$batch->code} đã hoàn tất. Tất cả thiết bị đã được chuyển về trạng thái Sẵn sàng.",
-                'data' => new CheckinBatchResource($batch->fresh(['warehouse', 'productLine', 'items.asset'])),
-            ]);
-        });
+                'success' => false,
+                'message' => $e->getMessage(),
+                'errors' => $e->errors(),
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Đợt nhập kho {$batch->code} đã hoàn tất thành công.",
+            'data' => new CheckinBatchResource($batch->fresh(['warehouse', 'productLine', 'items.asset'])),
+        ]);
     }
 }

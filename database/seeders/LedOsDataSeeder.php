@@ -122,7 +122,11 @@ class LedOsDataSeeder extends Seeder
                     ->orWhere('name', 'like', 'View%:InventoryReport%')
                     ->orWhere('name', 'like', 'View%:MovementHistoryReport%')
                     ->orWhere('name', 'like', 'View%:AssetUtilizationReport%')
-                    ->orWhere('name', 'like', 'View%:EventCalendar%');
+                    ->orWhere('name', 'like', 'View%:EventCalendar%')
+                    ->orWhereIn('name', [
+                        'CreateCheckoutBatch:Order', 'Return:Order', 'Dispatch:Order',
+                        'ViewCheckoutBatch:Order', 'ViewReturnBatch:Order',
+                    ]);
             })->get();
             $whRole->syncPermissions($whPermissions);
 
@@ -163,18 +167,34 @@ class LedOsDataSeeder extends Seeder
             $agencyPermissions = Permission::where(function ($q) {
                 $q->where('name', 'like', '%:Order%')
                     ->orWhere('name', 'like', '%:Customer%')
-                    ->orWhere('name', 'like', 'View%:Asset%')
+                    ->orWhere('name', 'like', '%:CheckinBatch%')
+                    ->orWhere('name', 'like', '%:CheckoutBatch%')
+                    ->orWhere('name', 'like', '%:ReturnBatch%')
+                    ->orWhere('name', 'like', '%:RepairLog%')
+                    ->orWhere('name', 'like', '%:Asset%')
                     ->orWhere('name', 'like', 'View%:Warehouse%')
                     ->orWhere('name', 'like', 'View%:ProductLine%')
                     ->orWhere('name', 'like', 'View%:PricingRule%')
                     ->orWhere('name', 'like', 'View%:Dashboard%')
                     ->orWhere('name', 'like', 'View%:EventCalendar%')
                     ->orWhere('name', 'like', 'View%:AgencyRevenueReport%')
+                    ->orWhere('name', 'like', 'View%:InventoryReport%')
+                    ->orWhere('name', 'like', 'View%:MovementHistoryReport%')
                     ->orWhere('name', 'like', 'View%:StatsOverview%')
-                    ->orWhere('name', 'like', 'View%:LatestOrders%');
+                    ->orWhere('name', 'like', 'View%:LatestOrders%')
+                    ->orWhereIn('name', [
+                        'CreateCheckoutBatch:Order', 'Return:Order', 'Dispatch:Order',
+                        'ViewCheckoutBatch:Order', 'ViewReturnBatch:Order',
+                    ]);
             })->whereNotIn('name', [
+                'Create:CheckinBatch', 'Delete:CheckinBatch', 'DeleteAny:CheckinBatch',
                 'ForceDelete:Order', 'ForceDeleteAny:Order',
                 'ForceDelete:Customer', 'ForceDeleteAny:Customer',
+                'ForceDelete:CheckinBatch', 'ForceDeleteAny:CheckinBatch',
+                'ForceDelete:CheckoutBatch', 'ForceDeleteAny:CheckoutBatch',
+                'ForceDelete:ReturnBatch', 'ForceDeleteAny:ReturnBatch',
+                'ForceDelete:RepairLog', 'ForceDeleteAny:RepairLog',
+                'ForceDelete:Asset', 'ForceDeleteAny:Asset',
             ])->get();
             $agencyManagerRole->syncPermissions($agencyPermissions);
             $agencyStaffRole->syncPermissions($agencyPermissions);
@@ -447,6 +467,16 @@ class LedOsDataSeeder extends Seeder
         ]);
         $agencyManagerHp->syncRoles([$agencyManagerRole]);
 
+        $agencyStaffHp = User::updateOrCreate(['email' => 'tech.haiphong@ledmanager.com'], [
+            'name' => 'Nguyễn Đình Tuấn (Kỹ thuật HP)',
+            'password' => Hash::make('password'),
+            'phone' => '0904 999 888',
+            'warehouse_id' => $whHp->id,
+            'agency_id' => $agencyHp->id,
+            'is_active' => true,
+        ]);
+        $agencyStaffHp->syncRoles([$techRole, $agencyStaffRole]);
+
         $agencyManagerDn = User::updateOrCreate(['email' => 'daily.danang@ledmanager.com'], [
             'name' => 'Lê Thanh Sơn (Đại lý ĐN)',
             'password' => Hash::make('password'),
@@ -456,6 +486,16 @@ class LedOsDataSeeder extends Seeder
             'is_active' => true,
         ]);
         $agencyManagerDn->syncRoles([$agencyManagerRole]);
+
+        $agencyStaffDn = User::updateOrCreate(['email' => 'tech.danang@ledmanager.com'], [
+            'name' => 'Đỗ Minh Trí (Kỹ thuật ĐN)',
+            'password' => Hash::make('password'),
+            'phone' => '0913 888 777',
+            'warehouse_id' => $whDn->id,
+            'agency_id' => $agencyDn->id,
+            'is_active' => true,
+        ]);
+        $agencyStaffDn->syncRoles([$techRole, $agencyStaffRole]);
 
         // Link accounts to admin for quick switching without password
         $admin->linkAccount($sales1, label: 'Sales Executive (Trần Minh Tuấn)', requiresPassword: false);
@@ -660,14 +700,16 @@ class LedOsDataSeeder extends Seeder
         $customersData = [
             [
                 'code' => 'CUS-001',
-                'name' => 'Tập đoàn Vingroup (VinFast & Vincom Events)',
+                'name' => 'Tập đoàn Vingroup (VinFast & Vincom Events Hải Phòng)',
                 'type' => CustomerType::Corporate,
+                'agency_id' => $agencyHp->id,
+                'created_by' => $agencyManagerHp->id,
                 'phone' => '024 3974 9999',
                 'email' => 'events@vingroup.net',
                 'tax_code' => '0101245486',
-                'address' => 'Số 7 Đường Bằng Lăng 1, Vinhomes Riverside, Long Biên, Hà Nội',
+                'address' => 'Số 1 Lê Thánh Tông, Máy Tơ, Ngô Quyền, Hải Phòng',
                 'contact_person' => 'Nguyễn Phương Thảo',
-                'note' => 'Khách hàng VIP, yêu cầu thiết bị đồng bộ độ sáng cao',
+                'note' => 'Khách hàng VIP đại lý Hải Phòng quản lý trực tiếp',
             ],
             [
                 'code' => 'CUS-002',
@@ -772,6 +814,8 @@ class LedOsDataSeeder extends Seeder
                 'code' => 'CUS-011',
                 'name' => 'Công ty TNHH Sự Kiện & Truyền Thông Sao Mai',
                 'type' => CustomerType::Agency,
+                'agency_id' => $agencyDn->id,
+                'created_by' => $agencyManagerDn->id,
                 'phone' => '0236 3747 888',
                 'email' => 'info@saomaievent.vn',
                 'tax_code' => '0401889922',
@@ -1114,6 +1158,92 @@ class LedOsDataSeeder extends Seeder
                 'current_status' => AssetStatus::Ready,
                 'current_warehouse_id' => $whHp->id,
                 'warehouse_location_id' => $locHp1->id,
+            ]);
+            $assets->push($asset);
+        }
+
+        // 7.6 Thiết bị mới về xưởng / mới mua về (NewlyAdded - Chưa nhập vào kho nào, sẵn sàng lập đợt nhập kho)
+        // P2.6 Indoor mới về (40 tấm)
+        for ($i = 1; $i <= 40; $i++) {
+            $serial = 'NEW-P26-'.str_pad((string) $i, 3, '0', STR_PAD_LEFT);
+            $asset = Asset::updateOrCreate(['serial_no' => $serial], [
+                'qr_code' => 'QR-'.$serial,
+                'product_line_id' => $plP26->id,
+                'size' => '500×500 mm',
+                'manufactured_date' => '2026-08-20',
+                'purchase_cost' => 8500000,
+                'purchase_date' => '2026-09-01',
+                'current_status' => AssetStatus::NewlyAdded,
+                'current_warehouse_id' => null,
+                'warehouse_location_id' => null,
+            ]);
+            $assets->push($asset);
+        }
+
+        // P3.9 Outdoor mới về xưởng (40 tấm)
+        for ($i = 1; $i <= 40; $i++) {
+            $serial = 'NEW-P39-'.str_pad((string) $i, 3, '0', STR_PAD_LEFT);
+            $asset = Asset::updateOrCreate(['serial_no' => $serial], [
+                'qr_code' => 'QR-'.$serial,
+                'product_line_id' => $plP39->id,
+                'size' => '500×1000 mm',
+                'manufactured_date' => '2026-08-25',
+                'purchase_cost' => 11000000,
+                'purchase_date' => '2026-09-02',
+                'current_status' => AssetStatus::NewlyAdded,
+                'current_warehouse_id' => null,
+                'warehouse_location_id' => null,
+            ]);
+            $assets->push($asset);
+        }
+
+        // P1.5 Fine Pitch mới về (25 tấm)
+        for ($i = 1; $i <= 25; $i++) {
+            $serial = 'NEW-P15-'.str_pad((string) $i, 3, '0', STR_PAD_LEFT);
+            $asset = Asset::updateOrCreate(['serial_no' => $serial], [
+                'qr_code' => 'QR-'.$serial,
+                'product_line_id' => $plP15->id,
+                'size' => '500×500 mm',
+                'manufactured_date' => '2026-09-01',
+                'purchase_cost' => 14000000,
+                'purchase_date' => '2026-09-05',
+                'current_status' => AssetStatus::NewlyAdded,
+                'current_warehouse_id' => null,
+                'warehouse_location_id' => null,
+            ]);
+            $assets->push($asset);
+        }
+
+        // P2.9 Rental Stage mới về (35 tấm)
+        for ($i = 1; $i <= 35; $i++) {
+            $serial = 'NEW-P29-'.str_pad((string) $i, 3, '0', STR_PAD_LEFT);
+            $asset = Asset::updateOrCreate(['serial_no' => $serial], [
+                'qr_code' => 'QR-'.$serial,
+                'product_line_id' => $plP29->id,
+                'size' => '500×1000 mm',
+                'manufactured_date' => '2026-08-15',
+                'purchase_cost' => 9500000,
+                'purchase_date' => '2026-08-28',
+                'current_status' => AssetStatus::NewlyAdded,
+                'current_warehouse_id' => null,
+                'warehouse_location_id' => null,
+            ]);
+            $assets->push($asset);
+        }
+
+        // P4.8 Outdoor Stadium mới về (20 tấm)
+        for ($i = 1; $i <= 20; $i++) {
+            $serial = 'NEW-P48-'.str_pad((string) $i, 3, '0', STR_PAD_LEFT);
+            $asset = Asset::updateOrCreate(['serial_no' => $serial], [
+                'qr_code' => 'QR-'.$serial,
+                'product_line_id' => $plP48->id,
+                'size' => '500×1000 mm',
+                'manufactured_date' => '2026-08-10',
+                'purchase_cost' => 9000000,
+                'purchase_date' => '2026-08-25',
+                'current_status' => AssetStatus::NewlyAdded,
+                'current_warehouse_id' => null,
+                'warehouse_location_id' => null,
             ]);
             $assets->push($asset);
         }
@@ -1631,6 +1761,7 @@ class LedOsDataSeeder extends Seeder
         $orderHp1 = Order::updateOrCreate(['order_no' => 'ORD-DL-HP-01'], [
             'warehouse_id' => $whHp->id,
             'agency_id' => $agencyHp->id,
+            'commission_rate' => $agencyHp->commission_rate,
             'customer_id' => $customers[0]->id,
             'quotation_id' => null,
             'request_date' => now()->subDays(3)->toDateString(),
@@ -1660,6 +1791,7 @@ class LedOsDataSeeder extends Seeder
         $orderHp2 = Order::updateOrCreate(['order_no' => 'ORD-DL-HP-02'], [
             'warehouse_id' => $whHp->id,
             'agency_id' => $agencyHp->id,
+            'commission_rate' => $agencyHp->commission_rate,
             'customer_id' => $customers[1]->id,
             'quotation_id' => null,
             'request_date' => now()->addDays(4)->toDateString(),
@@ -1671,7 +1803,7 @@ class LedOsDataSeeder extends Seeder
             'deposit_paid' => 30000000,
             'total_paid' => 30000000,
             'paid_at' => now()->subDays(1),
-            'status' => OrderStatus::OutboundCreated,
+            'status' => OrderStatus::Draft,
             'sales_user_id' => $agencyManagerHp->id,
             'note' => 'Khách đã cọc 50%, hoa hồng đại lý tính trên 30tr thực thu',
         ]);
@@ -1789,6 +1921,45 @@ class LedOsDataSeeder extends Seeder
                 'is_dispatched' => true,
                 'dispatched_by' => $whStaff2->id,
                 'dispatched_at' => now()->subDays(10),
+            ]);
+        }
+
+        // 11.4 OUT-DL-HP-01 (Order DL-HP-01, WH-HP / Agency Hải Phòng, Dispatched)
+        $outBatchHp1 = CheckoutBatch::updateOrCreate(['code' => 'OUT-DL-HP-01'], [
+            'order_id' => $orderHp1->id,
+            'customer_id' => $customers[0]->id,
+            'warehouse_id' => $whHp->id,
+            'agency_id' => $agencyHp->id,
+            'required_area_m2' => 25.0,
+            'expected_return_date' => now()->addDays(2)->toDateString(),
+            'status' => BatchStatus::Dispatched,
+            'created_by' => $agencyManagerHp->id,
+            'dispatched_at' => now()->subDays(2),
+        ]);
+
+        $hpDispatchedAssets = Asset::where('current_warehouse_id', $whHp->id)->take(20)->get();
+        foreach ($hpDispatchedAssets as $hpAsset) {
+            CheckoutBatchItem::updateOrCreate([
+                'checkout_batch_id' => $outBatchHp1->id,
+                'asset_id' => $hpAsset->id,
+            ], [
+                'is_dispatched' => true,
+                'dispatched_by' => $agencyManagerHp->id,
+                'dispatched_at' => now()->subDays(2),
+            ]);
+
+            $hpAsset->update(['current_status' => AssetStatus::InTransit]);
+
+            AssetStatusLog::create([
+                'asset_id' => $hpAsset->id,
+                'from_status' => AssetStatus::Ready,
+                'to_status' => AssetStatus::InTransit,
+                'from_warehouse_id' => $whHp->id,
+                'to_warehouse_id' => $whHp->id,
+                'source_type' => CheckoutBatch::class,
+                'source_id' => $outBatchHp1->id,
+                'changed_by' => $agencyManagerHp->id,
+                'note' => "Xuất kho đại lý đi sự kiện {$orderHp1->event}",
             ]);
         }
 

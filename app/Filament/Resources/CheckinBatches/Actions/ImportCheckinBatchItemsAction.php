@@ -8,6 +8,7 @@ use App\Models\Asset;
 use App\Models\CheckinBatch;
 use App\Models\CheckinBatchItem;
 use App\Models\ProductLine;
+use App\Models\User;
 use App\Models\Warehouse;
 use App\Models\WarehouseLocation;
 use Filament\Actions\Action;
@@ -35,22 +36,18 @@ class ImportCheckinBatchItemsAction extends Action
         parent::setUp();
 
         $this
-            ->label('Import Excel')
-            ->icon('heroicon-o-table-cells')
-            ->color('success')
-            ->modalHeading(fn ($record) => $record instanceof CheckinBatch && $record->exists
-                ? "Import thiết bị từ Excel — Đợt: {$record->code}"
-                : 'Import thiết bị từ Excel')
-            ->modalDescription('Upload file Excel (.xlsx, .xls, .csv) chứa danh sách thiết bị. File cần có ít nhất cột "Số Seri".')
-            ->modalSubmitActionLabel('Lưu & Thêm vào đợt nhập')
-            ->modalWidth(Width::FiveExtraLarge)
-            ->form(function ($schema) {
-                $livewire = $schema->getLivewire();
-                /** @var CheckinBatch|null $record */
+            ->label('Nhập từ Excel')
+            ->icon('heroicon-o-arrow-up-tray')
+            ->color('gray')
+            ->modalHeading('Nhập danh sách thiết bị từ file Excel')
+            ->modalDescription('Tải lên file Excel (.xlsx, .csv) chứa danh sách số Seri và Dòng sản phẩm. Thiết bị sẽ được tự động gán vào đợt nhập này.')
+            ->modalWidth(Width::Large)
+            ->modalSubmitActionLabel('Bắt đầu nhập')
+            ->schema(function ($livewire, $schema) {
                 $record = method_exists($livewire, 'getRecord') ? $livewire->getRecord() : null;
 
                 return $schema->components([
-                    Grid::make(3)
+                    Grid::make(2)
                         ->schema([
                             Select::make('default_product_line_id')
                                 ->label('Dòng sản phẩm (Mặc định)')
@@ -62,39 +59,40 @@ class ImportCheckinBatchItemsAction extends Action
 
                             Select::make('default_warehouse_id')
                                 ->label('Kho lưu trữ (Mặc định)')
-                                ->options(fn () => Warehouse::where('is_active', true)->pluck('name', 'id'))
-                                ->default(fn () => ($record instanceof CheckinBatch && $record->exists)
-                                    ? $record->warehouse_id
-                                    : Auth::user()?->getScopedWarehouseId())
-                                ->disabled(fn () => ($record instanceof CheckinBatch && $record->exists)
-                                    || (bool) Auth::user()?->getScopedWarehouseId())
+                                ->options(function () {
+                                    return Warehouse::with('agency')
+                                        ->where('is_active', true)
+                                        ->orderBy('name')
+                                        ->get()
+                                        ->mapWithKeys(function (Warehouse $w): array {
+                                            $agency = $w->agency;
+                                            $label = $agency ? "{$w->name} [Đại lý: {$agency->name} ({$agency->code})]" : "{$w->name} [Tổng công ty]";
+
+                                            return [$w->id => $label];
+                                        })
+                                        ->toArray();
+                                })
+                                ->default(function () use ($record) {
+                                    if ($record instanceof CheckinBatch && $record->exists) {
+                                        return $record->warehouse_id;
+                                    }
+                                    $user = Auth::user();
+
+                                    return $user instanceof User ? $user->getScopedWarehouseId() : null;
+                                })
+                                ->disabled(function () use ($record) {
+                                    if ($record instanceof CheckinBatch && $record->exists) {
+                                        return true;
+                                    }
+                                    $user = Auth::user();
+
+                                    return (bool) ($user instanceof User ? $user->getScopedWarehouseId() : null);
+                                })
                                 ->dehydrated()
                                 ->searchable()
                                 ->preload()
-                                ->live()
-                                ->afterStateUpdated(fn (callable $set) => $set('default_warehouse_location_id', null))
                                 ->placeholder('Chọn kho lưu trữ...')
                                 ->helperText('Áp dụng tự động nếu cột "Kho lưu trữ" để trống'),
-
-                            Select::make('default_warehouse_location_id')
-                                ->label('Vị trí kho (Mặc định)')
-                                ->options(function (callable $get) use ($record) {
-                                    $whId = $get('default_warehouse_id')
-                                        ?: (($record instanceof CheckinBatch && $record->exists) ? $record->warehouse_id : null)
-                                        ?: Auth::user()?->getScopedWarehouseId();
-
-                                    if (! $whId) {
-                                        return [];
-                                    }
-
-                                    return WarehouseLocation::where('warehouse_id', $whId)
-                                        ->where('is_active', true)
-                                        ->pluck('name', 'id');
-                                })
-                                ->searchable()
-                                ->preload()
-                                ->placeholder('Chọn vị trí kho...')
-                                ->helperText('Áp dụng tự động nếu cột "Vị trí" để trống'),
                         ]),
 
                     Toggle::make('create_if_not_exists')
@@ -162,11 +160,11 @@ class ImportCheckinBatchItemsAction extends Action
 
                 $createIfNotExists = (bool) ($data['create_if_not_exists'] ?? true);
                 $defaultProductLineId = $data['default_product_line_id'] ?? null;
-                $defaultLocationId = $data['default_warehouse_location_id'] ?? null;
+                $user = Auth::user();
+                $scopedWhId = $user instanceof User ? $user->getScopedWarehouseId() : null;
                 $warehouseId = $isExisting
                     ? $record->warehouse_id
-                    : ($data['default_warehouse_id'] ?? Auth::user()?->getScopedWarehouseId());
-                $user = Auth::user();
+                    : ($data['default_warehouse_id'] ?? $scopedWhId);
 
                 if (! $isExisting) {
                     static::importIntoCreateForm(

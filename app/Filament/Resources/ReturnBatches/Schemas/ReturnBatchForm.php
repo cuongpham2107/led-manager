@@ -5,6 +5,7 @@ namespace App\Filament\Resources\ReturnBatches\Schemas;
 use App\Enums\AssetStatus;
 use App\Enums\ReturnGrade;
 use App\Models\ReturnBatch;
+use App\Models\User;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -12,6 +13,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\ViewField;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Facades\Auth;
 
 class ReturnBatchForm
 {
@@ -28,14 +30,19 @@ class ReturnBatchForm
 
                         Select::make('checkout_batch_id')
                             ->label('Theo đợt xuất kho')
-                            ->relationship('checkoutBatch', 'code')
+                            ->relationship('checkoutBatch', 'code', modifyQueryUsing: function ($query) {
+                                $user = Auth::user();
+                                if ($whId = ($user instanceof User ? $user->getScopedWarehouseId() : null)) {
+                                    $query->where('warehouse_id', $whId);
+                                }
+                            })
                             ->disabled()
                             ->dehydrated(),
 
                         DatePicker::make('return_date')
                             ->label('Ngày trả thực tế')
-                            ->native(false)
                             ->displayFormat('d/m/Y')
+                            ->native(true)
                             ->default(now()->toDateString()),
                     ])
                     ->columnSpanFull(),

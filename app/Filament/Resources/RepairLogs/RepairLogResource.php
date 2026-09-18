@@ -13,6 +13,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 use UnitEnum;
 
 class RepairLogResource extends Resource
@@ -25,7 +26,7 @@ class RepairLogResource extends Resource
 
     protected static ?string $modelLabel = 'Nhật ký sửa chữa';
 
-    protected static ?string $pluralModelLabel = 'Bảo trì & Sửa chữa';
+    protected static ?string $pluralModelLabel = 'Nhật ký bảo dưỡng / Sửa chữa';
 
     protected static ?int $navigationSort = 5;
 
@@ -36,9 +37,11 @@ class RepairLogResource extends Resource
         $query = parent::getEloquentQuery();
 
         /** @var User|null $user */
-        $user = auth()->user();
+        $user = Auth::user();
 
-        if ($whId = $user?->getScopedWarehouseId()) {
+        if ($agencyId = $user?->getScopedAgencyId()) {
+            $query->where('repair_logs.agency_id', $agencyId);
+        } elseif ($whId = $user?->getScopedWarehouseId()) {
             $query->whereHas('asset', fn ($q) => $q->where('current_warehouse_id', $whId));
         }
 

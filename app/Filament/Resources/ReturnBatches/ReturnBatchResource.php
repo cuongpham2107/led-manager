@@ -40,8 +40,13 @@ class ReturnBatchResource extends Resource
         /** @var User|null $user */
         $user = Auth::user();
 
-        if ($whId = $user?->getScopedWarehouseId()) {
-            $query->whereHas('checkoutBatch', fn ($q) => $q->where('warehouse_id', $whId));
+        if ($agencyId = $user?->getScopedAgencyId()) {
+            $query->where('return_batches.agency_id', $agencyId);
+        } elseif ($whId = $user?->getScopedWarehouseId()) {
+            $query->where(function ($q) use ($whId) {
+                $q->where('return_batches.warehouse_id', $whId)
+                    ->orWhereHas('checkoutBatch', fn ($cq) => $cq->where('warehouse_id', $whId));
+            });
         }
 
         return $query;

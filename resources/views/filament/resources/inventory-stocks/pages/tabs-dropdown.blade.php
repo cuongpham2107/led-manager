@@ -3,101 +3,107 @@
     /** @var \App\Models\User|null $user */
     $user = auth()->user();
     $scopedWhId = $user?->getScopedWarehouseId();
+
+    $selectedAgencyWarehouse = null;
+    if ($this->selectedGroup === 'agency' && $this->selectedWarehouseId) {
+        $selectedAgencyWarehouse = collect($treeData['agency_warehouses'])->firstWhere('id', $this->selectedWarehouseId);
+    }
 @endphp
 
 <div class="mb-4">
-    <x-filament::tabs label="Kho hàng và vị trí">
+    <x-filament::tabs label="Kho hàng và đại lý">
         @if (! $scopedWhId)
             <x-filament::tabs.item
-                :active="empty($this->selectedWarehouseId) && empty($this->selectedLocationId)"
+                :active="empty($this->selectedWarehouseId) && empty($this->selectedGroup)"
                 :badge="(string) $treeData['grand_total']"
                 icon="heroicon-o-squares-2x2"
                 wire:click="selectAll"
             >
-                Tất cả thiết bị
+                Tất cả kho & đại lý
             </x-filament::tabs.item>
         @endif
 
-        @foreach ($treeData['warehouses'] as $wh)
+        {{-- Kho Tổng công ty (HQ) --}}
+        @foreach ($treeData['hq_warehouses'] as $wh)
             @php
-                $isWhActive = (int) $this->selectedWarehouseId === (int) $wh['id'];
-                $hasLocations = count($wh['locations']) > 0 || $wh['unassigned_count'] > 0;
-                $selectedLocName = null;
-                if ($isWhActive && $this->selectedLocationId) {
-                    $selectedLocName = $this->selectedLocationId === 'unassigned'
-                        ? 'Chưa xếp vị trí'
-                        : (collect($wh['locations'])->firstWhere('id', (int) $this->selectedLocationId)['name'] ?? null);
-                }
+                $isWhActive = empty($this->selectedGroup) && (int) $this->selectedWarehouseId === (int) $wh['id'];
             @endphp
 
-            @if ($hasLocations)
-                <x-filament::dropdown placement="bottom-start">
-                    <x-slot name="trigger">
-                        <x-filament::tabs.item
-                            :active="$isWhActive"
-                            :badge="(string) $wh['total']"
-                            icon="heroicon-m-chevron-down"
-                            icon-position="after"
-                        >
-                            <span>{{ $wh['name'] }}</span>
-                            @if ($selectedLocName)
-                                <span class="text-xs font-normal opacity-75">({{ $selectedLocName }})</span>
-                            @endif
-                        </x-filament::tabs.item>
-                    </x-slot>
-
-                    <x-filament::dropdown.list>
-                        <x-filament::dropdown.list.item
-                            wire:click="selectWarehouse({{ $wh['id'] }})"
-                            :badge="(string) $wh['total']"
-                            :color="$isWhActive && empty($this->selectedLocationId) ? 'primary' : 'gray'"
-                            :badge-color="$isWhActive && empty($this->selectedLocationId) ? 'primary' : 'gray'"
-                            icon="heroicon-o-building-storefront"
-                        >
-                            Tất cả tại {{ $wh['name'] }}
-                        </x-filament::dropdown.list.item>
-
-                        @foreach ($wh['locations'] as $loc)
-                            @php
-                                $isLocActive = $isWhActive && (string) $this->selectedLocationId === (string) $loc['id'];
-                            @endphp
-                            <x-filament::dropdown.list.item
-                                wire:click="selectLocation({{ $wh['id'] }}, '{{ $loc['id'] }}')"
-                                :badge="(string) $loc['count']"
-                                :color="$isLocActive ? 'primary' : 'gray'"
-                                :badge-color="$isLocActive ? 'primary' : 'gray'"
-                                icon="heroicon-o-map-pin"
-                            >
-                                {{ $loc['name'] }}
-                            </x-filament::dropdown.list.item>
-                        @endforeach
-
-                        @if ($wh['unassigned_count'] > 0)
-                            @php
-                                $isUnassignedActive = $isWhActive && $this->selectedLocationId === 'unassigned';
-                            @endphp
-                            <x-filament::dropdown.list.item
-                                wire:click="selectLocation({{ $wh['id'] }}, 'unassigned')"
-                                :badge="(string) $wh['unassigned_count']"
-                                :badge-color="$isUnassignedActive ? 'primary' : 'warning'"
-                                :color="$isUnassignedActive ? 'primary' : 'gray'"
-                                icon="heroicon-o-question-mark-circle"
-                            >
-                                Chưa xếp vị trí
-                            </x-filament::dropdown.list.item>
-                        @endif
-                    </x-filament::dropdown.list>
-                </x-filament::dropdown>
-            @else
-                <x-filament::tabs.item
-                    :active="$isWhActive && empty($this->selectedLocationId)"
-                    :badge="(string) $wh['total']"
-                    icon="heroicon-o-building-storefront"
-                    wire:click="selectWarehouse({{ $wh['id'] }})"
-                >
-                    {{ $wh['name'] }}
-                </x-filament::tabs.item>
-            @endif
+            <x-filament::tabs.item
+                :active="$isWhActive"
+                :badge="(string) $wh['total']"
+                badge-color="gray"
+                icon="heroicon-o-home-modern"
+                wire:click="selectWarehouse({{ $wh['id'] }})"
+            >
+                <span>{{ $wh['name'] }}</span>
+            </x-filament::tabs.item>
         @endforeach
+
+        {{-- Nhóm các kho Đại lý --}}
+        @if (count($treeData['agency_warehouses']) > 1)
+            @php
+                $isAgencyActive = $this->selectedGroup === 'agency';
+                $agencyBadge = $selectedAgencyWarehouse ? (string) $selectedAgencyWarehouse['total'] : (string) $treeData['agency_total'];
+                $agencyLabel = $selectedAgencyWarehouse ? $selectedAgencyWarehouse['name'] : 'Kho Đại lý';
+            @endphp
+
+            <x-filament::dropdown placement="bottom-start">
+                <x-slot name="trigger">
+                    <x-filament::tabs.item
+                        :active="$isAgencyActive"
+                        :badge="$agencyBadge"
+                        badge-color="warning"
+                        icon="heroicon-o-building-office-2"
+                    >
+                        <div class="flex items-center gap-1">
+                            <span>{{ $agencyLabel }}</span>
+                            <x-heroicon-m-chevron-down class="w-4 h-4 opacity-60" />
+                        </div>
+                    </x-filament::tabs.item>
+                </x-slot>
+
+                <x-filament::dropdown.list>
+                    <x-filament::dropdown.list.item
+                        wire:click="selectAgencyGroup"
+                        :badge="(string) $treeData['agency_total']"
+                        badge-color="warning"
+                        :color="$isAgencyActive && empty($this->selectedWarehouseId) ? 'primary' : 'gray'"
+                        icon="heroicon-o-building-storefront"
+                    >
+                        Tất cả kho đại lý ({{ count($treeData['agency_warehouses']) }} đại lý)
+                    </x-filament::dropdown.list.item>
+
+                    @foreach ($treeData['agency_warehouses'] as $awh)
+                        @php
+                            $isThisAgencyActive = (int) $this->selectedWarehouseId === (int) $awh['id'];
+                        @endphp
+                        <x-filament::dropdown.list.item
+                            wire:click="selectAgencyWarehouse({{ $awh['id'] }})"
+                            :badge="(string) $awh['total']"
+                            badge-color="warning"
+                            :color="$isThisAgencyActive ? 'primary' : 'gray'"
+                            icon="heroicon-o-map-pin"
+                        >
+                            {{ $awh['name'] }} ({{ $awh['agency_name'] }})
+                        </x-filament::dropdown.list.item>
+                    @endforeach
+                </x-filament::dropdown.list>
+            </x-filament::dropdown>
+        @elseif (count($treeData['agency_warehouses']) === 1)
+            @php
+                $awh = $treeData['agency_warehouses'][0];
+                $isAwhActive = (int) $this->selectedWarehouseId === (int) $awh['id'];
+            @endphp
+            <x-filament::tabs.item
+                :active="$isAwhActive"
+                :badge="(string) $awh['total']"
+                badge-color="warning"
+                icon="heroicon-o-building-office-2"
+                wire:click="selectAgencyWarehouse({{ $awh['id'] }})"
+            >
+                <span>{{ $awh['name'] }} ({{ $awh['agency_name'] }})</span>
+            </x-filament::tabs.item>
+        @endif
     </x-filament::tabs>
 </div>

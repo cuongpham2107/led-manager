@@ -102,11 +102,16 @@ class Asset extends Model
             return 'Chưa xác định';
         }
 
+        $agency = $this->currentWarehouse->agency;
+        $whPrefix = $agency
+            ? "{$agency->name} ({$agency->code})"
+            : $this->currentWarehouse->name;
+
         if ($this->warehouseLocation) {
-            return "{$this->currentWarehouse->name} · {$this->warehouseLocation->name}";
+            return "{$whPrefix} · {$this->warehouseLocation->name}";
         }
 
-        return $this->currentWarehouse->name;
+        return $whPrefix;
     }
 
     /**

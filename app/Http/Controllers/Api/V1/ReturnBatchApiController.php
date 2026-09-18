@@ -3,8 +3,6 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\AssetStatus;
-use App\Enums\BatchStatus;
-use App\Enums\OrderStatus;
 use App\Enums\RepairResultStatus;
 use App\Enums\ReturnBatchStatus;
 use App\Enums\ReturnGrade;
@@ -36,6 +34,21 @@ class ReturnBatchApiController extends Controller
             'creator',
             'items.asset.productLine',
         ])->latest();
+
+        if ($request->user()->isAgencyScoped()) {
+            $agencyId = $request->user()->getScopedAgencyId();
+            $whId = $request->user()->getScopedWarehouseId();
+            $query->whereHas('checkoutBatch', function ($cq) use ($agencyId, $whId) {
+                $cq->where(function ($sq) use ($agencyId, $whId) {
+                    if ($whId) {
+                        $sq->where('warehouse_id', $whId);
+                    }
+                    if ($agencyId) {
+                        $sq->orWhereHas('order', fn ($oq) => $oq->where('agency_id', $agencyId));
+                    }
+                });
+            });
+        }
 
         if ($warehouseId = $request->input('warehouse_id')) {
             $query->whereHas('checkoutBatch', fn ($cq) => $cq->where('warehouse_id', $warehouseId));
@@ -75,7 +88,7 @@ class ReturnBatchApiController extends Controller
     /**
      * Get single return batch details with all items and grading stats.
      */
-    public function show(int $id): JsonResponse
+    public function show(Request $request, int $id): JsonResponse
     {
         $batch = ReturnBatch::with([
             'checkoutBatch.warehouse',
@@ -91,6 +104,10 @@ class ReturnBatchApiController extends Controller
                 'success' => false,
                 'message' => 'Không tìm thấy đợt thu hồi trả kho.',
             ], 404);
+        }
+
+        if ($accessError = $this->checkAgencyAccess($request, $batch)) {
+            return $accessError;
         }
 
         return response()->json([
@@ -117,6 +134,10 @@ class ReturnBatchApiController extends Controller
                 'success' => false,
                 'message' => 'Không tìm thấy đợt thu hồi trả kho.',
             ], 404);
+        }
+
+        if ($accessError = $this->checkAgencyAccess($request, $batch)) {
+            return $accessError;
         }
 
         if (in_array($batch->status, [ReturnBatchStatus::Completed])) {
@@ -249,30 +270,59 @@ class ReturnBatchApiController extends Controller
             ], 404);
         }
 
-        return DB::transaction(function () use ($batch) {
-            $batch->update([
-                'status' => ReturnBatchStatus::Completed,
-                'completed_at' => now(),
-            ]);
+        if ($accessError = $this->checkAgencyAccess($request, $batch)) {
+            return $accessError;
+        }
 
-            if ($batch->checkoutBatch) {
-                $batch->checkoutBatch->update(['status' => BatchStatus::Completed]);
-
-                if ($batch->checkoutBatch->order) {
-                    $batch->checkoutBatch->order->update(['status' => OrderStatus::Returned]);
-                }
-            }
-
+        if ($batch->status === ReturnBatchStatus::Completed) {
             return response()->json([
-                'success' => true,
-                'message' => "Đợt thu hồi {$batch->code} đã hoàn tất kiểm đếm thành công.",
-                'data' => new ReturnBatchResource($batch->fresh([
-                    'checkoutBatch.warehouse',
-                    'checkoutBatch.order',
-                    'checkoutBatch.customer',
-                    'items.asset',
-                ])),
-            ]);
-        });
+                'success' => false,
+                'message' => 'Đợt thu hồi đã ở trạng thái hoàn tất.',
+            ], 422);
+        }
+
+        try {
+            $batch->complete($request->user());
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Đợt thu hồi {$batch->code} đã hoàn tất kiểm đếm thành công.",
+            'data' => new ReturnBatchResource($batch->fresh([
+                'checkoutBatch.warehouse',
+                'checkoutBatch.order',
+                'checkoutBatch.customer',
+                'items.asset',
+            ])),
+        ]);
+    }
+
+    /**
+     * Check if user has permission to access this return batch based on agency scoping.
+     */
+    private function checkAgencyAccess(Request $request, ReturnBatch $batch): ?JsonResponse
+    {
+        if ($request->user()->isAgencyScoped()) {
+            $agencyId = $request->user()->getScopedAgencyId();
+            $whId = $request->user()->getScopedWarehouseId();
+            $batch->loadMissing(['checkoutBatch.order']);
+
+            $isAllowed = ($whId && (int) $batch->checkoutBatch?->warehouse_id === (int) $whId)
+                || ($agencyId && (int) $batch->checkoutBatch?->order?->agency_id === (int) $agencyId);
+
+            if (! $isAllowed) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Bạn không có quyền truy cập đợt thu hồi này.',
+                ], 403);
+            }
+        }
+
+        return null;
     }
 }

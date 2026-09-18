@@ -3,8 +3,10 @@
 namespace App\Filament\Pages;
 
 use App\Enums\AssetStatus;
+use App\Models\Agency;
 use App\Models\Asset;
 use App\Models\ProductLine;
+use App\Models\User;
 use App\Models\Warehouse;
 use BackedEnum;
 use BezhanSalleh\FilamentShield\Traits\HasPageShield;
@@ -16,6 +18,8 @@ use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use UnitEnum;
 
@@ -169,11 +173,15 @@ class InventoryReport extends Page implements HasTable
                     ->badge()
                     ->color('gray'),
 
-                TextColumn::make('warehouseLocation.name')
-                    ->label('VỊ TRÍ / ZONE')
-                    ->searchable()
-                    ->sortable()
-                    ->placeholder('Chưa xếp'),
+                TextColumn::make('agency')
+                    ->label('ĐẠI LÝ / ĐƠN VỊ')
+                    ->state(function (Asset $record): string {
+                        $agency = $record->currentWarehouse?->agency;
+
+                        return $agency ? "{$agency->name} ({$agency->code})" : 'Tổng công ty (HQ)';
+                    })
+                    ->badge()
+                    ->color(fn (Asset $record): string => $record->currentWarehouse?->agency ? 'warning' : 'gray'),
 
                 TextColumn::make('size')
                     ->label('KÍCH THƯỚC')
@@ -196,17 +204,45 @@ class InventoryReport extends Page implements HasTable
                 SelectFilter::make('current_warehouse_id')
                     ->label('Kho hàng')
                     ->relationship('currentWarehouse', 'name')
-                    ->hidden(fn (): bool => (bool) auth()->user()?->getScopedWarehouseId())
-                    ->preload(),
+                    ->hidden(function (): bool {
+                        $user = Auth::user();
 
-                SelectFilter::make('warehouse_location_id')
-                    ->label('Vị trí kho')
-                    ->relationship('warehouseLocation', 'name', modifyQueryUsing: function ($query) {
-                        if ($whId = auth()->user()?->getScopedWarehouseId()) {
-                            $query->where('warehouse_id', $whId);
-                        }
+                        return $user instanceof User && (bool) $user->getScopedWarehouseId();
                     })
                     ->preload(),
+
+                SelectFilter::make('agency_filter')
+                    ->label('Đại lý / Đơn vị')
+                    ->options(function (): array {
+                        $options = ['hq' => 'Tổng công ty (HQ)'];
+                        $agencies = Agency::query()->orderBy('name')->pluck('name', 'id')->toArray();
+                        foreach ($agencies as $id => $name) {
+                            $options[(string) $id] = $name;
+                        }
+
+                        return $options;
+                    })
+                    ->query(function (Builder $query, array $data): Builder {
+                        $val = $data['value'] ?? null;
+                        if (! $val) {
+                            return $query;
+                        }
+
+                        if ($val === 'hq') {
+                            return $query->whereHas('currentWarehouse', function ($wq) {
+                                $wq->whereDoesntHave('agency');
+                            });
+                        }
+
+                        return $query->whereHas('currentWarehouse.agency', function ($aq) use ($val) {
+                            $aq->where('id', (int) $val);
+                        });
+                    })
+                    ->hidden(function (): bool {
+                        $user = Auth::user();
+
+                        return $user instanceof User && (bool) $user->getScopedWarehouseId();
+                    }),
 
                 SelectFilter::make('product_line_id')
                     ->label('Dòng sản phẩm')
@@ -242,19 +278,20 @@ class InventoryReport extends Page implements HasTable
                 'Số Seri',
                 'Dòng sản phẩm',
                 'Kho hiện tại',
-                'Vị trí',
+                'Đại lý / Đơn vị',
                 'Kích thước',
                 'Trạng thái',
             ]);
 
-            Asset::with(['productLine', 'currentWarehouse', 'warehouseLocation'])
+            Asset::with(['productLine', 'currentWarehouse.agency'])
                 ->chunk(200, function ($assets) use ($handle) {
                     foreach ($assets as $a) {
+                        $agency = $a->currentWarehouse?->agency;
                         fputcsv($handle, [
                             $a->serial_no,
                             $a->productLine?->name ?? '—',
                             $a->currentWarehouse?->name ?? 'Chưa gán kho',
-                            $a->warehouseLocation?->name ?? '—',
+                            $agency ? "{$agency->name} ({$agency->code})" : 'Tổng công ty (HQ)',
                             $a->size ?? '500×500 mm',
                             $a->current_status instanceof AssetStatus ? $a->current_status->getLabel() : (string) $a->current_status,
                         ]);

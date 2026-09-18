@@ -8,7 +8,7 @@ use App\Enums\OrderStatus;
 use App\Models\EventMilestone;
 use App\Models\Order;
 use Filament\Actions\Action;
-use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
@@ -40,14 +40,16 @@ class ManageTimelineAction extends Action
                     ->options(MilestoneType::class)
                     ->default(MilestoneType::Setup)
                     ->required(),
-                DateTimePicker::make('planned_at')
+                DatePicker::make('planned_at')
                     ->label('Thời gian kế hoạch')
                     ->default(now())
-                    ->native(false)
+                    ->displayFormat('d/m/Y')
+                    ->native(true)
                     ->required(),
-                DateTimePicker::make('actual_at')
+                DatePicker::make('actual_at')
                     ->label('Thời gian thực tế (nếu có)')
-                    ->native(false),
+                    ->displayFormat('d/m/Y')
+                    ->native(true),
                 Select::make('status')
                     ->label('Trạng thái')
                     ->options(MilestoneStatus::class)

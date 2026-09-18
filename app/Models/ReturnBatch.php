@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class ReturnBatch extends Model
@@ -23,6 +24,8 @@ class ReturnBatch extends Model
     protected $fillable = [
         'code',
         'checkout_batch_id',
+        'agency_id',
+        'warehouse_id',
         'return_date',
         'note',
         'status',
@@ -48,6 +51,34 @@ class ReturnBatch extends Model
     public function checkoutBatch(): BelongsTo
     {
         return $this->belongsTo(CheckoutBatch::class);
+    }
+
+    /**
+     * @return BelongsTo<Agency, $this>
+     */
+    public function agency(): BelongsTo
+    {
+        return $this->belongsTo(Agency::class);
+    }
+
+    /**
+     * @return BelongsTo<Warehouse, $this>
+     */
+    public function warehouse(): BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class);
+    }
+
+    protected static function booted(): void
+    {
+        static::saving(function (ReturnBatch $batch) {
+            if (! $batch->agency_id && $batch->checkout_batch_id) {
+                $batch->agency_id = $batch->checkoutBatch?->agency_id;
+            }
+            if (! $batch->warehouse_id && $batch->checkout_batch_id) {
+                $batch->warehouse_id = $batch->checkoutBatch?->warehouse_id;
+            }
+        });
     }
 
     /**
@@ -90,7 +121,7 @@ class ReturnBatch extends Model
     public function complete(?User $user = null): void
     {
         $now = now();
-        $userId = $user?->id ?? auth()->id();
+        $userId = $user?->id ?? Auth::id();
 
         DB::transaction(function () use ($now, $userId) {
             $this->loadMissing(['items.asset', 'checkoutBatch.order']);

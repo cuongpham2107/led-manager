@@ -23,7 +23,7 @@ class AuthController extends Controller
             'device_name' => ['nullable', 'string'],
         ]);
 
-        $user = User::with(['warehouse', 'roles'])->where('email', $validated['email'])->first();
+        $user = User::with(['warehouse', 'roles', 'agency.warehouse'])->where('email', $validated['email'])->first();
 
         if (! $user || ! Hash::check($validated['password'], $user->password)) {
             throw ValidationException::withMessages([
@@ -35,6 +35,13 @@ class AuthController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.',
+            ], 403);
+        }
+
+        if ($user->agency && ! $user->agency->is_active) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Đại lý của bạn đang bị vô hiệu hóa hoặc tạm ngưng hoạt động. Vui lòng liên hệ quản trị viên.',
             ], 403);
         }
 
@@ -69,7 +76,7 @@ class AuthController extends Controller
      */
     public function me(Request $request): JsonResponse
     {
-        $user = $request->user()->load(['warehouse', 'roles']);
+        $user = $request->user()->load(['warehouse', 'roles', 'agency.warehouse']);
 
         return response()->json([
             'success' => true,

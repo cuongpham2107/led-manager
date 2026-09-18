@@ -6,9 +6,11 @@ use App\Enums\OrderStatus;
 use App\Models\Contract;
 use App\Models\EventAssignment;
 use App\Models\Order;
+use App\Models\User;
 use Carbon\Carbon;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
+use Illuminate\Support\Facades\Auth;
 
 class ExecutiveKpiWidget extends BaseWidget
 {
@@ -17,6 +19,14 @@ class ExecutiveKpiWidget extends BaseWidget
     public static int $gridW = 24;
 
     public static int $gridH = 4;
+
+    public static function canView(): bool
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+
+        return (bool) ($user && ! $user->isAgencyScoped());
+    }
 
     protected function getStats(): array
     {

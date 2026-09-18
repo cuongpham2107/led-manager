@@ -19,6 +19,7 @@ class CheckoutBatch extends Model
         'order_id',
         'customer_id',
         'warehouse_id',
+        'agency_id',
         'required_area_m2',
         'export_date',
         'expected_return_date',
@@ -49,6 +50,23 @@ class CheckoutBatch extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
+    }
+
+    /**
+     * @return BelongsTo<Agency, $this>
+     */
+    public function agency(): BelongsTo
+    {
+        return $this->belongsTo(Agency::class);
+    }
+
+    protected static function booted(): void
+    {
+        static::saving(function (CheckoutBatch $batch) {
+            if (! $batch->agency_id && $batch->warehouse_id) {
+                $batch->agency_id = Warehouse::find($batch->warehouse_id)?->agency?->id;
+            }
+        });
     }
 
     /**

@@ -156,16 +156,19 @@ class ContractForm
                                         Grid::make(3)->schema([
                                             DatePicker::make('signed_date')
                                                 ->label('Ngày ký hợp đồng')
-                                                ->native(false)
+                                                ->displayFormat('d/m/Y')
+                                                ->native(true)
                                                 ->default(now())
                                                 ->live(),
                                             DatePicker::make('start_date')
                                                 ->label('Ngày bắt đầu thuê')
-                                                ->native(false)
+                                                ->displayFormat('d/m/Y')
+                                                ->native(true)
                                                 ->live(),
                                             DatePicker::make('end_date')
                                                 ->label('Ngày kết thúc thuê')
-                                                ->native(false)
+                                                ->displayFormat('d/m/Y')
+                                                ->native(true)
                                                 ->live(),
                                         ]),
                                         Textarea::make('terms')

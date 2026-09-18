@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Customers\Schemas;
 
 use App\Enums\CustomerType;
 use App\Models\Customer;
+use App\Models\User;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -11,6 +12,7 @@ use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Facades\Auth;
 
 class CustomerForm
 {
@@ -46,10 +48,27 @@ class CustomerForm
                                 ->required()
                                 ->default(CustomerType::Corporate),
                         ]),
-                        Grid::make(2)->schema([
+                        Grid::make(3)->schema([
                             TextInput::make('tax_code')
                                 ->label('Mã số thuế')
                                 ->placeholder('VD: 0101245486'),
+                            Select::make('agency_id')
+                                ->label('Đại lý quản lý')
+                                ->relationship('agency', 'name')
+                                ->searchable()
+                                ->preload()
+                                ->placeholder('— Khách hàng Tổng công ty (HQ) —')
+                                ->default(function () {
+                                    $user = Auth::user();
+
+                                    return $user instanceof User ? $user->getScopedAgencyId() : null;
+                                })
+                                ->disabled(function () {
+                                    $user = Auth::user();
+
+                                    return (bool) ($user instanceof User && $user->getScopedAgencyId());
+                                })
+                                ->dehydrated(),
                             Toggle::make('is_active')
                                 ->label('Đang hoạt động')
                                 ->default(true)

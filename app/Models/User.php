@@ -33,6 +33,11 @@ class User extends Authenticatable implements FilamentUser
 
     public function canAccessPanel(Panel $panel): bool
     {
+        // Block agency users whose agency has been deactivated
+        if ($this->agency_id && $this->agency && ! $this->agency->is_active) {
+            return false;
+        }
+
         return true;
     }
 
@@ -56,7 +61,9 @@ class User extends Authenticatable implements FilamentUser
             return null;
         }
 
-        return $this->warehouse_id ? (int) $this->warehouse_id : null;
+        return $this->warehouse_id
+            ? (int) $this->warehouse_id
+            : ($this->agency?->warehouse_id ? (int) $this->agency->warehouse_id : null);
     }
 
     /**

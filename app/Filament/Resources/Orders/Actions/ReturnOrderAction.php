@@ -80,9 +80,10 @@ class ReturnOrderAction extends Action
                 Grid::make(2)->schema([
                     DatePicker::make('return_date')
                         ->label('Ngày trả thực tế')
+                        ->displayFormat('d/m/Y')
+                        ->native(true)
                         ->default(now()->toDateString())
-                        ->required()
-                        ->native(false),
+                        ->required(),
                     Select::make('received_by')
                         ->label('Người tiếp nhận kho')
                         ->options(User::pluck('name', 'id'))
@@ -140,6 +141,8 @@ class ReturnOrderAction extends Action
                     $returnBatch = ReturnBatch::create([
                         'code' => $code,
                         'checkout_batch_id' => $record->checkoutBatches()->latest('id')->value('id'),
+                        'agency_id' => $record->agency_id,
+                        'warehouse_id' => $record->warehouse_id,
                         'return_date' => $data['return_date'] ?? now()->toDateString(),
                         'note' => $data['note'] ?? null,
                         'status' => ReturnBatchStatus::Completed,

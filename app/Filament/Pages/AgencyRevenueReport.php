@@ -56,21 +56,20 @@ class AgencyRevenueReport extends Page implements HasTable
         $user = Auth::user();
         $agencyId = $user?->getScopedAgencyId();
 
-        $query = Order::query()->with('agency')->whereNotNull('agency_id');
+        $ordersQuery = Order::query()
+            ->leftJoin('agencies', 'agencies.id', '=', 'orders.agency_id')
+            ->whereNotNull('orders.agency_id');
+
         if ($agencyId) {
-            $query->where('agency_id', $agencyId);
+            $ordersQuery->where('orders.agency_id', $agencyId);
         }
 
-        $orders = $query->get();
-        $totalRevenue = (float) $orders->sum('value');
-        $totalCollected = (float) $orders->sum('total_paid');
-
-        // Calculate total commission based on collected money (total_paid)
-        $totalCommission = (float) $orders->sum(function (Order $order) {
-            $rate = $order->agency ? (float) $order->agency->commission_rate : 0.0;
-
-            return ((float) $order->total_paid * $rate) / 100.0;
-        });
+        $stats = $ordersQuery->selectRaw('
+            COUNT(orders.id) as total_orders,
+            COALESCE(SUM(orders.value), 0) as total_revenue,
+            COALESCE(SUM(orders.total_paid), 0) as total_collected,
+            COALESCE(SUM((orders.total_paid * COALESCE(orders.commission_rate, agencies.commission_rate, 0)) / 100.0), 0) as total_commission
+        ')->first();
 
         $agenciesQuery = Agency::query()->where('is_active', true);
         if ($agencyId) {
@@ -82,10 +81,10 @@ class AgencyRevenueReport extends Page implements HasTable
         $totalInventoryArea = (float) $agencies->sum('current_inventory_area');
 
         return [
-            'total_revenue' => $totalRevenue,
-            'total_collected' => $totalCollected,
-            'total_commission' => $totalCommission,
-            'total_orders' => $orders->count(),
+            'total_revenue' => (float) ($stats->total_revenue ?? 0),
+            'total_collected' => (float) ($stats->total_collected ?? 0),
+            'total_commission' => round((float) ($stats->total_commission ?? 0), 2),
+            'total_orders' => (int) ($stats->total_orders ?? 0),
             'total_inventory_area' => $totalInventoryArea,
             'total_allocated_area' => $totalAllocatedArea,
         ];
@@ -109,8 +108,12 @@ class AgencyRevenueReport extends Page implements HasTable
             $orders = $agency->orders;
             $revenue = (float) $orders->sum('value');
             $collected = (float) $orders->sum('total_paid');
-            $rate = (float) $agency->commission_rate;
-            $commission = ($collected * $rate) / 100.0;
+            $agencyRate = (float) $agency->commission_rate;
+            $commission = (float) $orders->sum(function (Order $order) use ($agencyRate) {
+                $rate = $order->commission_rate !== null ? (float) $order->commission_rate : $agencyRate;
+
+                return ((float) $order->total_paid * $rate) / 100.0;
+            });
             $invArea = (float) $agency->current_inventory_area;
             $allocArea = (float) $agency->allocated_area_m2;
             $utilization = $allocArea > 0 ? round(($invArea / $allocArea) * 100, 1) : 0;
@@ -123,8 +126,8 @@ class AgencyRevenueReport extends Page implements HasTable
                 'orders_count' => $orders->count(),
                 'revenue' => $revenue,
                 'collected' => $collected,
-                'commission_rate' => $rate,
-                'commission' => $commission,
+                'commission_rate' => $agencyRate,
+                'commission' => round($commission, 2),
                 'inventory_area' => $invArea,
                 'allocated_area' => $allocArea,
                 'utilization_percent' => $utilization,
@@ -138,6 +141,7 @@ class AgencyRevenueReport extends Page implements HasTable
         $user = Auth::user();
         $agencyId = $user?->getScopedAgencyId();
 
+        /** @var Builder<Order> $query */
         $query = Order::query()
             ->with(['agency', 'customer', 'salesUser'])
             ->whereNotNull('agency_id');
@@ -189,14 +193,14 @@ class AgencyRevenueReport extends Page implements HasTable
                     ->suffix('%')
                     ->badge()
                     ->color('warning')
-                    ->state(fn (Order $record): float => (float) ($record->agency?->commission_rate ?? 0)),
+                    ->state(fn (Order $record): float => (float) ($record->commission_rate ?? $record->agency?->commission_rate ?? 0)),
                 TextColumn::make('commission_amount')
                     ->label('Hoa hồng thực hưởng')
                     ->money('VND')
                     ->weight('bold')
                     ->color('primary')
                     ->state(function (Order $record): float {
-                        $rate = (float) ($record->agency?->commission_rate ?? 0);
+                        $rate = (float) ($record->commission_rate ?? $record->agency?->commission_rate ?? 0);
 
                         return ((float) $record->total_paid * $rate) / 100.0;
                     }),
@@ -233,7 +237,9 @@ class AgencyRevenueReport extends Page implements HasTable
                                 $data['until'],
                                 fn (Builder $q, $date): Builder => $q->whereDate('request_date', '<=', $date),
                             );
-                    }),
+                    })
+                    ->columns(2)
+                    ->columnSpan(2),
             ], layout: FiltersLayout::AboveContent)
             ->deferFilters(false)
             ->headerActions([
@@ -280,7 +286,7 @@ class AgencyRevenueReport extends Page implements HasTable
             }
 
             foreach ($query->get() as $order) {
-                $rate = (float) ($order->agency?->commission_rate ?? 0);
+                $rate = (float) ($order->commission_rate ?? $order->agency?->commission_rate ?? 0);
                 $commission = ((float) $order->total_paid * $rate) / 100.0;
 
                 fputcsv($handle, [

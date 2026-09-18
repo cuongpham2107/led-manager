@@ -2,8 +2,10 @@
 
 namespace App\Filament\Resources\CheckoutBatches\Schemas;
 
+use App\Models\Agency;
 use App\Models\Asset;
 use App\Models\CheckoutBatch;
+use App\Models\Order;
 use App\Models\ProductLine;
 use App\Models\User;
 use App\Models\Warehouse;
@@ -14,6 +16,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\ViewField;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Auth;
 
@@ -35,23 +38,126 @@ class CheckoutBatchForm
                     ->placeholder('')
                     ->columnSpanFull(),
 
-                Select::make('warehouse_id')
-                    ->label('Kho hàng')
-                    ->relationship('warehouse', 'name')
-                    ->searchable()
-                    ->preload()
-                    ->live()
-                    ->default(function () {
-                        /** @var User|null $user */
-                        $user = Auth::user();
+                Grid::make(['default' => 1, 'md' => 2])
+                    ->schema([
+                        Select::make('agency_id')
+                            ->label('Đại lý xuất hàng (Nếu có)')
+                            ->placeholder('— Xuất từ Kho Tổng (HQ) —')
+                            ->options(fn () => Agency::where('is_active', true)->orderBy('name')->pluck('name', 'id'))
+                            ->searchable()
+                            ->preload()
+                            ->live()
+                            ->default(function (?CheckoutBatch $record) {
+                                if ($record) {
+                                    return $record->agency_id ?? $record->warehouse?->agency?->id;
+                                }
+                                $user = Auth::user();
 
-                        return $user?->getScopedWarehouseId() ?: Warehouse::first()?->id;
-                    })
-                    ->required()
+                                return $user instanceof User ? $user->getScopedAgencyId() : null;
+                            })
+                            ->disabled(function () {
+                                $user = Auth::user();
+
+                                return (bool) ($user instanceof User && $user->getScopedAgencyId());
+                            })
+                            ->dehydrated()
+                            ->afterStateUpdated(function ($state, Set $set) {
+                                if ($state) {
+                                    $agency = Agency::find($state);
+                                    if ($agency && $agency->warehouse_id) {
+                                        $set('warehouse_id', $agency->warehouse_id);
+                                    }
+                                } else {
+                                    $defaultHq = Warehouse::whereDoesntHave('agency')->where('is_active', true)->first();
+                                    $set('warehouse_id', $defaultHq?->id);
+                                }
+                                $set('order_id', null);
+                            }),
+
+                        Select::make('warehouse_id')
+                            ->label('Kho hàng xuất')
+                            ->options(function (Get $get) {
+                                $agencyId = $get('agency_id');
+                                if ($agencyId) {
+                                    $agency = Agency::find($agencyId);
+
+                                    return $agency && $agency->warehouse
+                                        ? [$agency->warehouse_id => "{$agency->warehouse->name} [Đại lý: {$agency->name}]"]
+                                        : [];
+                                }
+
+                                return Warehouse::whereDoesntHave('agency')
+                                    ->where('is_active', true)
+                                    ->pluck('name', 'id');
+                            })
+                            ->default(function (?CheckoutBatch $record) {
+                                if ($record) {
+                                    return $record->warehouse_id;
+                                }
+                                $user = Auth::user();
+                                if ($user instanceof User && $user->getScopedWarehouseId()) {
+                                    return $user->getScopedWarehouseId();
+                                }
+
+                                return Warehouse::whereDoesntHave('agency')->where('is_active', true)->first()?->id;
+                            })
+                            ->disabled(function (Get $get) {
+                                $user = Auth::user();
+                                if ($user instanceof User && $user->getScopedWarehouseId()) {
+                                    return true;
+                                }
+
+                                return (bool) $get('agency_id');
+                            })
+                            ->dehydrated()
+                            ->required()
+                            ->live()
+                            ->helperText(function (Get $get) {
+                                $whId = $get('warehouse_id');
+                                if (! $whId) {
+                                    return null;
+                                }
+                                $agency = Agency::where('warehouse_id', $whId)->first();
+                                if (! $agency) {
+                                    return '🏢 Kho Tổng công ty (HQ)';
+                                }
+
+                                return "🏢 Thuộc Đại lý: {$agency->name} ({$agency->code}) | Tồn kho hiện tại: {$agency->current_inventory_area} m² / Định mức: {$agency->allocated_area_m2} m²";
+                            }),
+                    ])
                     ->columnSpanFull(),
 
-                Grid::make(2)
+                Grid::make(['default' => 1, 'md' => 3])
                     ->schema([
+                        Select::make('order_id')
+                            ->label('Đơn hàng liên kết (Nếu có)')
+                            ->relationship('order', 'order_no', modifyQueryUsing: function ($query, Get $get) {
+                                $user = Auth::user();
+                                $agencyId = ($user instanceof User ? $user->getScopedAgencyId() : null) ?: $get('agency_id');
+                                if ($agencyId) {
+                                    $query->where('agency_id', $agencyId);
+                                } elseif ($whId = $get('warehouse_id')) {
+                                    $query->where('warehouse_id', $whId);
+                                }
+                            })
+                            ->searchable()
+                            ->preload()
+                            ->nullable()
+                            ->live()
+                            ->afterStateUpdated(function ($state, Set $set) {
+                                if ($state) {
+                                    $order = Order::find($state);
+                                    if ($order) {
+                                        if ($order->customer_id) {
+                                            $set('customer_id', $order->customer_id);
+                                        }
+                                        if ($order->area_m2) {
+                                            $set('required_area_m2', $order->area_m2);
+                                        }
+                                    }
+                                }
+                            }),
+
                         Select::make('customer_id')
                             ->label('Khách hàng')
                             ->relationship('customer', 'name')
@@ -61,16 +167,16 @@ class CheckoutBatchForm
 
                         DatePicker::make('export_date')
                             ->label('Ngày cần xuất')
-                            ->native(false)
                             ->displayFormat('d/m/Y')
+                            ->native(true)
                             ->default(now()),
                     ])
                     ->columnSpanFull(),
 
                 DatePicker::make('expected_return_date')
                     ->label('Ngày dự kiến trả')
-                    ->native(false)
                     ->displayFormat('d/m/Y')
+                    ->native(true)
                     ->default(now())
                     ->columnSpanFull(),
 

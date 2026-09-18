@@ -33,7 +33,7 @@ class CheckoutBatchesTable
     public static function configure(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn ($query) => $query->with(['order', 'customer', 'warehouse', 'returnBatches']))
+            ->modifyQueryUsing(fn ($query) => $query->with(['order', 'customer', 'warehouse.agency', 'returnBatches']))
             ->columns([
                 TextColumn::make('code')
                     ->color('primary')
@@ -53,6 +53,7 @@ class CheckoutBatchesTable
                     ->sortable(),
                 TextColumn::make('warehouse.name')
                     ->label('Kho xuất')
+                    ->description(fn (CheckoutBatch $record): ?string => $record->warehouse?->agency ? "🏢 Đại lý: {$record->warehouse->agency->name} ({$record->warehouse->agency->code})" : 'Kho Tổng (HQ)')
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('required_area_m2')
@@ -225,62 +226,63 @@ class CheckoutBatchesTable
                             return $record;
                         });
                     }),
-                Action::make('confirmDispatch')
-                    ->label('Xác nhận xuất kho')
-                    ->icon('heroicon-o-truck')
-                    ->color('success')
-                    ->visible(fn (CheckoutBatch $record): bool => ! in_array($record->status, [BatchStatus::Dispatched, BatchStatus::Completed, BatchStatus::Cancelled]) && $record->items()->count() > 0)
-                    ->requiresConfirmation()
-                    ->modalHeading('Xác nhận Xuất kho đi sự kiện')
-                    ->modalDescription(fn (CheckoutBatch $record): string => "Bạn có chắc chắn muốn xác nhận xuất kho cho đợt {$record->code} ({$record->items()->count()} thiết bị)? Toàn bộ thiết bị sẽ chuyển sang trạng thái Đang vận chuyển.")
-                    ->modalSubmitActionLabel('Xác nhận xuất kho')
-                    ->modalCancelActionLabel('Hủy')
-                    ->action(function (CheckoutBatch $record): void {
-                        DB::transaction(function () use ($record) {
-                            foreach ($record->items as $item) {
-                                $item->update([
-                                    'is_dispatched' => true,
-                                    'dispatched_by' => Auth::id(),
+
+                ActionGroup::make([
+                    // CreateReturnBatchAction::make(),
+                    Action::make('confirmDispatch')
+                        ->label('Xác nhận xuất kho')
+                        ->icon('heroicon-o-truck')
+                        ->color('success')
+                        ->visible(fn (CheckoutBatch $record): bool => ! in_array($record->status, [BatchStatus::Dispatched, BatchStatus::Completed, BatchStatus::Cancelled]) && $record->items()->count() > 0)
+                        ->requiresConfirmation()
+                        ->modalHeading('Xác nhận Xuất kho đi sự kiện')
+                        ->modalDescription(fn (CheckoutBatch $record): string => "Bạn có chắc chắn muốn xác nhận xuất kho cho đợt {$record->code} ({$record->items()->count()} thiết bị)? Toàn bộ thiết bị sẽ chuyển sang trạng thái Đang vận chuyển.")
+                        ->modalSubmitActionLabel('Xác nhận xuất kho')
+                        ->modalCancelActionLabel('Hủy')
+                        ->action(function (CheckoutBatch $record): void {
+                            DB::transaction(function () use ($record) {
+                                foreach ($record->items as $item) {
+                                    $item->update([
+                                        'is_dispatched' => true,
+                                        'dispatched_by' => Auth::id(),
+                                        'dispatched_at' => now(),
+                                    ]);
+
+                                    $asset = $item->asset;
+                                    if ($asset) {
+                                        $oldStatus = $asset->current_status;
+                                        $asset->update(['current_status' => AssetStatus::InTransit]);
+
+                                        AssetStatusLog::create([
+                                            'asset_id' => $asset->id,
+                                            'from_status' => $oldStatus,
+                                            'to_status' => AssetStatus::InTransit,
+                                            'from_warehouse_id' => $record->warehouse_id,
+                                            'to_warehouse_id' => $record->warehouse_id,
+                                            'source_type' => CheckoutBatch::class,
+                                            'source_id' => $record->id,
+                                            'changed_by' => Auth::id(),
+                                            'note' => "Xác nhận xuất kho đợt {$record->code} từ quản trị",
+                                            'created_at' => now(),
+                                        ]);
+                                    }
+                                }
+
+                                $record->update([
+                                    'status' => BatchStatus::Dispatched,
                                     'dispatched_at' => now(),
                                 ]);
 
-                                $asset = $item->asset;
-                                if ($asset) {
-                                    $oldStatus = $asset->current_status;
-                                    $asset->update(['current_status' => AssetStatus::InTransit]);
-
-                                    AssetStatusLog::create([
-                                        'asset_id' => $asset->id,
-                                        'from_status' => $oldStatus,
-                                        'to_status' => AssetStatus::InTransit,
-                                        'from_warehouse_id' => $record->warehouse_id,
-                                        'to_warehouse_id' => $record->warehouse_id,
-                                        'source_type' => CheckoutBatch::class,
-                                        'source_id' => $record->id,
-                                        'changed_by' => Auth::id(),
-                                        'note' => "Xác nhận xuất kho đợt {$record->code} từ quản trị",
-                                        'created_at' => now(),
-                                    ]);
+                                if ($record->order) {
+                                    $record->order->update(['status' => OrderStatus::Dispatched]);
                                 }
-                            }
+                            });
 
-                            $record->update([
-                                'status' => BatchStatus::Dispatched,
-                                'dispatched_at' => now(),
-                            ]);
-
-                            if ($record->order) {
-                                $record->order->update(['status' => OrderStatus::Dispatched]);
-                            }
-                        });
-
-                        Notification::make()
-                            ->title("Đợt xuất kho {$record->code} đã được xác nhận xuất kho thành công!")
-                            ->success()
-                            ->send();
-                    }),
-                ActionGroup::make([
-                    // CreateReturnBatchAction::make(),
+                            Notification::make()
+                                ->title("Đợt xuất kho {$record->code} đã được xác nhận xuất kho thành công!")
+                                ->success()
+                                ->send();
+                        }),
                     ViewReturnBatchAction::make(),
                 ]),
             ], position: RecordActionsPosition::BeforeCells)

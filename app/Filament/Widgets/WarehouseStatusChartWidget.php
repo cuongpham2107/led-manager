@@ -4,7 +4,9 @@ namespace App\Filament\Widgets;
 
 use App\Enums\AssetStatus;
 use App\Models\Asset;
+use App\Models\User;
 use Filament\Widgets\ChartWidget;
+use Illuminate\Support\Facades\Auth;
 
 class WarehouseStatusChartWidget extends ChartWidget
 {
@@ -22,10 +24,16 @@ class WarehouseStatusChartWidget extends ChartWidget
 
     protected function getData(): array
     {
-        $whId = auth()->user()?->getScopedWarehouseId();
+        /** @var User|null $user */
+        $user = Auth::user();
+        $whId = $user?->getScopedWarehouseId();
+        $agencyId = $user?->getScopedAgencyId();
+
         $base = Asset::query();
         if ($whId) {
             $base->where('current_warehouse_id', $whId);
+        } elseif ($agencyId) {
+            $base->whereRaw('1 = 0');
         }
 
         $ready = (clone $base)->where('current_status', AssetStatus::Ready)->count();

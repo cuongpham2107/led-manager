@@ -34,6 +34,42 @@ class AssetApiController extends Controller
             ], 404);
         }
 
+        if ($request->user()->isAgencyScoped()) {
+            $whId = $request->user()->getScopedWarehouseId();
+            $agencyId = $request->user()->getScopedAgencyId();
+
+            $hasAccess = ($whId && (int) $asset->current_warehouse_id === (int) $whId)
+                || ($whId && $asset->statusLogs()->where('to_warehouse_id', $whId)->exists())
+                || ($whId && $asset->checkinBatchItems()->whereHas('checkinBatch', fn ($cq) => $cq->where('warehouse_id', $whId))->exists())
+                || $asset->checkoutBatchItems()->whereHas('checkoutBatch', function ($cbq) use ($whId, $agencyId) {
+                    $cbq->where(function ($q) use ($whId, $agencyId) {
+                        if ($whId) {
+                            $q->where('warehouse_id', $whId);
+                        }
+                        if ($agencyId) {
+                            $q->orWhereHas('order', fn ($oq) => $oq->where('agency_id', $agencyId));
+                        }
+                    });
+                })->exists()
+                || $asset->returnBatchItems()->whereHas('returnBatch.checkoutBatch', function ($cbq) use ($whId, $agencyId) {
+                    $cbq->where(function ($q) use ($whId, $agencyId) {
+                        if ($whId) {
+                            $q->where('warehouse_id', $whId);
+                        }
+                        if ($agencyId) {
+                            $q->orWhereHas('order', fn ($oq) => $oq->where('agency_id', $agencyId));
+                        }
+                    });
+                })->exists();
+
+            if (! $hasAccess) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Thiết bị này không thuộc phạm vi quản lý của đại lý.',
+                ], 403);
+            }
+        }
+
         $recentLogs = $asset->statusLogs()->latest()->take(5)->get();
         $recentRepairs = $asset->repairLogs()->latest()->take(5)->get();
 

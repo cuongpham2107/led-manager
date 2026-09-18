@@ -32,7 +32,7 @@ class OrderResource extends Resource
 
     protected static ?int $navigationSort = 2;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCalendarDays;
+    // protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCalendarDays;
 
     public static function getEloquentQuery(): Builder
     {
@@ -42,10 +42,13 @@ class OrderResource extends Resource
         $user = Auth::user();
 
         if ($agencyId = $user?->getScopedAgencyId()) {
-            $query->where('orders.agency_id', $agencyId);
-        }
-
-        if ($whId = $user?->getScopedWarehouseId()) {
+            $query->where(function (Builder $q) use ($agencyId, $user) {
+                $q->where('orders.agency_id', $agencyId);
+                if ($whId = $user->getScopedWarehouseId()) {
+                    $q->orWhere('orders.warehouse_id', $whId);
+                }
+            });
+        } elseif ($whId = $user?->getScopedWarehouseId()) {
             $query->where('orders.warehouse_id', $whId);
         }
 

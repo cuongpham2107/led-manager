@@ -3,9 +3,11 @@
 namespace App\Filament\Widgets;
 
 use App\Models\Order;
+use App\Models\User;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
+use Illuminate\Support\Facades\Auth;
 
 class LatestOrdersWidget extends BaseWidget
 {
@@ -22,7 +24,16 @@ class LatestOrdersWidget extends BaseWidget
     public function table(Table $table): Table
     {
         $query = Order::query()->latest();
-        if ($whId = auth()->user()?->getScopedWarehouseId()) {
+        /** @var User|null $user */
+        $user = Auth::user();
+        if ($agencyId = $user?->getScopedAgencyId()) {
+            $query->where(function ($q) use ($agencyId, $user) {
+                $q->where('agency_id', $agencyId);
+                if ($whId = $user->getScopedWarehouseId()) {
+                    $q->orWhere('warehouse_id', $whId);
+                }
+            });
+        } elseif ($whId = $user?->getScopedWarehouseId()) {
             $query->where('warehouse_id', $whId);
         }
 

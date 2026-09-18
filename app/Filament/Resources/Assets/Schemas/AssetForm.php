@@ -53,13 +53,13 @@ class AssetForm
                         ]),
                     ]),
 
-                Section::make('Trạng thái & Vị trí kho')
-                    ->description('Vị trí kho hiện tại và tình trạng sẵn sàng vận hành')
+                Section::make('Trạng thái & Kho lưu trữ')
+                    ->description('Kho lưu trữ hiện tại và tình trạng sẵn sàng vận hành')
                     ->columnSpanFull()
                     ->hiddenOn('create')
                     ->schema([
-                        Grid::make(3)
-                            ->columns(3)
+                        Grid::make(2)
+                            ->columns(2)
                             ->schema([
                                 Select::make('current_status')
                                     ->label('Trạng thái hiện tại')
@@ -71,20 +71,7 @@ class AssetForm
                                     ->relationship('currentWarehouse', 'name')
                                     ->searchable()
                                     ->preload()
-                                    ->live()
-                                    ->afterStateUpdated(fn (callable $set) => $set('warehouse_location_id', null))
                                     ->required(),
-                                Select::make('warehouse_location_id')
-                                    ->label('Vị trí trong kho')
-                                    ->relationship('warehouseLocation', 'name', modifyQueryUsing: function ($query, callable $get) {
-                                        if ($whId = $get('current_warehouse_id')) {
-                                            $query->where('warehouse_id', $whId);
-                                        }
-                                    })
-                                    ->searchable()
-                                    ->preload()
-                                    ->nullable()
-                                    ->placeholder('Chọn vị trí kho...'),
                             ]),
                     ]),
 
@@ -119,11 +106,15 @@ class AssetForm
                                 DatePicker::make('manufactured_date')
                                     ->label('Ngày sản xuất')
                                     ->placeholder('dd/mm/yyyy')
+                                    ->displayFormat('d/m/Y')
+                                    ->native(true)
                                     ->default(now()->toDateString())
                                     ->dehydratedWhenHidden(),
                                 DatePicker::make('purchase_date')
                                     ->label('Ngày mua về kho')
                                     ->placeholder('dd/mm/yyyy')
+                                    ->displayFormat('d/m/Y')
+                                    ->native(true)
                                     ->default(now()->toDateString())
                                     ->dehydratedWhenHidden(),
                                 TextInput::make('purchase_cost')

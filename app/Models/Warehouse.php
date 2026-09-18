@@ -6,6 +6,7 @@ use App\Enums\AssetStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Warehouse extends Model
 {
@@ -30,6 +31,14 @@ class Warehouse extends Model
     }
 
     /**
+     * @return HasOne<Agency, $this>
+     */
+    public function agency(): HasOne
+    {
+        return $this->hasOne(Agency::class);
+    }
+
+    /**
      * @return HasMany<WarehouseLocation, $this>
      */
     public function locations(): HasMany
@@ -50,7 +59,7 @@ class Warehouse extends Model
      */
     public function readyAssets(): HasMany
     {
-        return $this->hasMany(Asset::class, 'current_warehouse_id')->where('status', AssetStatus::Ready);
+        return $this->hasMany(Asset::class, 'current_warehouse_id')->where('current_status', AssetStatus::Ready);
     }
 
     /**
@@ -58,7 +67,7 @@ class Warehouse extends Model
      */
     public function inEventAssets(): HasMany
     {
-        return $this->hasMany(Asset::class, 'current_warehouse_id')->where('status', AssetStatus::InEvent);
+        return $this->hasMany(Asset::class, 'current_warehouse_id')->where('current_status', AssetStatus::InEvent);
     }
 
     /**
@@ -66,7 +75,7 @@ class Warehouse extends Model
      */
     public function repairingAssets(): HasMany
     {
-        return $this->hasMany(Asset::class, 'current_warehouse_id')->where('status', AssetStatus::Repairing);
+        return $this->hasMany(Asset::class, 'current_warehouse_id')->where('current_status', AssetStatus::Repairing);
     }
 
     /**
