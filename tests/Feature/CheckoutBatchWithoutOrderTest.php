@@ -2,6 +2,7 @@
 
 use App\Enums\AssetStatus;
 use App\Enums\BatchStatus;
+use App\Filament\Resources\CheckoutBatches\Pages\CreateCheckoutBatch;
 use App\Filament\Resources\CheckoutBatches\Pages\ListCheckoutBatches;
 use App\Models\Asset;
 use App\Models\CheckoutBatch;
@@ -237,4 +238,28 @@ test('can process return for a checkout batch without an order', function () {
     expect($returnBatch)->not->toBeNull()
         ->and($batch->fresh()->status)->toBe(BatchStatus::Completed)
         ->and($this->asset->fresh()->current_status)->toBe(AssetStatus::Ready);
+});
+
+test('can create checkout batch through CreateCheckoutBatch page', function () {
+    actingAs($this->user);
+
+    Livewire::test(CreateCheckoutBatch::class)
+        ->fillForm([
+            'code' => 'OUT-PAGE-TEST-01 · Hệ thống tự sinh',
+            'note' => 'Xuất từ trang tạo đợt xuất',
+            'warehouse_id' => $this->warehouse->id,
+            'customer_id' => $this->customer->id,
+            'export_date' => now()->toDateString(),
+            'expected_return_date' => now()->addDays(2)->toDateString(),
+            'required_area_m2' => 0.5,
+            'purpose' => 'Sự kiện',
+            'selected_assets' => [$this->asset->id],
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $batch = CheckoutBatch::where('code', 'OUT-PAGE-TEST-01')->first();
+    expect($batch)->not->toBeNull()
+        ->and($batch->items)->toHaveCount(1)
+        ->and($batch->items->first()->asset_id)->toBe($this->asset->id);
 });

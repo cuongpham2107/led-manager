@@ -114,8 +114,16 @@ class CheckoutBatchesTable
                     ->label('Chỉnh sửa')
                     ->modalHeading(fn (CheckoutBatch $record): string => "Sửa đợt xuất: {$record->code}")
                     ->modalWidth(Width::FourExtraLarge)
-                    ->modalSubmitActionLabel('Xác nhận xuất kho')
+                    ->modalSubmitActionLabel('Lưu thay đổi')
                     ->modalCancelActionLabel('Đóng')
+                    ->successNotification(null)
+                    ->extraModalFooterActions(fn (CheckoutBatch $record, EditAction $action): array => [
+                        $action->makeModalSubmitAction('confirmDispatchModal', arguments: ['dispatch' => true])
+                            ->label('Xác nhận xuất kho')
+                            ->icon('heroicon-o-truck')
+                            ->color('success')
+                            ->visible(fn (): bool => ! in_array($record->status, [BatchStatus::Dispatched, BatchStatus::Completed, BatchStatus::Cancelled])),
+                    ])
                     ->mutateRecordDataUsing(function (array $data, CheckoutBatch $record): array {
                         $data['selected_assets'] = $record->items()->pluck('asset_id')->map(fn ($id) => (int) $id)->toArray();
 
@@ -147,8 +155,9 @@ class CheckoutBatchesTable
                             }
                         }
                     })
-                    ->using(function (CheckoutBatch $record, array $data): CheckoutBatch {
-                        return DB::transaction(function () use ($record, $data) {
+                    ->using(function (CheckoutBatch $record, array $data, array $arguments = []): CheckoutBatch {
+                        return DB::transaction(function () use ($record, $data, $arguments) {
+                            $isDispatchAction = (bool) ($arguments['dispatch'] ?? false);
                             $selectedAssets = $data['selected_assets'] ?? [];
                             unset($data['selected_assets']);
                             unset($data['product_line_id']);
@@ -184,18 +193,20 @@ class CheckoutBatchesTable
                             }
 
                             // Add newly selected assets
-                            $isDispatched = in_array($record->status, [BatchStatus::Dispatched, BatchStatus::Completed]);
+                            $isAlreadyDispatched = in_array($record->status, [BatchStatus::Dispatched, BatchStatus::Completed]);
+                            $shouldMarkItemDispatched = $isDispatchAction || $isAlreadyDispatched;
+
                             foreach ($toAdd as $addId) {
                                 CheckoutBatchItem::create([
                                     'checkout_batch_id' => $record->id,
                                     'asset_id' => $addId,
-                                    'is_dispatched' => $isDispatched,
-                                    'dispatched_by' => $isDispatched ? Auth::id() : null,
-                                    'dispatched_at' => $isDispatched ? now() : null,
+                                    'is_dispatched' => $shouldMarkItemDispatched,
+                                    'dispatched_by' => $shouldMarkItemDispatched ? Auth::id() : null,
+                                    'dispatched_at' => $shouldMarkItemDispatched ? now() : null,
                                     'note' => $record->note,
                                 ]);
 
-                                if ($isDispatched) {
+                                if ($shouldMarkItemDispatched) {
                                     $asset = Asset::find($addId);
                                     if ($asset) {
                                         $oldStatus = $asset->current_status;
@@ -217,10 +228,61 @@ class CheckoutBatchesTable
                                 }
                             }
 
-                            if ($newAssetIds->isNotEmpty() && $record->status === BatchStatus::Pending) {
-                                $record->update(['status' => BatchStatus::InProgress]);
-                            } elseif ($newAssetIds->isEmpty() && $record->status === BatchStatus::InProgress) {
-                                $record->update(['status' => BatchStatus::Pending]);
+                            if ($isDispatchAction) {
+                                // Mark all batch items as dispatched
+                                foreach ($record->fresh()->items as $item) {
+                                    if (! $item->is_dispatched) {
+                                        $item->update([
+                                            'is_dispatched' => true,
+                                            'dispatched_by' => Auth::id(),
+                                            'dispatched_at' => now(),
+                                        ]);
+                                    }
+
+                                    $asset = $item->asset;
+                                    if ($asset && $asset->current_status !== AssetStatus::InTransit) {
+                                        $oldStatus = $asset->current_status;
+                                        $asset->update(['current_status' => AssetStatus::InTransit]);
+
+                                        AssetStatusLog::create([
+                                            'asset_id' => $asset->id,
+                                            'from_status' => $oldStatus,
+                                            'to_status' => AssetStatus::InTransit,
+                                            'from_warehouse_id' => $record->warehouse_id,
+                                            'to_warehouse_id' => $record->warehouse_id,
+                                            'source_type' => CheckoutBatch::class,
+                                            'source_id' => $record->id,
+                                            'changed_by' => Auth::id(),
+                                            'note' => "Xác nhận xuất kho đợt {$record->code} từ quản trị",
+                                            'created_at' => now(),
+                                        ]);
+                                    }
+                                }
+
+                                $record->update([
+                                    'status' => BatchStatus::Dispatched,
+                                    'dispatched_at' => now(),
+                                ]);
+
+                                if ($record->order) {
+                                    $record->order->update(['status' => OrderStatus::Dispatched]);
+                                }
+
+                                Notification::make()
+                                    ->title("Đợt xuất kho {$record->code} đã được xác nhận xuất kho thành công!")
+                                    ->success()
+                                    ->send();
+                            } else {
+                                if ($newAssetIds->isNotEmpty() && $record->status === BatchStatus::Pending) {
+                                    $record->update(['status' => BatchStatus::InProgress]);
+                                } elseif ($newAssetIds->isEmpty() && $record->status === BatchStatus::InProgress) {
+                                    $record->update(['status' => BatchStatus::Pending]);
+                                }
+
+                                Notification::make()
+                                    ->title("Đã lưu thông tin đợt xuất kho {$record->code}")
+                                    ->success()
+                                    ->send();
                             }
 
                             return $record;

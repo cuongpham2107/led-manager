@@ -11,6 +11,7 @@ use App\Models\CheckoutBatchItem;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class CheckoutAssetSearchController extends Controller
@@ -33,7 +34,7 @@ class CheckoutAssetSearchController extends Controller
             });
 
         /** @var User|null $user */
-        $user = auth()->user();
+        $user = Auth::user();
         if ($scopedWhId = $user?->getScopedWarehouseId()) {
             $query->where('current_warehouse_id', $scopedWhId);
         } elseif (! empty($warehouseId)) {
@@ -132,12 +133,21 @@ class CheckoutAssetSearchController extends Controller
         $asset = Asset::with('productLine')->findOrFail($request->input('asset_id'));
 
         $now = now();
-        $user = auth()->user();
+        $user = Auth::user();
 
         return DB::transaction(function () use ($batch, $asset, $now, $user) {
             $item = CheckoutBatchItem::where('checkout_batch_id', $batch->id)
                 ->where('asset_id', $asset->id)
-                ->firstOrFail();
+                ->first();
+
+            if (! $item) {
+                $item = CheckoutBatchItem::create([
+                    'checkout_batch_id' => $batch->id,
+                    'asset_id' => $asset->id,
+                    'is_dispatched' => false,
+                    'note' => $batch->note,
+                ]);
+            }
 
             if ($item->is_dispatched) {
                 return response()->json([

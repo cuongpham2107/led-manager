@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\CheckoutBatches\Schemas;
 
+use App\Enums\BatchStatus;
 use App\Models\Agency;
 use App\Models\Asset;
 use App\Models\CheckoutBatch;
@@ -288,6 +289,7 @@ class CheckoutBatchForm
                                         'is_dispatched' => (bool) $item->is_dispatched,
                                         'dispatched_at' => $item->dispatched_at?->format('d/m/Y H:i'),
                                         'checkout_batch_item_id' => (int) $item->id,
+                                        '_dispatching' => false,
                                     ];
                                 })
                                 ->filter()
@@ -300,12 +302,12 @@ class CheckoutBatchForm
                             'isEdit' => $isEdit,
                             'batchId' => $record?->id,
                             'batchCode' => $record?->code,
-                            'batchStatus' => $record?->status?->value,
+                            'batchStatus' => $record?->status instanceof BatchStatus ? $record->status->value : ($record?->status ?? 'pending'),
                             'warehouseId' => $warehouseId,
                             'productLineId' => $productLineId,
                             'requiredArea' => $requiredArea,
-                            'apiUrl' => route('filament.checkout-assets'),
-                            'dispatchApiUrl' => route('filament.checkout-dispatch-item'),
+                            'apiUrl' => route('filament.checkout-assets', absolute: false),
+                            'dispatchApiUrl' => route('filament.checkout-dispatch-item', absolute: false),
                         ];
                     })
                     ->afterStateHydrated(function ($component, $state, ?CheckoutBatch $record) {

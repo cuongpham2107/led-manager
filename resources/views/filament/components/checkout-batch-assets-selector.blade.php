@@ -16,8 +16,26 @@
         productLineId: {{ !empty($productLineId) ? (int) $productLineId : 'null' }},
         batchStatus: '{{ $batchStatus ?? '' }}',
         batchId: {{ !empty($batchId) ? (int) $batchId : 'null' }},
-        apiUrl: '{{ $apiUrl ?? route('filament.checkout-assets') }}',
-        dispatchApiUrl: '{{ $dispatchApiUrl ?? '' }}',
+        apiUrl: '{{ $apiUrl ?? route('filament.checkout-assets', absolute: false) }}',
+        dispatchApiUrl: '{{ $dispatchApiUrl ?? route('filament.checkout-dispatch-item', absolute: false) }}',
+        csrfToken: '{{ csrf_token() }}',
+        dispatchingMap: {},
+        toast: {
+            show: false,
+            message: '',
+            type: 'success',
+            timer: null,
+        },
+
+        showToast(message, type = 'success') {
+            this.toast.message = message;
+            this.toast.type = type;
+            this.toast.show = true;
+            clearTimeout(this.toast.timer);
+            this.toast.timer = setTimeout(() => {
+                this.toast.show = false;
+            }, 3500);
+        },
         search: '',
         searchTimer: null,
         page: 1,
@@ -129,265 +147,314 @@
 
         // Có thể đánh dấu xuất kho từng item không (batch chưa dispatched/completed/cancelled)
         get canDispatchItems() {
-            return this.isEdit && this.batchId && this.dispatchApiUrl && !['dispatched', 'completed', 'cancelled'].includes(this.batchStatus);
+            return Boolean(this.isEdit && this.batchId && this.dispatchApiUrl && !['dispatched', 'completed', 'cancelled'].includes(this.batchStatus));
         },
 
         // Đánh dấu xuất kho cho 1 thiết bị
         async dispatchSingleItem(item) {
-            if (item.is_dispatched || item._dispatching) return;
-            item._dispatching = true;
+            const assetId = Number(item.id);
+            if (item.is_dispatched || this.dispatchingMap[assetId]) return;
+
+            this.dispatchingMap[assetId] = true;
+            this.dispatchingMap = { ...this.dispatchingMap };
 
             try {
-                const res = await fetch(this.dispatchApiUrl, {
+                const targetUrl = (this.dispatchApiUrl || '/filament-api/checkout-dispatch-item').startsWith('http')
+                    ? (this.dispatchApiUrl || '/filament-api/checkout-dispatch-item')
+                    : (window.location.origin + (this.dispatchApiUrl || '/filament-api/checkout-dispatch-item'));
+
+                const token = document.querySelector('meta[name=csrf-token]')?.getAttribute('content')
+                    || document.querySelector('input[name=_token]')?.value
+                    || this.csrfToken;
+
+                const res = await fetch(targetUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json',
                         'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name=" csrf-token"]')?.content || '' }, body:
-    JSON.stringify({ batch_id: this.batchId, asset_id: Number(item.id), }) }); const data=await res.json(); if (res.ok
-    && data.success) { // Update item in allAssets and assets arrays const updateItem=(arr)=> {
-    const idx = arr.findIndex(a => Number(a.id) === Number(item.id));
-    if (idx !== -1) {
-    arr[idx] = { ...arr[idx], is_dispatched: true, dispatched_at: data.item?.dispatched_at || 'Vừa xuất' };
-    }
-    };
-    updateItem(this.allAssets);
-    updateItem(this.assets);
-    // Force Alpine reactivity
-    this.assets = [...this.assets];
-    this.allAssets = [...this.allAssets];
+                        'X-CSRF-TOKEN': token,
+                    },
+                    body: JSON.stringify({
+                        batch_id: this.batchId,
+                        asset_id: assetId,
+                    }),
+                });
 
-    // Show success notification via Filament
-    if (window.$wireui?.notify) {
-    window.$wireui.notify({ title: data.message, icon: 'success' });
-    }
-    } else {
-    alert(data.message || 'Có lỗi xảy ra khi xuất kho thiết bị.');
-    }
-    } catch (err) {
-    console.error('Lỗi xuất kho thiết bị:', err);
-    alert('Có lỗi xảy ra khi xuất kho thiết bị.');
-    } finally {
-    item._dispatching = false;
-    }
-    },
+                let data;
+                try {
+                    data = await res.json();
+                } catch (jsonErr) {
+                    throw new Error('Máy chủ phản hồi không đúng định dạng JSON.');
+                }
 
-    // Toggle chọn/bỏ chọn trong bảng chọn từ kho
-    toggle(item) {
-    const id = Number(item.id);
-    let current = [...this.selectedList];
-    const idx = current.indexOf(id);
+                if (res.ok && data.success) {
+                    const dispatchedTime = data.item?.dispatched_at || 'Vừa xuất';
 
-    if (idx > -1) {
-    current.splice(idx, 1);
-    } else {
-    current.push(id);
-    this.selectedAssetsMap[id] = item;
-    }
-    this.state = current;
-    },
+                    // Cập nhật trực tiếp item hiện tại
+                    item.is_dispatched = true;
+                    item.dispatched_at = dispatchedTime;
 
-    toggleAllVisible() {
-    const visibleIds = this.assets.map(a => Number(a.id));
-    let current = [...this.selectedList];
-    const allChecked = visibleIds.length > 0 && visibleIds.every(id => current.includes(id));
+                    // Update item in allAssets and assets arrays
+                    for (const a of this.allAssets) {
+                        if (Number(a.id) === assetId) {
+                            a.is_dispatched = true;
+                            a.dispatched_at = dispatchedTime;
+                        }
+                    }
+                    for (const a of this.assets) {
+                        if (Number(a.id) === assetId) {
+                            a.is_dispatched = true;
+                            a.dispatched_at = dispatchedTime;
+                        }
+                    }
 
-    if (allChecked) {
-    this.state = current.filter(id => !visibleIds.includes(id));
-    } else {
-    for (const a of this.assets) {
-    this.selectedAssetsMap[Number(a.id)] = a;
-    }
-    const combined = new Set([...current, ...visibleIds]);
-    this.state = Array.from(combined);
-    }
-    },
+                    // Force Alpine reactivity
+                    this.assets = [...this.assets];
+                    this.allAssets = [...this.allAssets];
 
-    onScroll(e) {
-    const el = e.target;
-    if (!el || this.loading || this.loadingMore || !this.hasMore) return;
-    // Chỉ cuộn tải thêm khi ở chế độ chọn từ kho (!isEdit || addMoreMode)
-    if ((!this.isEdit || this.addMoreMode) && el.scrollTop + el.clientHeight >= el.scrollHeight - 60) {
-    this.fetchWarehouseAssets(this.page + 1, true);
-    }
-    },
+                    this.showToast(data.message || 'Đã xuất kho thiết bị thành công!', 'success');
+                } else {
+                    this.showToast(data.message || 'Có lỗi xảy ra khi xuất kho thiết bị.', 'error');
+                }
+            } catch (err) {
+                console.error('Lỗi xuất kho thiết bị:', err);
+                this.showToast(err.message || 'Có lỗi xảy ra khi xuất kho thiết bị.', 'error');
+            } finally {
+                this.dispatchingMap[assetId] = false;
+                this.dispatchingMap = { ...this.dispatchingMap };
+            }
+        },
 
-    onSearchInput() {
-    if (this.isEdit && !this.addMoreMode) {
-    // Tìm kiếm local trong allAssets
-    const q = this.search.trim().toLowerCase();
-    if (!q) {
-    this.assets = [...this.allAssets];
-    } else {
-    this.assets = this.allAssets.filter(a =>
-    (a.serial_no && a.serial_no.toLowerCase().includes(q)) ||
-    (a.name && a.name.toLowerCase().includes(q)) ||
-    (a.type && a.type.toLowerCase().includes(q)) ||
-    (a.size && a.size.toLowerCase().includes(q))
-    );
-    }
-    } else {
-    // Tìm kiếm qua API cho kho
-    clearTimeout(this.searchTimer);
-    this.searchTimer = setTimeout(() => {
-    this.page = 1;
-    this.fetchWarehouseAssets(1, false);
-    }, 300);
-    }
-    },
+        // Toggle chọn/bỏ chọn trong bảng chọn từ kho
+        toggle(item) {
+            const id = Number(item.id);
+            let current = [...this.selectedList];
+            const idx = current.indexOf(id);
 
-    clearSearch() {
-    this.search = '';
-    if (this.isEdit && !this.addMoreMode) {
-    this.assets = [...this.allAssets];
-    } else {
-    this.page = 1;
-    this.fetchWarehouseAssets(1, false);
-    }
-    },
+            if (idx > -1) {
+                current.splice(idx, 1);
+            } else {
+                current.push(id);
+                this.selectedAssetsMap[id] = item;
+            }
+            this.state = current;
+        },
 
-    async fetchWarehouseAssets(targetPage = 1, append = false) {
-    if (append) {
-    this.loadingMore = true;
-    } else {
-    this.loading = true;
-    }
+        toggleAllVisible() {
+            const visibleIds = this.assets.map(a => Number(a.id));
+            let current = [...this.selectedList];
+            const allChecked = visibleIds.length > 0 && visibleIds.every(id => current.includes(id));
 
-    try {
-    const url = new URL(this.apiUrl, window.location.origin);
-    url.searchParams.set('page', targetPage);
-    url.searchParams.set('per_page', 50);
+            if (allChecked) {
+                this.state = current.filter(id => !visibleIds.includes(id));
+            } else {
+                for (const a of this.assets) {
+                    this.selectedAssetsMap[Number(a.id)] = a;
+                }
+                const combined = new Set([...current, ...visibleIds]);
+                this.state = Array.from(combined);
+            }
+        },
 
-    if (this.warehouseId) {
-    url.searchParams.set('warehouse_id', this.warehouseId);
-    }
-    if (this.productLineId) {
-    url.searchParams.set('product_line_id', this.productLineId);
-    }
-    if (this.search && this.search.trim()) {
-    url.searchParams.set('search', this.search.trim());
-    }
+        onScroll(e) {
+            const el = e.target;
+            if (!el || this.loading || this.loadingMore || !this.hasMore) return;
+            // Chỉ cuộn tải thêm khi ở chế độ chọn từ kho (!isEdit || addMoreMode)
+            if ((!this.isEdit || this.addMoreMode) && el.scrollTop + el.clientHeight >= el.scrollHeight - 60) {
+                this.fetchWarehouseAssets(this.page + 1, true);
+            }
+        },
 
-    const res = await fetch(url.toString(), {
-    headers: {
-    'Accept': 'application/json',
-    'X-Requested-With': 'XMLHttpRequest'
-    }
-    });
+        onSearchInput() {
+            if (this.isEdit && !this.addMoreMode) {
+                // Tìm kiếm local trong allAssets
+                const q = this.search.trim().toLowerCase();
+                if (!q) {
+                    this.assets = [...this.allAssets];
+                } else {
+                    this.assets = this.allAssets.filter(a =>
+                        (a.serial_no && a.serial_no.toLowerCase().includes(q)) ||
+                        (a.name && a.name.toLowerCase().includes(q)) ||
+                        (a.type && a.type.toLowerCase().includes(q)) ||
+                        (a.size && a.size.toLowerCase().includes(q))
+                    );
+                }
+            } else {
+                // Tìm kiếm qua API cho kho
+                clearTimeout(this.searchTimer);
+                this.searchTimer = setTimeout(() => {
+                    this.page = 1;
+                    this.fetchWarehouseAssets(1, false);
+                }, 300);
+            }
+        },
 
-    if (!res.ok) throw new Error('Network response not ok');
+        clearSearch() {
+            this.search = '';
+            if (this.isEdit && !this.addMoreMode) {
+                this.assets = [...this.allAssets];
+            } else {
+                this.page = 1;
+                this.fetchWarehouseAssets(1, false);
+            }
+        },
 
-    const data = await res.json();
-    const newItems = data.items || [];
+        async fetchWarehouseAssets(targetPage = 1, append = false) {
+            if (append) {
+                this.loadingMore = true;
+            } else {
+                this.loading = true;
+            }
 
-    for (const item of newItems) {
-    if (this.isChecked(item.id)) {
-    this.selectedAssetsMap[Number(item.id)] = item;
-    }
-    }
+            try {
+                const url = new URL(this.apiUrl, window.location.origin);
+                url.searchParams.set('page', targetPage);
+                url.searchParams.set('per_page', 50);
 
-    if (append) {
-    const existingIds = new Set(this.warehouseAssets.map(a => Number(a.id)));
-    for (const item of newItems) {
-    if (!existingIds.has(Number(item.id))) {
-    this.warehouseAssets.push(item);
-    existingIds.add(Number(item.id));
-    }
-    }
-    } else {
-    this.warehouseAssets = [...newItems];
-    }
+                if (this.warehouseId) {
+                    url.searchParams.set('warehouse_id', this.warehouseId);
+                }
+                if (this.productLineId) {
+                    url.searchParams.set('product_line_id', this.productLineId);
+                }
+                if (this.search && this.search.trim()) {
+                    url.searchParams.set('search', this.search.trim());
+                }
 
-    this.assets = [...this.warehouseAssets];
-    this.page = data.current_page || targetPage;
-    this.hasMore = !!data.has_more;
-    this.totalWarehouse = data.total || 0;
+                const res = await fetch(url.toString(), {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
 
-    // Auto suggest for create mode if requiredArea is set
-    if (!this.isEdit && this.requiredArea > 0 && this.state.length === 0 && targetPage === 1 &&
-    !this.insufficientStockWarning) {
-    await this.autoSuggestByArea(this.requiredArea);
-    }
-    this.checkStockSufficiency();
-    } catch (err) {
-    console.error('Lỗi khi tải danh sách thiết bị kho:', err);
-    } finally {
-    this.loading = false;
-    this.loadingMore = false;
-    }
-    },
+                if (!res.ok) throw new Error('Network response not ok');
 
-    checkStockSufficiency() {
-    if (this.requiredArea > 0) {
-    if (this.selectedArea < this.requiredArea) { this.insufficientStockWarning=true; if (this.selectedList.length===0) {
-        const totalArea=this.warehouseAssets.reduce((sum, a)=> sum + (parseFloat(a.area_m2) || 0.25), 0);
-        this.insufficientStockMessage = `Kho chỉ còn ${totalArea.toFixed(2)} m² khả dụng, không đủ
-        ${this.requiredArea.toFixed(2)} m² theo yêu cầu. Không đủ điều kiện để xuất kho!`;
-        } else {
-        this.insufficientStockMessage = `Kho chỉ còn ${this.selectedArea.toFixed(2)} m² khả dụng, không đủ
-        ${this.requiredArea.toFixed(2)} m² theo yêu cầu. Không đủ điều kiện để xuất kho!`;
-        }
-        this.toggleSubmitButtons(false);
-        } else {
-        this.insufficientStockWarning = false;
-        this.insufficientStockMessage = '';
-        this.toggleSubmitButtons(true);
-        }
-        } else {
-        if (this.selectedList.length === 0 && !this.isEdit) {
-        this.toggleSubmitButtons(false);
-        } else {
-        this.insufficientStockWarning = false;
-        this.insufficientStockMessage = '';
-        this.toggleSubmitButtons(true);
-        }
-        }
+                const data = await res.json();
+                const newItems = data.items || [];
+
+                for (const item of newItems) {
+                    if (this.isChecked(item.id)) {
+                        this.selectedAssetsMap[Number(item.id)] = item;
+                    }
+                }
+
+                if (append) {
+                    const existingIds = new Set(this.warehouseAssets.map(a => Number(a.id)));
+                    for (const item of newItems) {
+                        if (!existingIds.has(Number(item.id))) {
+                            this.warehouseAssets.push(item);
+                            existingIds.add(Number(item.id));
+                        }
+                    }
+                } else {
+                    this.warehouseAssets = [...newItems];
+                }
+
+                this.assets = [...this.warehouseAssets];
+                this.page = data.current_page || targetPage;
+                this.hasMore = !!data.has_more;
+                this.totalWarehouse = data.total || 0;
+
+                // Auto suggest for create mode if requiredArea is set
+                if (!this.isEdit && this.requiredArea > 0 && this.state.length === 0 && targetPage === 1 && !this.insufficientStockWarning) {
+                    await this.autoSuggestByArea(this.requiredArea);
+                }
+                this.checkStockSufficiency();
+            } catch (err) {
+                console.error('Lỗi khi tải danh sách thiết bị kho:', err);
+            } finally {
+                this.loading = false;
+                this.loadingMore = false;
+            }
+        },
+
+        checkStockSufficiency() {
+            if (this.requiredArea > 0) {
+                if (this.selectedArea < this.requiredArea) {
+                    this.insufficientStockWarning = true;
+                    if (this.selectedList.length === 0) {
+                        const totalArea = this.warehouseAssets.reduce((sum, a) => sum + (parseFloat(a.area_m2) || 0.25), 0);
+                        this.insufficientStockMessage = `Kho chỉ còn ${totalArea.toFixed(2)} m² khả dụng, không đủ ${this.requiredArea.toFixed(2)} m² theo yêu cầu. Không đủ điều kiện để xuất kho!`;
+                    } else {
+                        this.insufficientStockMessage = `Kho chỉ còn ${this.selectedArea.toFixed(2)} m² khả dụng, không đủ ${this.requiredArea.toFixed(2)} m² theo yêu cầu. Không đủ điều kiện để xuất kho!`;
+                    }
+                    this.toggleSubmitButtons(false);
+                } else {
+                    this.insufficientStockWarning = false;
+                    this.insufficientStockMessage = '';
+                    this.toggleSubmitButtons(true);
+                }
+            } else {
+                if (this.selectedList.length === 0 && !this.isEdit) {
+                    this.toggleSubmitButtons(false);
+                } else {
+                    this.insufficientStockWarning = false;
+                    this.insufficientStockMessage = '';
+                    this.toggleSubmitButtons(true);
+                }
+            }
         },
 
         toggleSubmitButtons(enabled) {
-        const updateButtons = () => {
-        const modal = this.$el.closest('.fi-modal') || document.querySelector('.fi-modal') || document;
-        const submitButtons = modal.querySelectorAll('.fi-modal-footer-actions button[type=submit],
-        .fi-modal-footer-actions button.fi-btn-color-primary');
-        submitButtons.forEach(btn => {
-        btn.disabled = !enabled;
-        if (!enabled) {
-        btn.classList.add('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
-        btn.setAttribute('title', 'Không đủ điều kiện để xuất kho (chưa đủ m² yêu cầu)');
-        } else {
-        btn.classList.remove('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
-        btn.removeAttribute('title');
-        }
-        });
-        };
+            const updateButtons = () => {
+                const modal = this.$el.closest('.fi-modal') || document.querySelector('.fi-modal') || document;
+                const submitButtons = modal.querySelectorAll('.fi-modal-footer-actions button[type=submit], .fi-modal-footer-actions button.fi-btn-color-primary');
+                submitButtons.forEach(btn => {
+                    btn.disabled = !enabled;
+                    if (!enabled) {
+                        btn.classList.add('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
+                        btn.setAttribute('title', 'Không đủ điều kiện để xuất kho (chưa đủ m² yêu cầu)');
+                    } else {
+                        btn.classList.remove('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
+                        btn.removeAttribute('title');
+                    }
+                });
+            };
 
-        this.$nextTick(updateButtons);
-        setTimeout(updateButtons, 100);
-        setTimeout(updateButtons, 300);
+            this.$nextTick(updateButtons);
+            setTimeout(updateButtons, 100);
+            setTimeout(updateButtons, 300);
         },
 
         async autoSuggestByArea(area) {
-        if (area <= 0) return; while (true) { let totalLoadedArea=0; let accumulated=0; const suggestedIds=[]; for
-            (const asset of this.warehouseAssets) { const id=Number(asset.id); const aArea=(parseFloat(asset.area_m2) ||
-            0.25); totalLoadedArea +=aArea; if (accumulated < area) { suggestedIds.push(id);
-            this.selectedAssetsMap[id]=asset; accumulated +=aArea; } } if (accumulated>= area) {
-            this.state = suggestedIds;
-            this.checkStockSufficiency();
-            return;
-            }
+            if (area <= 0) return;
+            while (true) {
+                let accumulated = 0;
+                const suggestedIds = [];
+                for (const asset of this.warehouseAssets) {
+                    const id = Number(asset.id);
+                    const aArea = (parseFloat(asset.area_m2) || 0.25);
+                    if (accumulated < area) {
+                        suggestedIds.push(id);
+                        this.selectedAssetsMap[id] = asset;
+                        accumulated += aArea;
+                    }
+                }
+                if (accumulated >= area) {
+                    this.state = suggestedIds;
+                    this.checkStockSufficiency();
+                    return;
+                }
 
-            if (this.hasMore && !this.loading && !this.loadingMore) {
-            await this.fetchWarehouseAssets(this.page + 1, true);
-            } else {
-            this.state = [];
-            this.checkStockSufficiency();
-            return;
+                if (this.hasMore && !this.loading && !this.loadingMore) {
+                    const prevCount = this.warehouseAssets.length;
+                    await this.fetchWarehouseAssets(this.page + 1, true);
+                    if (this.warehouseAssets.length <= prevCount) {
+                        this.state = [];
+                        this.checkStockSufficiency();
+                        return;
+                    }
+                } else {
+                    this.state = [];
+                    this.checkStockSufficiency();
+                    return;
+                }
             }
-            }
-            }
-            }"
-            class="space-y-3 relative z-0 font-sans"
+        }
+    }"
+    class="space-y-3 relative z-0 font-sans"
             >
             <!-- Insufficient Stock Alert Banner -->
             <template x-if="insufficientStockWarning">
@@ -522,58 +589,50 @@
                                                 x-text="(item.area_m2 || 0.25) + ' m²'"></span>
                                         </td>
                                         <td class="px-5 py-3.5">
-                                            <template x-if="item.is_dispatched">
-                                                <span
-                                                    class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/60">
-                                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                                                    Đã xuất kho
-                                                </span>
-                                            </template>
-                                            <template x-if="!item.is_dispatched">
-                                                <span
-                                                    class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200/60 dark:border-amber-800/60">
-                                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                                                    Chờ xuất
-                                                </span>
-                                            </template>
+                                            <span x-show="item.is_dispatched"
+                                                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/60">
+                                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                                Đã xuất kho
+                                            </span>
+                                            <span x-show="!item.is_dispatched"
+                                                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200/60 dark:border-amber-800/60">
+                                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                                Chờ xuất
+                                            </span>
                                         </td>
                                         <td class="px-5 py-3.5 text-right">
                                             <div class="inline-flex items-center gap-1.5">
-                                                <template x-if="canDispatchItems && !item.is_dispatched">
-                                                    <button type="button" @click="dispatchSingleItem(item)"
-                                                        :disabled="item._dispatching"
-                                                        class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded-lg transition-colors cursor-pointer border border-emerald-200 dark:border-emerald-800/60 disabled:opacity-50 disabled:cursor-not-allowed"
-                                                        title="Đánh dấu đã xuất kho">
-                                                        <template x-if="!item._dispatching">
-                                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor"
-                                                                viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round"
-                                                                    stroke-width="2" d="M5 13l4 4L19 7" />
-                                                            </svg>
-                                                        </template>
-                                                        <template x-if="item._dispatching">
-                                                            <svg class="animate-spin w-3.5 h-3.5" fill="none"
-                                                                viewBox="0 0 24 24">
-                                                                <circle class="opacity-25" cx="12" cy="12" r="10"
-                                                                    stroke="currentColor" stroke-width="4"></circle>
-                                                                <path class="opacity-75" fill="currentColor"
-                                                                    d="M4 12a8 8 0 018-8v8H4z"></path>
-                                                            </svg>
-                                                        </template>
-                                                        <span
-                                                            x-text="item._dispatching ? 'Đang xử lý...' : 'Xuất kho'"></span>
-                                                    </button>
-                                                </template>
-                                                <button type="button" @click="removeItemFromBatch(item)"
+                                                <button type="button"
+                                                    x-show="canDispatchItems && !item.is_dispatched"
+                                                    @click.stop.prevent="dispatchSingleItem(item)"
+                                                    :disabled="Boolean(dispatchingMap[Number(item.id)])"
+                                                    class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded-lg transition-colors cursor-pointer border border-emerald-200 dark:border-emerald-800/60 disabled:opacity-50 disabled:cursor-not-allowed select-none"
+                                                    title="Đánh dấu đã xuất kho">
+                                                    <svg x-show="!dispatchingMap[Number(item.id)]" class="w-3.5 h-3.5 pointer-events-none" fill="none" stroke="currentColor"
+                                                        viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                            stroke-width="2" d="M5 13l4 4L19 7" />
+                                                    </svg>
+                                                    <svg x-show="dispatchingMap[Number(item.id)]" class="animate-spin w-3.5 h-3.5 pointer-events-none" fill="none"
+                                                        viewBox="0 0 24 24">
+                                                        <circle class="opacity-25" cx="12" cy="12" r="10"
+                                                            stroke="currentColor" stroke-width="4"></circle>
+                                                        <path class="opacity-75" fill="currentColor"
+                                                            d="M4 12a8 8 0 018-8v8H4z"></path>
+                                                    </svg>
+                                                    <span class="pointer-events-none"
+                                                        x-text="dispatchingMap[Number(item.id)] ? 'Đang xuất...' : 'Xuất kho'"></span>
+                                                </button>
+                                                <button type="button" @click.stop.prevent="removeItemFromBatch(item)"
                                                     class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-rose-600 dark:text-rose-400 hover:text-rose-700 bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-900/40 rounded-lg transition-colors cursor-pointer border border-rose-200 dark:border-rose-800/60"
                                                     title="Gỡ thiết bị này khỏi đợt xuất">
-                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor"
+                                                    <svg class="w-3.5 h-3.5 pointer-events-none" fill="none" stroke="currentColor"
                                                         viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round"
                                                             stroke-width="2"
                                                             d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                                     </svg>
-                                                    <span>Xóa</span>
+                                                    <span class="pointer-events-none">Xóa</span>
                                                 </button>
                                             </div>
                                         </td>
@@ -686,4 +745,30 @@
                     </div>
                 </div>
             </div>
+
+    <!-- Floating Toast Feedback -->
+    <template x-teleport="body">
+        <div
+            x-show="toast.show"
+            x-cloak
+            x-transition:enter="ease-out duration-300"
+            x-transition:enter-start="opacity-0 translate-y-2 scale-95"
+            x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+            x-transition:leave="ease-in duration-200"
+            x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+            x-transition:leave-end="opacity-0 translate-y-2 scale-95"
+            class="fixed bottom-5 right-5 z-[100000] flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg border text-sm font-medium"
+            :class="toast.type === 'success'
+                ? 'bg-emerald-50 dark:bg-emerald-950/80 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200'
+                : 'bg-rose-50 dark:bg-rose-950/80 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200'"
+        >
+            <svg x-show="toast.type === 'success'" class="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+            <svg x-show="toast.type !== 'success'" class="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+            <span x-text="toast.message"></span>
+        </div>
+    </template>
 </div>
