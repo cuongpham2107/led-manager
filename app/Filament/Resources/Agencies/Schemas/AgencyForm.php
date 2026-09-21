@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Agencies\Schemas;
 
+use App\Models\Agency;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -9,6 +10,7 @@ use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Illuminate\Database\Eloquent\Builder;
 
 class AgencyForm
 {
@@ -51,11 +53,41 @@ class AgencyForm
                             ->placeholder('Số nhà, đường, phường, quận...'),
                         Select::make('warehouse_id')
                             ->label('Kho hàng trực thuộc đại lý')
-                            ->relationship('warehouse', 'name')
+                            ->relationship(
+                                name: 'warehouse',
+                                titleAttribute: 'name',
+                                modifyQueryUsing: fn (Builder $query, ?Agency $record) => $query
+                                    ->whereNotIn('code', ['WH-HN', 'WH-HCM'])
+                                    ->where(function (Builder $q) use ($record) {
+                                        $q->whereDoesntHave('agency');
+                                        if ($record?->warehouse_id) {
+                                            $q->orWhere('id', $record->warehouse_id);
+                                        }
+                                    }),
+                            )
                             ->searchable()
                             ->preload()
                             ->placeholder('— Chưa gán kho riêng —')
-                            ->helperText('Kho lưu trữ thiết bị LED thực tế của đại lý tại tỉnh'),
+                            ->helperText('Kho lưu trữ thiết bị LED riêng của đại lý tại tỉnh (không thể chọn Kho Tổng HQ).')
+                            ->createOptionForm([
+                                TextInput::make('name')
+                                    ->label('Tên kho hàng')
+                                    ->required()
+                                    ->maxLength(255)
+                                    ->placeholder('VD: Kho Đại lý Nam Định'),
+                                TextInput::make('code')
+                                    ->label('Mã kho')
+                                    ->required()
+                                    ->unique('warehouses', 'code')
+                                    ->maxLength(50)
+                                    ->placeholder('VD: WH-ND'),
+                                TextInput::make('address')
+                                    ->label('Địa chỉ kho')
+                                    ->placeholder('Số nhà, đường...'),
+                                TextInput::make('phone')
+                                    ->label('Số điện thoại kho')
+                                    ->tel(),
+                            ]),
                     ]),
 
                 Section::make('Chính sách & Hạn mức hợp tác')

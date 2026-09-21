@@ -27,6 +27,10 @@ class AssetForm
                             TextInput::make('serial_no')
                                 ->label('Mã Serial No')
                                 ->required()
+                                ->unique(ignoreRecord: true)
+                                ->validationMessages([
+                                    'unique' => 'Mã Serial No này đã tồn tại trong hệ thống.',
+                                ])
                                 ->live(onBlur: true)
                                 ->afterStateUpdated(function ($state, callable $set, callable $get) {
                                     if ($state && empty($get('qr_code'))) {

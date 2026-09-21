@@ -20,7 +20,7 @@ class ListAgencies extends ListRecords
                 ->icon(Heroicon::Plus)
                 ->modalHeading('Thêm mới Đại lý tỉnh')
                 ->modalDescription('Đăng ký đại lý cấp tỉnh, tỷ lệ % hoa hồng và định mức bàn giao 1.000m².')
-                ->modalWidth(Width::FourExtraLarge),
+                ->modalWidth(Width::SevenExtraLarge),
         ];
     }
 }

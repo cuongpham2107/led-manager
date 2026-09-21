@@ -51,6 +51,9 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::get('/filament-api/checkout-assets', [CheckoutAssetSearchController::class, 'index'])
         ->name('filament.checkout-assets');
 
+    Route::post('/filament-api/checkout-dispatch-item', [CheckoutAssetSearchController::class, 'dispatchItem'])
+        ->name('filament.checkout-dispatch-item');
+
     Route::post('/filament-api/return-receive-item', [ReturnAssetController::class, 'receiveItem'])
         ->name('filament.return-receive-item');
 

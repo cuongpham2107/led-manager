@@ -194,13 +194,23 @@ class CheckinBatchesTable
                             ->label('Kết thúc nhận hàng')
                             ->color('gray')
                             ->icon('heroicon-o-check-circle')
-                            ->visible(fn (): bool => $record->status !== BatchStatus::Completed)
+                            ->visible(fn (): bool => $record->status !== BatchStatus::Completed && $record->items()->where('is_received', true)->exists())
                             ->requiresConfirmation()
                             ->modalHeading('Kết thúc nhận hàng')
                             ->modalDescription("Bạn có chắc chắn muốn kết thúc nhận hàng cho đợt nhập {$record->code} không? Tất cả các thiết bị chưa nhận sẽ được đánh dấu nhận hàng hoàn tất và cập nhật trạng thái về kho.")
                             ->modalSubmitActionLabel('Xác nhận kết thúc')
                             ->modalCancelActionLabel('Hủy')
                             ->action(function (CheckinBatch $record) {
+                                if (! $record->items()->where('is_received', true)->exists()) {
+                                    Notification::make()
+                                        ->title('Chưa thể kết thúc nhận hàng')
+                                        ->body('Chưa có thiết bị nào trong đợt nhập được kiểm đếm / nhận hàng.')
+                                        ->danger()
+                                        ->send();
+
+                                    return;
+                                }
+
                                 $record->complete(Auth::user());
 
                                 Notification::make()

@@ -6,13 +6,16 @@
 ## File registry
 
 | File | Glob (when to read) | What's inside |
-|---|---|---|
+| --- | --- | --- |
 | `project.md` | `**/*` (always) | Stack, branches, user prefs, conventions overview |
 | `architecture.md` | `app/`, `mobile/`, `database/`, `routes/`, `tests/` | File map, architectural patterns, key modules |
 | `conventions.md` | `**/*.php`, `**/*.ts`, `**/*.tsx`, `**/*.blade.php` | Coding style, naming, structure rules |
 | `traps.md` | `**/*` (always) | Known bugs, gotchas, things to NEVER do |
 | `decisions.md` | `**/*` | Phase history, key design decisions, git state |
 | `bootstrap.md` | `app/Console/Commands/**`, `database/seeders/**` | `app:bootstrap` command, seeding workflow |
+| `e2e.md` | `scripts/e2e/**` | browser-use E2E: DeepSeek thinking mode vs tool_choice, server prerequisites |
+| `tests.md` | `tests/**` | Pest pitfalls — e.g. bare `actingAs()` must be imported |
+| `services.md` | `database/seeders/**`, `tests/**`, `app/Services/**` | Availability/stock traps caused by seed data |
 
 ## How to use
 

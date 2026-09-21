@@ -102,13 +102,23 @@ class ReturnBatchesTable
                             ->label('Kết thúc nhận hàng')
                             ->color('gray')
                             ->icon('heroicon-o-check-circle')
-                            ->visible(fn (): bool => $record->status !== ReturnBatchStatus::Completed)
+                            ->visible(fn (): bool => $record->status !== ReturnBatchStatus::Completed && $record->items()->where('is_received', true)->exists())
                             ->requiresConfirmation()
                             ->modalHeading('Kết thúc nhận hàng')
                             ->modalDescription("Bạn có chắc chắn muốn kết thúc nhận hàng cho đợt trả kho {$record->code} không? Các thiết bị chưa nhận sẽ được đánh dấu là Chưa trả về (Missing) và đợt xuất kho tương ứng sẽ được đánh dấu hoàn tất.")
                             ->modalSubmitActionLabel('Xác nhận kết thúc')
                             ->modalCancelActionLabel('Hủy')
                             ->action(function (ReturnBatch $record) {
+                                if (! $record->items()->where('is_received', true)->exists()) {
+                                    Notification::make()
+                                        ->title('Chưa thể kết thúc nhận hàng')
+                                        ->body('Chưa có thiết bị nào trong đợt trả kho được kiểm đếm / nhận hàng.')
+                                        ->danger()
+                                        ->send();
+
+                                    return;
+                                }
+
                                 $record->complete(Auth::user());
 
                                 Notification::make()
@@ -118,24 +128,6 @@ class ReturnBatchesTable
                             })
                             ->cancelParentActions(),
                     ]),
-                Action::make('confirmReturn')
-                    ->label('Xác nhận trả hàng')
-                    ->icon('heroicon-o-check-circle')
-                    ->color('success')
-                    ->visible(fn (ReturnBatch $record): bool => $record->status !== ReturnBatchStatus::Completed)
-                    ->requiresConfirmation()
-                    ->modalHeading('Xác nhận hoàn tất trả hàng')
-                    ->modalDescription(fn (ReturnBatch $record): string => "Bạn có chắc chắn muốn xác nhận hoàn tất nhận hàng cho đợt trả kho {$record->code} không? Các thiết bị đã kiểm đếm sẽ nhập lại vào kho sẵn sàng.")
-                    ->modalSubmitActionLabel('Xác nhận trả hàng')
-                    ->modalCancelActionLabel('Hủy')
-                    ->action(function (ReturnBatch $record): void {
-                        $record->complete(Auth::user());
-
-                        Notification::make()
-                            ->title("Đợt trả kho {$record->code} đã hoàn tất nhận hàng thành công!")
-                            ->success()
-                            ->send();
-                    }),
             ], position: RecordActionsPosition::BeforeCells)
             ->toolbarActions([
                 BulkActionGroup::make([

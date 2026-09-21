@@ -3,7 +3,9 @@
 namespace App\Filament\Resources\Assets\Tables;
 
 use App\Enums\AssetStatus;
+use App\Filament\Resources\Assets\Actions\CompleteMaintenanceAction;
 use App\Filament\Resources\Assets\Actions\CompleteMaintenanceBulkAction;
+use App\Filament\Resources\Assets\Actions\SendToMaintenanceAction;
 use App\Filament\Resources\Assets\Actions\SendToMaintenanceBulkAction;
 use App\Filament\Resources\Assets\Actions\ViewQrCodeAction;
 use App\Models\Agency;
@@ -140,6 +142,14 @@ class AssetsTable
                     ->iconButton()
                     ->color('danger')
                     ->tooltip('Xóa'),
+
+                SendToMaintenanceAction::make()
+                    ->iconButton()
+                    ->tooltip('Bảo trì / Sửa chữa'),
+
+                CompleteMaintenanceAction::make()
+                    ->iconButton()
+                    ->tooltip('Hoàn thành sửa chữa'),
             ], position: RecordActionsPosition::BeforeColumns)
             ->toolbarActions([
                 BulkActionGroup::make([

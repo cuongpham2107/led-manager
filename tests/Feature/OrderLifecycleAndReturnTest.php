@@ -131,6 +131,7 @@ test('order complete action transitions order status from Returned to Completed'
     $order = Order::first();
     $order->update([
         'status' => OrderStatus::Returned,
+        'total_paid' => $order->value,
     ]);
 
     Livewire::test(ListOrders::class)
@@ -138,6 +139,81 @@ test('order complete action transitions order status from Returned to Completed'
         ->assertHasNoTableActionErrors();
 
     expect($order->fresh()->status)->toBe(OrderStatus::Completed);
+});
+
+test('order complete action is blocked when the order has not been paid in full', function () {
+    (new LedOsDataSeeder)->run();
+
+    $user = User::where('email', 'admin@ledmanager.com')->first();
+    actingAs($user);
+
+    $order = Order::first();
+    $order->update([
+        'status' => OrderStatus::Returned,
+        'value' => 10_000_000,
+        'total_paid' => 4_000_000,
+    ]);
+
+    Livewire::test(ListOrders::class)
+        ->callTableAction('complete_order', $order);
+
+    // Action halts before updating the record — order stays Returned.
+    expect($order->fresh()->status)->toBe(OrderStatus::Returned);
+});
+
+test('order complete action closes order despite a pending repair and records repair cost without affecting order revenue', function () {
+    (new LedOsDataSeeder)->run();
+
+    $user = User::where('email', 'admin@ledmanager.com')->first();
+    actingAs($user);
+
+    $order = Order::first();
+    // Đơn phải thu đủ tiền mới hoàn tất được (validate mới) — set total_paid
+    // = value trước, rồi mới chốt làm mốc "không đổi" để so sánh sau khi
+    // complete (repair cost không được đụng vào các field doanh thu này).
+    $order->update([
+        'status' => OrderStatus::Returned,
+        'total_paid' => $order->value,
+    ]);
+    $originalTotalPaid = $order->total_paid;
+    $originalValue = $order->value;
+
+    $asset = Asset::where('current_warehouse_id', $order->warehouse_id)->first();
+    $asset->update(['current_status' => AssetStatus::Repairing]);
+
+    $repairLog = RepairLog::create([
+        'asset_id' => $asset->id,
+        'start_date' => now()->toDateString(),
+        'result_status' => RepairResultStatus::Pending,
+        'repair_note' => 'Chờ nhập chi phí sửa chữa',
+    ]);
+
+    Livewire::test(ListOrders::class)
+        ->mountTableAction('complete_order', $order)
+        ->assertTableActionDataSet(function (array $data) use ($repairLog): bool {
+            expect($data['repair_costs'])->toHaveCount(1);
+            $row = array_values($data['repair_costs'])[0];
+
+            return $row['repair_log_id'] === $repairLog->id && $row['repair_cost'] === null;
+        })
+        ->setTableActionData(['repair_costs' => [[
+            'repair_log_id' => $repairLog->id,
+            // Chuỗi có dấu phẩy ngăn cách hàng nghìn, y hệt giá trị field
+            // mask $money($input) tạo ra khi người dùng gõ trên UI thật.
+            'repair_cost' => '500,000',
+        ]]])
+        ->callMountedTableAction()
+        ->assertHasNoTableActionErrors();
+
+    // Order closes even though the asset is still Repairing.
+    expect($order->fresh()->status)->toBe(OrderStatus::Completed)
+        ->and($asset->fresh()->current_status)->toBe(AssetStatus::Repairing);
+
+    // Repair cost captured, but order revenue fields untouched (repair cost
+    // is not commission-eligible revenue).
+    expect((float) $repairLog->fresh()->repair_cost)->toBe(500000.0)
+        ->and((float) $order->fresh()->total_paid)->toBe((float) $originalTotalPaid)
+        ->and((float) $order->fresh()->value)->toBe((float) $originalValue);
 });
 
 test('order return action marks unreceived asset as Missing and still advances order', function () {

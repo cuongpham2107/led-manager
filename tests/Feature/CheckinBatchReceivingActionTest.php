@@ -4,6 +4,7 @@ use App\Enums\AssetStatus;
 use App\Enums\BatchStatus;
 use App\Enums\CheckinBatchType;
 use App\Filament\Resources\CheckinBatches\CheckinBatchResource;
+use App\Filament\Resources\CheckinBatches\Pages\ListCheckinBatches;
 use App\Models\Asset;
 use App\Models\AssetStatusLog;
 use App\Models\CheckinBatch;
@@ -11,6 +12,9 @@ use App\Models\CheckinBatchItem;
 use App\Models\ProductLine;
 use App\Models\User;
 use App\Models\Warehouse;
+use Livewire\Livewire;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 beforeEach(function () {
     $this->warehouse = Warehouse::create([
@@ -27,6 +31,13 @@ beforeEach(function () {
         'warehouse_id' => $this->warehouse->id,
         'is_active' => true,
     ]);
+
+    $role = Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
+    foreach (['ViewAny:CheckinBatch', 'Create:CheckinBatch', 'Update:CheckinBatch', 'Delete:CheckinBatch'] as $perm) {
+        $p = Permission::firstOrCreate(['name' => $perm, 'guard_name' => 'web']);
+        $role->givePermissionTo($p);
+    }
+    $this->user->assignRole($role);
 
     $this->productLine = ProductLine::create([
         'code' => 'P2.6-RCV',
@@ -225,4 +236,24 @@ test('newly selected checkin items have null condition and unreceived status unt
         ->and($item->condition)->toBe('ok')
         ->and($asset->current_status)->toBe(AssetStatus::Ready)
         ->and($asset->current_warehouse_id)->toBe($this->warehouse->id);
+});
+
+test('completeReceiving footer action is hidden when all items are unreceived and visible when at least one item is received', function () {
+    \Pest\Laravel\actingAs($this->user);
+
+    $livewire = Livewire::test(ListCheckinBatches::class);
+    $livewire->mountTableAction('edit', $this->batch);
+
+    $extraActions = $livewire->instance()->getTable()->getAction('edit')->getExtraModalFooterActions();
+    expect($extraActions['completeReceiving']->isVisible())->toBeFalse();
+
+    CheckinBatchItem::where('checkin_batch_id', $this->batch->id)
+        ->where('asset_id', $this->asset1->id)
+        ->update(['is_received' => true]);
+
+    $livewire = Livewire::test(ListCheckinBatches::class);
+    $livewire->mountTableAction('edit', $this->batch);
+
+    $extraActions = $livewire->instance()->getTable()->getAction('edit')->getExtraModalFooterActions();
+    expect($extraActions['completeReceiving']->isVisible())->toBeTrue();
 });

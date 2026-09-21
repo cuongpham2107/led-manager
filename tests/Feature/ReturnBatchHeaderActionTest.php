@@ -12,6 +12,7 @@ use App\Models\Customer;
 use App\Models\Order;
 use App\Models\ProductLine;
 use App\Models\ReturnBatch;
+use App\Models\ReturnBatchItem;
 use App\Models\User;
 use App\Models\Warehouse;
 use Livewire\Livewire;
@@ -172,4 +173,40 @@ test('can create return batch for a checkout batch without order via modal actio
 
     expect($returnBatch->fresh()->status)->toBe(ReturnBatchStatus::Completed);
     expect($batch->fresh()->status)->toBe(BatchStatus::Completed);
+});
+
+test('table has edit action and does not expose confirmReturn action directly', function () {
+    actingAs($this->user);
+
+    $batch = CheckoutBatch::create([
+        'code' => 'OUT-CONFIRM-TEST-01',
+        'warehouse_id' => $this->warehouse->id,
+        'status' => BatchStatus::Dispatched,
+        'created_by' => $this->user->id,
+    ]);
+
+    $cbItem = CheckoutBatchItem::create([
+        'checkout_batch_id' => $batch->id,
+        'asset_id' => $this->asset->id,
+        'is_dispatched' => true,
+    ]);
+
+    $returnBatch = ReturnBatch::create([
+        'code' => 'RET-CONFIRM-TEST-01',
+        'checkout_batch_id' => $batch->id,
+        'warehouse_id' => $this->warehouse->id,
+        'status' => ReturnBatchStatus::InProgress,
+        'created_by' => $this->user->id,
+    ]);
+
+    ReturnBatchItem::create([
+        'return_batch_id' => $returnBatch->id,
+        'asset_id' => $this->asset->id,
+        'checkout_batch_item_id' => $cbItem->id,
+        'is_received' => false,
+    ]);
+
+    Livewire::test(ListReturnBatches::class)
+        ->assertTableActionExists('edit')
+        ->assertTableActionDoesNotExist('confirmReturn');
 });

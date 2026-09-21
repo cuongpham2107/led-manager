@@ -236,6 +236,13 @@ class LedOsDataSeeder extends Seeder
             'is_active' => true,
         ]);
 
+        $whMc = Warehouse::updateOrCreate(['code' => 'WH-MC-HN'], [
+            'name' => 'Kho Đại lý Mạnh Cường',
+            'address' => 'Số nhà 70, Hai Bà Trưng, Hà Nội',
+            'phone' => '098765436',
+            'is_active' => true,
+        ]);
+
         // 2.0 Agencies (Đại lý tỉnh: 1000m2, ăn theo %)
         $agencyHp = Agency::updateOrCreate(['code' => 'DL-HP'], [
             'name' => 'Đại lý Hải Phòng',
@@ -274,6 +281,19 @@ class LedOsDataSeeder extends Seeder
             'warehouse_id' => $whCt->id,
             'is_active' => true,
             'note' => 'Đại lý Tây Nam Bộ, định mức 1.000m2 LED, hoa hồng 10%',
+        ]);
+
+        $agencyMc = Agency::updateOrCreate(['code' => 'DL-MC-HN'], [
+            'name' => 'Đại lý Mạnh Cường',
+            'province' => 'Hà Nội',
+            'contact_person' => 'Phạm Mạnh Cường',
+            'phone' => '098765436',
+            'address' => 'Số nhà 70, Hai Bà Trưng, Hà Nội',
+            'commission_rate' => 10.00,
+            'allocated_area_m2' => 1000.00,
+            'warehouse_id' => $whMc->id,
+            'is_active' => true,
+            'note' => 'Đại lý đối tác khu vực Hà Nội, định mức 1.000m2 LED, hoa hồng 10%',
         ]);
 
         // 2.1 Warehouse Locations (Vị trí kho)
@@ -354,6 +374,12 @@ class LedOsDataSeeder extends Seeder
         $locHp1 = WarehouseLocation::updateOrCreate(['warehouse_id' => $whHp->id, 'code' => 'HP-K1'], [
             'name' => 'Khu 1 - Kho thiết bị đại lý Hải Phòng',
             'description' => 'Màn hình LED P3.9 và P2.6 phục vụ đại lý Hải Phòng',
+            'is_active' => true,
+        ]);
+
+        $locMc1 = WarehouseLocation::updateOrCreate(['warehouse_id' => $whMc->id, 'code' => 'MC-K1'], [
+            'name' => 'Khu 1 - Kho thiết bị đại lý Mạnh Cường',
+            'description' => 'Khu vực lưu trữ module LED của đại lý Mạnh Cường',
             'is_active' => true,
         ]);
 
@@ -497,6 +523,16 @@ class LedOsDataSeeder extends Seeder
         ]);
         $agencyStaffDn->syncRoles([$techRole, $agencyStaffRole]);
 
+        $agencyManagerMc = User::updateOrCreate(['email' => 'daily.manhcuong@ledmanager.com'], [
+            'name' => 'Phạm Mạnh Cường (Đại lý MC)',
+            'password' => Hash::make('password'),
+            'phone' => '098765436',
+            'warehouse_id' => $whMc->id,
+            'agency_id' => $agencyMc->id,
+            'is_active' => true,
+        ]);
+        $agencyManagerMc->syncRoles([$agencyManagerRole]);
+
         // Link accounts to admin for quick switching without password
         $admin->linkAccount($sales1, label: 'Sales Executive (Trần Minh Tuấn)', requiresPassword: false);
         $admin->linkAccount($whStaff1, label: 'Kho Hà Nội (Lê Hoàng Nam)', requiresPassword: false);
@@ -504,6 +540,7 @@ class LedOsDataSeeder extends Seeder
         $admin->linkAccount($accountantUser, label: 'Kế toán (Nguyễn Thị Mai)', requiresPassword: false);
         $admin->linkAccount($agencyManagerHp, label: 'Đại lý Hải Phòng (Trần Văn Hoàng)', requiresPassword: false);
         $admin->linkAccount($agencyManagerDn, label: 'Đại lý Đà Nẵng (Lê Thanh Sơn)', requiresPassword: false);
+        $admin->linkAccount($agencyManagerMc, label: 'Đại lý Mạnh Cường (Phạm Mạnh Cường)', requiresPassword: false);
 
         // 4. Product Lines (P1.5, P2.6, P2.9, P3.9, P4.8)
         $plP15 = ProductLine::updateOrCreate(['code' => 'P1.5'], [

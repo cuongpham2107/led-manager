@@ -35,6 +35,22 @@ test('create asset modal hides current_status and operation history section and 
         ->and($asset->purchase_date?->toDateString())->toBe(now()->toDateString());
 });
 
+test('create asset modal rejects a duplicate serial_no with a validation error', function () {
+    $admin = User::where('email', 'admin@ledmanager.com')->first();
+    $productLine = ProductLine::first();
+    $existing = Asset::first();
+
+    Livewire::actingAs($admin)
+        ->test(ListAssets::class)
+        ->callAction('create', [
+            'serial_no' => $existing->serial_no,
+            'product_line_id' => $productLine->id,
+        ])
+        ->assertHasActionErrors(['serial_no' => 'unique']);
+
+    expect(Asset::where('serial_no', $existing->serial_no)->count())->toBe(1);
+});
+
 test('edit asset modal allows modifying status and operation history fields', function () {
     $admin = User::where('email', 'admin@ledmanager.com')->first();
     $asset = Asset::first();

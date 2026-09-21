@@ -46,6 +46,41 @@ test('send to maintenance bulk action marks assets as repairing and creates repa
     }
 });
 
+test('single-row send_to_maintenance and complete_maintenance actions are registered on the assets table', function () {
+    (new LedOsDataSeeder)->run();
+
+    $user = User::where('email', 'admin@ledmanager.com')->first();
+    $this->actingAs($user);
+
+    $asset = Asset::where('current_status', AssetStatus::Ready)->first();
+
+    Livewire::test(ListAssets::class)
+        ->assertTableActionExists('send_to_maintenance')
+        ->assertTableActionVisible('send_to_maintenance', $asset)
+        ->assertTableActionHidden('complete_maintenance', $asset)
+        ->callTableAction('send_to_maintenance', $asset, [
+            'start_date' => '2026-08-29',
+            'created_by' => $user->id,
+            'repair_note' => 'Kiểm tra điểm chết bóng LED',
+        ])
+        ->assertHasNoTableActionErrors();
+
+    $asset->refresh();
+    expect($asset->current_status)->toBe(AssetStatus::Repairing);
+
+    Livewire::test(ListAssets::class)
+        ->assertTableActionHidden('send_to_maintenance', $asset)
+        ->assertTableActionVisible('complete_maintenance', $asset)
+        ->callTableAction('complete_maintenance', $asset, [
+            'end_date' => '2026-08-30',
+            'result_status' => 'fixed',
+            'repair_note' => 'Đã thay module LED',
+        ])
+        ->assertHasNoTableActionErrors();
+
+    expect($asset->fresh()->current_status)->toBe(AssetStatus::Ready);
+});
+
 test('complete maintenance bulk action returns assets to ready status', function () {
     (new LedOsDataSeeder)->run();
 

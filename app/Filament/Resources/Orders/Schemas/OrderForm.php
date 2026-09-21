@@ -256,7 +256,7 @@ class OrderForm
                                                 ->numeric()
                                                 ->suffix(' đ')
                                                 ->default(0)
-                                                ->disabled(fn () => self::isCurrentUserAgencyScoped())
+                                                ->readOnly(fn () => self::isCurrentUserAgencyScoped())
                                                 ->dehydrated()
                                                 ->columnSpan(1),
                                             TextInput::make('area_m2')
@@ -264,7 +264,7 @@ class OrderForm
                                                 ->numeric()
                                                 ->suffix(' m²')
                                                 ->default(0)
-                                                ->disabled(fn () => self::isCurrentUserAgencyScoped())
+                                                ->readOnly(fn () => self::isCurrentUserAgencyScoped())
                                                 ->dehydrated()
                                                 ->columnSpan(1),
                                         ]),
@@ -396,7 +396,7 @@ class OrderForm
                                                     ->numeric()
                                                     ->suffix(' đ')
                                                     ->default(0)
-                                                    ->disabled(fn () => self::isCurrentUserAgencyScoped())
+                                                    ->readOnly(fn () => self::isCurrentUserAgencyScoped())
                                                     ->dehydrated()
                                                     ->live(onBlur: true)
                                                     ->afterStateUpdated(function (Get $get, Set $set) {

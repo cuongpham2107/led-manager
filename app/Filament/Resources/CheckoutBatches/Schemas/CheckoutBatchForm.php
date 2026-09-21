@@ -300,10 +300,12 @@ class CheckoutBatchForm
                             'isEdit' => $isEdit,
                             'batchId' => $record?->id,
                             'batchCode' => $record?->code,
+                            'batchStatus' => $record?->status?->value,
                             'warehouseId' => $warehouseId,
                             'productLineId' => $productLineId,
                             'requiredArea' => $requiredArea,
                             'apiUrl' => route('filament.checkout-assets'),
+                            'dispatchApiUrl' => route('filament.checkout-dispatch-item'),
                         ];
                     })
                     ->afterStateHydrated(function ($component, $state, ?CheckoutBatch $record) {

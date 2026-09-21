@@ -3,6 +3,8 @@
 namespace App\Filament\Resources\RepairLogs\Tables;
 
 use App\Enums\RepairResultStatus;
+use App\Filament\Resources\RepairLogs\Actions\CompleteRepairAction;
+use App\Models\User;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -13,6 +15,7 @@ use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Enums\RecordActionsPosition;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Auth;
 
 class RepairLogsTable
 {
@@ -78,13 +81,19 @@ class RepairLogsTable
                 SelectFilter::make('warehouse_id')
                     ->label('Kho hàng')
                     ->relationship('asset.currentWarehouse', 'name')
-                    ->hidden(fn (): bool => (bool) auth()->user()?->getScopedWarehouseId()),
+                    ->hidden(function (): bool {
+                        /** @var User|null $user */
+                        $user = Auth::user();
+
+                        return (bool) $user?->getScopedWarehouseId();
+                    }),
                 SelectFilter::make('result_status')
                     ->label('Kết quả xử lý')
                     ->options(RepairResultStatus::class),
             ], layout: FiltersLayout::AboveContent)
             ->deferFilters(false)
             ->recordActions([
+                CompleteRepairAction::make(),
                 EditAction::make()
                     ->modalHeading('Cập nhật phiếu sửa chữa')
                     ->modalDescription('Cập nhật tình trạng khắc phục, kỹ thuật viên phụ trách và chi phí thực tế.')

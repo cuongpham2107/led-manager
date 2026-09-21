@@ -5,9 +5,13 @@ namespace App\Http\Controllers;
 use App\Enums\AssetStatus;
 use App\Enums\BatchStatus;
 use App\Models\Asset;
+use App\Models\AssetStatusLog;
+use App\Models\CheckoutBatch;
+use App\Models\CheckoutBatchItem;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class CheckoutAssetSearchController extends Controller
 {
@@ -104,5 +108,81 @@ class CheckoutAssetSearchController extends Controller
             'has_more' => $paginator->hasMorePages(),
             'total' => $paginator->total(),
         ]);
+    }
+
+    /**
+     * Đánh dấu xuất kho cho 1 thiết bị cụ thể trong đợt xuất.
+     */
+    public function dispatchItem(Request $request): JsonResponse
+    {
+        $request->validate([
+            'batch_id' => ['required', 'integer', 'exists:checkout_batches,id'],
+            'asset_id' => ['required', 'integer', 'exists:assets,id'],
+        ]);
+
+        $batch = CheckoutBatch::findOrFail($request->input('batch_id'));
+
+        if (in_array($batch->status, [BatchStatus::Dispatched, BatchStatus::Completed, BatchStatus::Cancelled])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Đợt xuất này đã được xác nhận hoặc đã hủy, không thể đánh dấu thêm.',
+            ], 422);
+        }
+
+        $asset = Asset::with('productLine')->findOrFail($request->input('asset_id'));
+
+        $now = now();
+        $user = auth()->user();
+
+        return DB::transaction(function () use ($batch, $asset, $now, $user) {
+            $item = CheckoutBatchItem::where('checkout_batch_id', $batch->id)
+                ->where('asset_id', $asset->id)
+                ->firstOrFail();
+
+            if ($item->is_dispatched) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Thiết bị {$asset->serial_no} đã được xuất kho trước đó.",
+                ], 422);
+            }
+
+            $item->update([
+                'is_dispatched' => true,
+                'dispatched_by' => $user?->id,
+                'dispatched_at' => $now,
+            ]);
+
+            $oldStatus = $asset->current_status;
+            $asset->update(['current_status' => AssetStatus::InTransit]);
+
+            AssetStatusLog::create([
+                'asset_id' => $asset->id,
+                'from_status' => $oldStatus,
+                'to_status' => AssetStatus::InTransit,
+                'from_warehouse_id' => $asset->current_warehouse_id,
+                'to_warehouse_id' => $batch->warehouse_id,
+                'source_type' => CheckoutBatch::class,
+                'source_id' => $batch->id,
+                'changed_by' => $user?->id,
+                'note' => "Xuất kho thiết bị đợt {$batch->code}",
+                'created_at' => $now,
+            ]);
+
+            if ($batch->status === BatchStatus::Pending) {
+                $batch->update(['status' => BatchStatus::InProgress]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => "Đã xuất kho thiết bị {$asset->serial_no}",
+                'item' => [
+                    'id' => (int) $asset->id,
+                    'item_id' => (int) $item->id,
+                    'serial_no' => (string) $asset->serial_no,
+                    'is_dispatched' => true,
+                    'dispatched_at' => $now->format('d/m/Y H:i'),
+                ],
+            ]);
+        });
     }
 }
