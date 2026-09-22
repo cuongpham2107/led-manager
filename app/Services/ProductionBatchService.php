@@ -272,8 +272,8 @@ class ProductionBatchService
                 if ($size === '' && $productLineId) {
                     $pl = $productLines->firstWhere('id', $productLineId);
                     $size = ($pl && $pl->module_width_mm && $pl->module_height_mm)
-                        ? "{$pl->module_width_mm}×{$pl->module_height_mm} mm"
-                        : '500×500 mm';
+                        ? ((int) $pl->module_width_mm).' x '.((int) $pl->module_height_mm).' mm'
+                        : '500 x 500 mm';
                 }
 
                 $mfgDate = isset($columnMap['manufactured_date'])

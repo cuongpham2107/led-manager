@@ -186,7 +186,7 @@ class InventoryReport extends Page implements HasTable
                 TextColumn::make('size')
                     ->label('KÍCH THƯỚC')
                     ->sortable()
-                    ->placeholder('500×500 mm'),
+                    ->placeholder('500 x 500 mm'),
 
                 TextColumn::make('current_status')
                     ->label('TRẠNG THÁI')
@@ -292,7 +292,7 @@ class InventoryReport extends Page implements HasTable
                             $a->productLine?->name ?? '—',
                             $a->currentWarehouse?->name ?? 'Chưa gán kho',
                             $agency ? "{$agency->name} ({$agency->code})" : 'Tổng công ty (HQ)',
-                            $a->size ?? '500×500 mm',
+                            $a->size ?? '500 x 500 mm',
                             $a->current_status instanceof AssetStatus ? $a->current_status->getLabel() : (string) $a->current_status,
                         ]);
                     }

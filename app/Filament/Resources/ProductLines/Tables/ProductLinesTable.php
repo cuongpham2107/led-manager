@@ -46,7 +46,9 @@ class ProductLinesTable
                     ->sortable(),
                 TextColumn::make('size_display')
                     ->label('Kích thước Cabinet')
-                    ->state(fn (ProductLine $record): string => ($record->module_width_mm / 1000).'×'.($record->module_height_mm / 1000).' m ('.(int) $record->module_width_mm.'×'.(int) $record->module_height_mm.'mm)'),
+                    ->state(fn (ProductLine $record): string => ($record->module_width_mm && $record->module_height_mm)
+                        ? (int) $record->module_width_mm.' x '.(int) $record->module_height_mm.' mm'
+                        : '—'),
                 TextColumn::make('weight_kg')
                     ->label('Trọng lượng')
                     ->suffix(' kg/tấm')

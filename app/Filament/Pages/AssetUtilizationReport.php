@@ -97,9 +97,15 @@ class AssetUtilizationReport extends Page implements HasTable
                 'code' => $line->code,
                 'pitch' => $line->pitch ?? '—',
                 'pixel_pitch' => $line->pixel_pitch_mm ?? $line->pixel_pitch ?? ($line->pitch ?? '—'),
-                'cabinet_size' => ($line->cabinet_width_mm && $line->cabinet_height_mm) ? "{$line->cabinet_width_mm}x{$line->cabinet_height_mm}mm" : (($line->module_width_mm && $line->module_height_mm) ? "{$line->module_width_mm}x{$line->module_height_mm}mm" : '500x500mm'),
+                'cabinet_size' => ($line->cabinet_width_mm && $line->cabinet_height_mm)
+                    ? ((int) $line->cabinet_width_mm).' x '.((int) $line->cabinet_height_mm).' mm'
+                    : (($line->module_width_mm && $line->module_height_mm)
+                        ? ((int) $line->module_width_mm).' x '.((int) $line->module_height_mm).' mm'
+                        : '500 x 500 mm'),
                 'environment' => $line->environment?->value ?? 'indoor',
-                'module_size' => ($line->module_width_mm && $line->module_height_mm) ? $line->module_width_mm.'×'.$line->module_height_mm.' mm' : '—',
+                'module_size' => ($line->module_width_mm && $line->module_height_mm)
+                    ? ((int) $line->module_width_mm).' x '.((int) $line->module_height_mm).' mm'
+                    : '—',
                 'total' => $total,
                 'ready' => $ready,
                 'ready_rate' => $readyRate,

@@ -20,6 +20,7 @@ class CheckoutAssetSearchController extends Controller
     {
         $warehouseId = $request->query('warehouse_id');
         $productLineId = $request->query('product_line_id');
+        $batchId = $request->query('batch_id');
         $search = trim((string) $request->query('search', ''));
         $page = max(1, (int) $request->query('page', 1));
         $perPage = min(200, max(10, (int) $request->query('per_page', 50)));
@@ -27,10 +28,13 @@ class CheckoutAssetSearchController extends Controller
         $query = Asset::query()
             ->with('productLine')
             ->where('current_status', AssetStatus::Ready)
-            ->whereDoesntHave('checkoutBatchItems', function ($q) {
-                $q->whereHas('checkoutBatch', function ($b) {
-                    $b->whereNotIn('status', [BatchStatus::Completed, BatchStatus::Cancelled]);
-                });
+            ->whereDoesntHave('checkoutBatchItems', function ($q) use ($batchId) {
+                $q->when($batchId, fn ($subQ) => $subQ->where('checkout_batch_id', '!=', (int) $batchId))
+                    ->whereHas('checkoutBatch', fn ($b) => $b->where('status', '!=', BatchStatus::Cancelled))
+                    ->where(function ($subQ) {
+                        $subQ->where('is_dispatched', false)
+                            ->orWhereDoesntHave('returnBatchItem', fn ($r) => $r->where('is_received', true));
+                    });
             });
 
         /** @var User|null $user */
@@ -78,22 +82,13 @@ class CheckoutAssetSearchController extends Controller
             }
 
             // Calculate cabinet area
-            $area = 0.25;
-            if ($pl && (float) $pl->module_width_mm > 0 && (float) $pl->module_height_mm > 0) {
-                $area = ((float) $pl->module_width_mm / 1000) * ((float) $pl->module_height_mm / 1000);
-            } elseif (! empty($asset->size)) {
-                if (str_contains($asset->size, '0.5×1') || str_contains($asset->size, '0.5x1')) {
-                    $area = 0.5;
-                } elseif (str_contains($asset->size, '0.5×0.5') || str_contains($asset->size, '0.5x0.5')) {
-                    $area = 0.25;
-                }
-            }
+            $area = $asset->area_m2;
 
             return [
                 'id' => (int) $asset->id,
                 'serial_no' => (string) $asset->serial_no,
                 'name' => (string) $shortName,
-                'size' => (string) ($asset->size ?? '0.5×0.5 m'),
+                'size' => (string) ($asset->size ?? '500 x 500 mm'),
                 'type' => (string) $type,
                 'status' => (string) $asset->current_status->value,
                 'status_label' => (string) $asset->current_status->getLabel(),

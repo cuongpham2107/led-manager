@@ -318,6 +318,9 @@
                 if (this.productLineId) {
                     url.searchParams.set('product_line_id', this.productLineId);
                 }
+                if (this.batchId) {
+                    url.searchParams.set('batch_id', this.batchId);
+                }
                 if (this.search && this.search.trim()) {
                     url.searchParams.set('search', this.search.trim());
                 }
@@ -583,7 +586,7 @@
                                                 x-text="item.serial_no"></div>
                                         </td>
                                         <td class="px-5 py-3.5 text-xs text-gray-600 dark:text-gray-400">
-                                            <span x-text="item.size || '0.5×0.5 m'"></span>
+                                            <span x-text="item.size || '500 x 500 mm'"></span>
                                             <span class="text-gray-400"> · </span>
                                             <span class="font-medium text-gray-700 dark:text-gray-300"
                                                 x-text="(item.area_m2 || 0.25) + ' m²'"></span>

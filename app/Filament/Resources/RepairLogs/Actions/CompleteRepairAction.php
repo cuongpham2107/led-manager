@@ -36,7 +36,7 @@ class CompleteRepairAction extends Action
 
         $this
             ->authorize('CompleteMaintenance:Asset')
-            ->label('Hoàn thành sửa chữa')
+            ->label('')
             ->icon('heroicon-o-check-badge')
             ->color('success')
             ->visible(fn (RepairLog $record): bool => $record->result_status === RepairResultStatus::Pending)

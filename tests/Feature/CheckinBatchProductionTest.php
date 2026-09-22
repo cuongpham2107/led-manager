@@ -39,7 +39,7 @@ test('createFromProduction creates N assets, 1 batch, N items and N status logs 
         productLine: $productLine,
         quantity: 10,
         warehouse: $warehouse,
-        size: '500x500mm',
+        size: '500 x 500 mm',
         serialPrefix: $prefix,
         note: 'Lô test Phase 1',
         createdBy: $user,
@@ -69,7 +69,7 @@ test('createFromProduction creates N assets, 1 batch, N items and N status logs 
         expect($asset->current_status)->toBe(AssetStatus::Ready);
         expect($asset->current_warehouse_id)->toBe($warehouse->id);
         expect($asset->product_line_id)->toBe($productLine->id);
-        expect($asset->size)->toBe('500x500mm');
+        expect($asset->size)->toBe('500 x 500 mm');
     }
 
     // Items assertions
@@ -104,7 +104,7 @@ test('createFromProduction assigns warehouse location to created assets when pro
         productLine: $productLine,
         quantity: 3,
         warehouse: $warehouse,
-        size: '500x500mm',
+        size: '500 x 500 mm',
         serialPrefix: $prefix,
         note: 'Test nhập kèm vị trí kho',
         createdBy: $user,
@@ -375,7 +375,7 @@ test('createFromSpreadsheet creates batch with custom serial numbers and distinc
     // Check custom serials
     $asset1 = Asset::where('serial_no', 'CUSTOM-SN-001')->first();
     expect($asset1)->not->toBeNull();
-    expect($asset1->size)->toBe('500x500mm');
+    expect($asset1->size)->toBe('500 x 500 mm');
     expect($asset1->current_warehouse_id)->toBe($warehouse->id);
     expect($asset1->warehouse_location_id)->toBe($location->id);
     expect($asset1->current_status)->toBe(AssetStatus::Ready);
@@ -412,7 +412,7 @@ test('createFromSpreadsheet updates existing asset when updateExisting is true',
         'size' => 1,
     ];
     $rows = [
-        ['EXIST-SN-888', 'Updated Size 500x500mm'],
+        ['EXIST-SN-888', 'Updated Size 2U'],
     ];
 
     $result = $service->createFromSpreadsheet(
@@ -427,7 +427,7 @@ test('createFromSpreadsheet updates existing asset when updateExisting is true',
     expect($result['created_count'])->toBe(0);
 
     $existing->refresh();
-    expect($existing->size)->toBe('Updated Size 500x500mm');
+    expect($existing->size)->toBe('Updated Size 2U');
     expect($existing->current_status)->toBe(AssetStatus::Ready);
 
     // Batch items should link existing asset

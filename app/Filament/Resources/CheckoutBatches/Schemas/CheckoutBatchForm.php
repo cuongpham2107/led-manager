@@ -147,13 +147,29 @@ class CheckoutBatchForm
                             ->live()
                             ->afterStateUpdated(function ($state, Set $set) {
                                 if ($state) {
-                                    $order = Order::find($state);
+                                    $order = Order::with('items')->find($state);
                                     if ($order) {
+                                        if ($order->agency_id) {
+                                            $set('agency_id', $order->agency_id);
+                                        }
+                                        if ($order->warehouse_id) {
+                                            $set('warehouse_id', $order->warehouse_id);
+                                        }
                                         if ($order->customer_id) {
                                             $set('customer_id', $order->customer_id);
                                         }
                                         if ($order->area_m2) {
                                             $set('required_area_m2', $order->area_m2);
+                                        }
+                                        if ($order->request_date) {
+                                            $set('export_date', $order->request_date);
+                                        }
+                                        if ($order->expected_return_date) {
+                                            $set('expected_return_date', $order->expected_return_date);
+                                        }
+                                        $firstPlId = $order->product_line_id ?? $order->items->first()?->product_line_id;
+                                        if ($firstPlId) {
+                                            $set('product_line_id', $firstPlId);
                                         }
                                     }
                                 }
@@ -265,22 +281,13 @@ class CheckoutBatchForm
                                         $type = $pl?->environment?->getLabel() ?? 'Sự kiện';
                                     }
 
-                                    $area = 0.25;
-                                    if ($pl && (float) $pl->module_width_mm > 0 && (float) $pl->module_height_mm > 0) {
-                                        $area = ((float) $pl->module_width_mm / 1000) * ((float) $pl->module_height_mm / 1000);
-                                    } elseif (! empty($asset->size)) {
-                                        if (str_contains($asset->size, '0.5×1') || str_contains($asset->size, '0.5x1')) {
-                                            $area = 0.5;
-                                        } elseif (str_contains($asset->size, '0.5×0.5') || str_contains($asset->size, '0.5x0.5')) {
-                                            $area = 0.25;
-                                        }
-                                    }
+                                    $area = $asset->area_m2;
 
                                     return [
                                         'id' => (int) $asset->id,
                                         'serial_no' => (string) $asset->serial_no,
                                         'name' => (string) $shortName,
-                                        'size' => (string) ($asset->size ?? '0.5×0.5 m'),
+                                        'size' => (string) ($asset->size ?? '500 x 500 mm'),
                                         'type' => (string) $type,
                                         'status' => (string) $asset->current_status->value,
                                         'status_label' => (string) $asset->current_status->getLabel(),

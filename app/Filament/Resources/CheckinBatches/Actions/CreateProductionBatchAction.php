@@ -258,7 +258,7 @@ class CreateProductionBatchAction extends Action
             'P2.6 Sự kiện',
             'Kho Hà Nội',
             'HN-K1',
-            '500×500 mm',
+            '500 x 500 mm',
             now()->format('d/m/Y'),
             0,
             'Xem tab "Danh mục tham khảo" để copy tên Dòng SP / Kho',

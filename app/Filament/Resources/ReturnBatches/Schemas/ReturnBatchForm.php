@@ -86,7 +86,7 @@ class ReturnBatchForm
                                         'item_id' => (int) $item->id,
                                         'serial_no' => (string) $asset->serial_no,
                                         'name' => (string) ($asset->productLine?->name ?? 'LED'),
-                                        'size' => (string) ($asset->size ?? '0.5×0.5 m'),
+                                        'size' => (string) ($asset->size ?? '500 x 500 mm'),
                                         'status' => (string) $statusLabel,
                                         'status_color' => (string) $statusColor,
                                         'is_received' => (bool) $item->is_received,

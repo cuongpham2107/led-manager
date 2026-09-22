@@ -1,5 +1,6 @@
 <?php
 
+use App\Exports\AssetTemplateExport;
 use App\Exports\CheckinBatchTemplate;
 use App\Http\Controllers\CheckinAssetSearchController;
 use App\Http\Controllers\CheckinImportController;
@@ -35,6 +36,10 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::get('/filament/checkin-batch-template', function () {
         return Excel::download(new CheckinBatchTemplate, 'mau-import-checkin.xlsx');
     })->name('filament.checkin-batch-template');
+
+    Route::get('/filament/asset-import-template', function () {
+        return Excel::download(new AssetTemplateExport, 'mau-import-thiet-bi.xlsx');
+    })->name('filament.asset-template');
 
     Route::post('/filament-api/checkin-import', [CheckinImportController::class, 'import'])
         ->name('filament.checkin-import');

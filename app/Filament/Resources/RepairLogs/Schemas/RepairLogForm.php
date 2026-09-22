@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\RepairLogs\Schemas;
 
+use App\Enums\AssetStatus;
+use App\Models\RepairLog;
 use App\Models\User;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
@@ -28,11 +30,26 @@ class RepairLogForm
                             ->schema([
                                 Select::make('asset_id')
                                     ->label('Thiết bị (Serial No)')
-                                    ->relationship('asset', 'serial_no', modifyQueryUsing: function ($query) {
+                                    ->relationship('asset', 'serial_no', modifyQueryUsing: function ($query, string $operation, ?RepairLog $record = null) {
                                         $user = Auth::user();
                                         if ($whId = ($user instanceof User ? $user->getScopedWarehouseId() : null)) {
                                             $query->where('current_warehouse_id', $whId);
                                         }
+
+                                        $query->where(function ($sub) use ($operation, $record) {
+                                            $sub->where(function ($q) use ($operation, $record) {
+                                                $q->where('current_status', '!=', AssetStatus::Repairing)
+                                                    ->where('current_status', '!=', AssetStatus::Disposed)
+                                                    ->whereDoesntHave('repairLogs', function ($rLogQ) use ($operation, $record) {
+                                                        $rLogQ->when($operation === 'edit' && $record?->id, fn ($s) => $s->where('id', '!=', $record->id))
+                                                            ->where('result_status', 'pending');
+                                                    });
+                                            });
+
+                                            if ($operation === 'edit' && $record?->asset_id) {
+                                                $sub->orWhere('id', $record->asset_id);
+                                            }
+                                        });
                                     })
                                     ->searchable()
                                     ->preload()

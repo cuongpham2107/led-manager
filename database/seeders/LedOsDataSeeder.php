@@ -880,27 +880,27 @@ class LedOsDataSeeder extends Seeder
 
         // 7. Assets Inventory across Warehouses
         $exactSerials = [
-            // P1.5 (500×500 mm)
-            ['serial' => 'GE-R15-000201', 'pl' => $plP15, 'size' => '500×500 mm', 'mfd' => '2025-09-02', 'status' => AssetStatus::Ready, 'wh' => $whHcm, 'loc' => $locHcm1],
-            ['serial' => 'GE-R15-000202', 'pl' => $plP15, 'size' => '500×500 mm', 'mfd' => '2025-09-02', 'status' => AssetStatus::InEvent, 'wh' => $whHcm, 'loc' => $locHcm1],
-            ['serial' => 'GE-R15-000203', 'pl' => $plP15, 'size' => '500×500 mm', 'mfd' => '2026-03-20', 'status' => AssetStatus::Ready, 'wh' => $whHcm, 'loc' => $locHcm1],
-            ['serial' => 'GE-R15-000204', 'pl' => $plP15, 'size' => '500×500 mm', 'mfd' => '2026-09-01', 'status' => AssetStatus::NewlyAdded, 'wh' => null, 'loc' => null],
-            // P2.6 Fix (500×500 mm)
-            ['serial' => 'GE-R18-000301', 'pl' => $plP26Fix, 'size' => '500×500 mm', 'mfd' => '2026-03-20', 'status' => AssetStatus::Disposed, 'wh' => $whHcm, 'loc' => $locHcm2],
-            ['serial' => 'GE-R18-000302', 'pl' => $plP26Fix, 'size' => '500×500 mm', 'mfd' => '2026-03-20', 'status' => AssetStatus::Ready, 'wh' => $whHcm, 'loc' => $locHcm2],
-            // P2.6 (500×500 mm)
-            ['serial' => 'GE-R26-000101', 'pl' => $plP26, 'size' => '500×500 mm', 'mfd' => '2026-02-10', 'status' => AssetStatus::Ready, 'wh' => $whHn, 'loc' => $locHn1],
-            ['serial' => 'GE-R26-000102', 'pl' => $plP26, 'size' => '500×500 mm', 'mfd' => '2026-02-10', 'status' => AssetStatus::InEvent, 'wh' => $whHn, 'loc' => $locHn1],
-            ['serial' => 'GE-R26-000105', 'pl' => $plP26, 'size' => '500×500 mm', 'mfd' => '2026-02-10', 'status' => AssetStatus::Ready, 'wh' => $whHn, 'loc' => $locHn2],
-            ['serial' => 'GE-R26-000106', 'pl' => $plP26, 'size' => '500×500 mm', 'mfd' => '2026-02-10', 'status' => AssetStatus::Ready, 'wh' => $whHn, 'loc' => $locHn1],
-            ['serial' => 'GE-R26-000107', 'pl' => $plP26, 'size' => '500×500 mm', 'mfd' => '2025-11-14', 'status' => AssetStatus::Repairing, 'wh' => null, 'loc' => null],
-            ['serial' => 'GE-R26-000109', 'pl' => $plP26, 'size' => '500×500 mm', 'mfd' => '2026-02-10', 'status' => AssetStatus::InEvent, 'wh' => $whHn, 'loc' => $locHn2],
-            ['serial' => 'GE-R26-000112', 'pl' => $plP26, 'size' => '500×500 mm', 'mfd' => '2026-09-05', 'status' => AssetStatus::NewlyAdded, 'wh' => null, 'loc' => null],
-            // P2.9 (500×1000 mm)
-            ['serial' => 'GE-R29-000103', 'pl' => $plP29, 'size' => '500×1000 mm', 'mfd' => '2025-11-14', 'status' => AssetStatus::Repairing, 'wh' => null, 'loc' => null],
-            ['serial' => 'GE-R29-000104', 'pl' => $plP29, 'size' => '500×1000 mm', 'mfd' => '2025-11-14', 'status' => AssetStatus::Ready, 'wh' => $whHn, 'loc' => $locHn2],
-            ['serial' => 'GE-R29-000108', 'pl' => $plP29, 'size' => '500×1000 mm', 'mfd' => '2026-02-10', 'status' => AssetStatus::Ready, 'wh' => $whHn, 'loc' => $locHn3],
-            ['serial' => 'GE-R29-000110', 'pl' => $plP29, 'size' => '500×1000 mm', 'mfd' => '2025-11-14', 'status' => AssetStatus::Ready, 'wh' => $whHn, 'loc' => $locHn3],
+            // P1.5 (500 x 500 mm)
+            ['serial' => 'GE-R15-000201', 'pl' => $plP15, 'size' => '500 x 500 mm', 'mfd' => '2025-09-02', 'status' => AssetStatus::Ready, 'wh' => $whHcm, 'loc' => $locHcm1],
+            ['serial' => 'GE-R15-000202', 'pl' => $plP15, 'size' => '500 x 500 mm', 'mfd' => '2025-09-02', 'status' => AssetStatus::InEvent, 'wh' => $whHcm, 'loc' => $locHcm1],
+            ['serial' => 'GE-R15-000203', 'pl' => $plP15, 'size' => '500 x 500 mm', 'mfd' => '2026-03-20', 'status' => AssetStatus::Ready, 'wh' => $whHcm, 'loc' => $locHcm1],
+            ['serial' => 'GE-R15-000204', 'pl' => $plP15, 'size' => '500 x 500 mm', 'mfd' => '2026-09-01', 'status' => AssetStatus::NewlyAdded, 'wh' => null, 'loc' => null],
+            // P2.6 Fix (500 x 500 mm)
+            ['serial' => 'GE-R18-000301', 'pl' => $plP26Fix, 'size' => '500 x 500 mm', 'mfd' => '2026-03-20', 'status' => AssetStatus::Disposed, 'wh' => $whHcm, 'loc' => $locHcm2],
+            ['serial' => 'GE-R18-000302', 'pl' => $plP26Fix, 'size' => '500 x 500 mm', 'mfd' => '2026-03-20', 'status' => AssetStatus::Ready, 'wh' => $whHcm, 'loc' => $locHcm2],
+            // P2.6 (500 x 500 mm)
+            ['serial' => 'GE-R26-000101', 'pl' => $plP26, 'size' => '500 x 500 mm', 'mfd' => '2026-02-10', 'status' => AssetStatus::Ready, 'wh' => $whHn, 'loc' => $locHn1],
+            ['serial' => 'GE-R26-000102', 'pl' => $plP26, 'size' => '500 x 500 mm', 'mfd' => '2026-02-10', 'status' => AssetStatus::InEvent, 'wh' => $whHn, 'loc' => $locHn1],
+            ['serial' => 'GE-R26-000105', 'pl' => $plP26, 'size' => '500 x 500 mm', 'mfd' => '2026-02-10', 'status' => AssetStatus::Ready, 'wh' => $whHn, 'loc' => $locHn2],
+            ['serial' => 'GE-R26-000106', 'pl' => $plP26, 'size' => '500 x 500 mm', 'mfd' => '2026-02-10', 'status' => AssetStatus::Ready, 'wh' => $whHn, 'loc' => $locHn1],
+            ['serial' => 'GE-R26-000107', 'pl' => $plP26, 'size' => '500 x 500 mm', 'mfd' => '2025-11-14', 'status' => AssetStatus::Repairing, 'wh' => null, 'loc' => null],
+            ['serial' => 'GE-R26-000109', 'pl' => $plP26, 'size' => '500 x 500 mm', 'mfd' => '2026-02-10', 'status' => AssetStatus::InEvent, 'wh' => $whHn, 'loc' => $locHn2],
+            ['serial' => 'GE-R26-000112', 'pl' => $plP26, 'size' => '500 x 500 mm', 'mfd' => '2026-09-05', 'status' => AssetStatus::NewlyAdded, 'wh' => null, 'loc' => null],
+            // P2.9 (500 x 1000 mm)
+            ['serial' => 'GE-R29-000103', 'pl' => $plP29, 'size' => '500 x 1000 mm', 'mfd' => '2025-11-14', 'status' => AssetStatus::Repairing, 'wh' => null, 'loc' => null],
+            ['serial' => 'GE-R29-000104', 'pl' => $plP29, 'size' => '500 x 1000 mm', 'mfd' => '2025-11-14', 'status' => AssetStatus::Ready, 'wh' => $whHn, 'loc' => $locHn2],
+            ['serial' => 'GE-R29-000108', 'pl' => $plP29, 'size' => '500 x 1000 mm', 'mfd' => '2026-02-10', 'status' => AssetStatus::Ready, 'wh' => $whHn, 'loc' => $locHn3],
+            ['serial' => 'GE-R29-000110', 'pl' => $plP29, 'size' => '500 x 1000 mm', 'mfd' => '2025-11-14', 'status' => AssetStatus::Ready, 'wh' => $whHn, 'loc' => $locHn3],
         ];
 
         $assets = collect();
@@ -925,7 +925,7 @@ class LedOsDataSeeder extends Seeder
             $asset = Asset::updateOrCreate(['serial_no' => $serial], [
                 'qr_code' => 'QR-'.$serial,
                 'product_line_id' => $plP26->id,
-                'size' => '0.5×0.5 m',
+                'size' => '500 x 500 mm',
                 'manufactured_date' => '2026-02-10',
                 'purchase_cost' => 8500000,
                 'purchase_date' => '2026-02-20',
@@ -942,7 +942,7 @@ class LedOsDataSeeder extends Seeder
             $asset = Asset::updateOrCreate(['serial_no' => $serial], [
                 'qr_code' => 'QR-'.$serial,
                 'product_line_id' => $plP15->id,
-                'size' => '0.5×0.5 m',
+                'size' => '500 x 500 mm',
                 'manufactured_date' => '2025-10-10',
                 'purchase_cost' => 12000000,
                 'purchase_date' => '2025-10-25',
@@ -959,7 +959,7 @@ class LedOsDataSeeder extends Seeder
             $asset = Asset::updateOrCreate(['serial_no' => $serial], [
                 'qr_code' => 'QR-'.$serial,
                 'product_line_id' => $plP39->id,
-                'size' => '0.5×1.0 m',
+                'size' => '500 x 1000 mm',
                 'manufactured_date' => '2025-11-20',
                 'purchase_cost' => 10500000,
                 'purchase_date' => '2025-12-05',
@@ -1025,7 +1025,7 @@ class LedOsDataSeeder extends Seeder
             $asset = Asset::updateOrCreate(['serial_no' => $serial], [
                 'qr_code' => 'QR-'.$serial,
                 'product_line_id' => $plP26->id,
-                'size' => '0.5×0.5 m',
+                'size' => '500 x 500 mm',
                 'manufactured_date' => '2026-01-15',
                 'purchase_cost' => 8500000,
                 'purchase_date' => '2026-01-30',
@@ -1041,7 +1041,7 @@ class LedOsDataSeeder extends Seeder
             $asset = Asset::updateOrCreate(['serial_no' => $serial], [
                 'qr_code' => 'QR-'.$serial,
                 'product_line_id' => $plP29->id,
-                'size' => '0.5×1.0 m',
+                'size' => '500 x 1000 mm',
                 'manufactured_date' => '2025-12-10',
                 'purchase_cost' => 9800000,
                 'purchase_date' => '2025-12-25',
@@ -1057,7 +1057,7 @@ class LedOsDataSeeder extends Seeder
             $asset = Asset::updateOrCreate(['serial_no' => $serial], [
                 'qr_code' => 'QR-'.$serial,
                 'product_line_id' => $plP39->id,
-                'size' => '0.5×1.0 m',
+                'size' => '500 x 1000 mm',
                 'manufactured_date' => '2025-11-15',
                 'purchase_cost' => 10500000,
                 'purchase_date' => '2025-12-01',
@@ -1106,7 +1106,7 @@ class LedOsDataSeeder extends Seeder
             $asset = Asset::updateOrCreate(['serial_no' => $serial], [
                 'qr_code' => 'QR-'.$serial,
                 'product_line_id' => $plP26->id,
-                'size' => '0.5×0.5 m',
+                'size' => '500 x 500 mm',
                 'manufactured_date' => '2026-01-20',
                 'purchase_cost' => 8500000,
                 'purchase_date' => '2026-02-05',
@@ -1122,7 +1122,7 @@ class LedOsDataSeeder extends Seeder
             $asset = Asset::updateOrCreate(['serial_no' => $serial], [
                 'qr_code' => 'QR-'.$serial,
                 'product_line_id' => $plP39->id,
-                'size' => '0.5×1.0 m',
+                'size' => '500 x 1000 mm',
                 'manufactured_date' => '2025-11-25',
                 'purchase_cost' => 10500000,
                 'purchase_date' => '2025-12-10',
@@ -1171,7 +1171,7 @@ class LedOsDataSeeder extends Seeder
             $asset = Asset::updateOrCreate(['serial_no' => $serial], [
                 'qr_code' => 'QR-'.$serial,
                 'product_line_id' => $plP26->id,
-                'size' => '0.5×0.5 m',
+                'size' => '500 x 500 mm',
                 'manufactured_date' => '2026-02-01',
                 'purchase_cost' => 8500000,
                 'purchase_date' => '2026-02-15',
@@ -1188,7 +1188,7 @@ class LedOsDataSeeder extends Seeder
             $asset = Asset::updateOrCreate(['serial_no' => $serial], [
                 'qr_code' => 'QR-'.$serial,
                 'product_line_id' => $plP39->id,
-                'size' => '0.5×1.0 m',
+                'size' => '500 x 1000 mm',
                 'manufactured_date' => '2026-01-10',
                 'purchase_cost' => 11000000,
                 'purchase_date' => '2026-01-20',
@@ -1206,7 +1206,7 @@ class LedOsDataSeeder extends Seeder
             $asset = Asset::updateOrCreate(['serial_no' => $serial], [
                 'qr_code' => 'QR-'.$serial,
                 'product_line_id' => $plP26->id,
-                'size' => '500×500 mm',
+                'size' => '500 x 500 mm',
                 'manufactured_date' => '2026-08-20',
                 'purchase_cost' => 8500000,
                 'purchase_date' => '2026-09-01',
@@ -1223,7 +1223,7 @@ class LedOsDataSeeder extends Seeder
             $asset = Asset::updateOrCreate(['serial_no' => $serial], [
                 'qr_code' => 'QR-'.$serial,
                 'product_line_id' => $plP39->id,
-                'size' => '500×1000 mm',
+                'size' => '500 x 1000 mm',
                 'manufactured_date' => '2026-08-25',
                 'purchase_cost' => 11000000,
                 'purchase_date' => '2026-09-02',
@@ -1240,7 +1240,7 @@ class LedOsDataSeeder extends Seeder
             $asset = Asset::updateOrCreate(['serial_no' => $serial], [
                 'qr_code' => 'QR-'.$serial,
                 'product_line_id' => $plP15->id,
-                'size' => '500×500 mm',
+                'size' => '500 x 500 mm',
                 'manufactured_date' => '2026-09-01',
                 'purchase_cost' => 14000000,
                 'purchase_date' => '2026-09-05',
@@ -1257,7 +1257,7 @@ class LedOsDataSeeder extends Seeder
             $asset = Asset::updateOrCreate(['serial_no' => $serial], [
                 'qr_code' => 'QR-'.$serial,
                 'product_line_id' => $plP29->id,
-                'size' => '500×1000 mm',
+                'size' => '500 x 1000 mm',
                 'manufactured_date' => '2026-08-15',
                 'purchase_cost' => 9500000,
                 'purchase_date' => '2026-08-28',
@@ -1274,7 +1274,7 @@ class LedOsDataSeeder extends Seeder
             $asset = Asset::updateOrCreate(['serial_no' => $serial], [
                 'qr_code' => 'QR-'.$serial,
                 'product_line_id' => $plP48->id,
-                'size' => '500×1000 mm',
+                'size' => '500 x 1000 mm',
                 'manufactured_date' => '2026-08-10',
                 'purchase_cost' => 9000000,
                 'purchase_date' => '2026-08-25',

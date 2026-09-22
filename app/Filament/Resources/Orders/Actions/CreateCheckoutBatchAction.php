@@ -89,9 +89,11 @@ class CreateCheckoutBatchAction extends Action
                             ->where('current_warehouse_id', $record->warehouse_id)
                             ->where('current_status', AssetStatus::Ready)
                             ->whereDoesntHave('checkoutBatchItems', function ($q) {
-                                $q->whereHas('checkoutBatch', function ($b) {
-                                    $b->whereNotIn('status', [BatchStatus::Completed, BatchStatus::Cancelled]);
-                                });
+                                $q->whereHas('checkoutBatch', fn ($b) => $b->where('status', '!=', BatchStatus::Cancelled))
+                                    ->where(function ($subQ) {
+                                        $subQ->where('is_dispatched', false)
+                                            ->orWhereDoesntHave('returnBatchItem', fn ($r) => $r->where('is_received', true));
+                                    });
                             })
                             ->count();
 
@@ -181,9 +183,11 @@ class CreateCheckoutBatchAction extends Action
                                 ->when($item->product_line_id, fn ($q, $plId) => $q->where('product_line_id', $plId))
                                 ->when(! empty($alreadyPickedIds), fn ($q) => $q->whereNotIn('id', $alreadyPickedIds))
                                 ->whereDoesntHave('checkoutBatchItems', function ($q) {
-                                    $q->whereHas('checkoutBatch', function ($b) {
-                                        $b->whereNotIn('status', [BatchStatus::Completed, BatchStatus::Cancelled]);
-                                    });
+                                    $q->whereHas('checkoutBatch', fn ($b) => $b->where('status', '!=', BatchStatus::Cancelled))
+                                        ->where(function ($subQ) {
+                                            $subQ->where('is_dispatched', false)
+                                                ->orWhereDoesntHave('returnBatchItem', fn ($r) => $r->where('is_received', true));
+                                        });
                                 })
                                 ->take($takeCount)
                                 ->get();
@@ -206,9 +210,11 @@ class CreateCheckoutBatchAction extends Action
                             ->where('current_status', AssetStatus::Ready)
                             ->when(! empty($alreadyPickedIds), fn ($q) => $q->whereNotIn('id', $alreadyPickedIds))
                             ->whereDoesntHave('checkoutBatchItems', function ($q) {
-                                $q->whereHas('checkoutBatch', function ($b) {
-                                    $b->whereNotIn('status', [BatchStatus::Completed, BatchStatus::Cancelled]);
-                                });
+                                $q->whereHas('checkoutBatch', fn ($b) => $b->where('status', '!=', BatchStatus::Cancelled))
+                                    ->where(function ($subQ) {
+                                        $subQ->where('is_dispatched', false)
+                                            ->orWhereDoesntHave('returnBatchItem', fn ($r) => $r->where('is_received', true));
+                                    });
                             });
 
                         if ($record->product_line_id) {

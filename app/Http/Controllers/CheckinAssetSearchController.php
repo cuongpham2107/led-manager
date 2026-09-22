@@ -72,7 +72,7 @@ class CheckinAssetSearchController extends Controller
                 'serial_no' => (string) $asset->serial_no,
                 'product_line_id' => (int) $asset->product_line_id,
                 'name' => (string) ($asset->productLine?->name ?? 'LED'),
-                'size' => (string) ($asset->size ?? '0.5×0.5 m'),
+                'size' => (string) ($asset->size ?? '500 x 500 mm'),
                 'status' => (string) $statusLabel,
                 'status_raw' => (string) ($asset->current_status instanceof AssetStatus ? $asset->current_status->value : $asset->current_status),
                 'status_color' => (string) $statusColor,

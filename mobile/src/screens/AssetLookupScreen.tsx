@@ -128,7 +128,7 @@ export const AssetLookupScreen: React.FC<AssetLookupScreenProps> = ({ onBack }) 
               <View style={styles.grid}>
                 <View style={styles.gridItem}>
                   <Text style={styles.gridLabel}>Kích thước:</Text>
-                  <Text style={styles.gridVal}>{assetData.asset.size || '0.5×0.5 m'}</Text>
+                  <Text style={styles.gridVal}>{assetData.asset.size || '500 x 500 mm'}</Text>
                 </View>
                 <View style={styles.gridItem}>
                   <Text style={styles.gridLabel}>Pixel Pitch:</Text>

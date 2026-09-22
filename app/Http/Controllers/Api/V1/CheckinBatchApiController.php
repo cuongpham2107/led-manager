@@ -236,7 +236,7 @@ class CheckinBatchApiController extends Controller
 
             if ($targetCount > 0 && $scannedCount >= $targetCount && $batch->status !== BatchStatus::Completed) {
                 try {
-                    $batch->complete(Auth::user());
+                    $batch->complete(Auth::user(), autoReceiveRemaining: false);
                 } catch (\Throwable) {
                     // If auto-completion fails quota validation, keep batch in progress so user can review
                 }
@@ -293,8 +293,12 @@ class CheckinBatchApiController extends Controller
             ], 422);
         }
 
+        $autoReceive = $request->has('auto_receive_remaining')
+            ? $request->boolean('auto_receive_remaining')
+            : true;
+
         try {
-            $batch->complete($request->user());
+            $batch->complete($request->user(), autoReceiveRemaining: $autoReceive);
         } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,

@@ -64,7 +64,7 @@ beforeEach(function () {
         'product_line_id' => $this->productLine->id,
         'current_warehouse_id' => $this->warehouse->id,
         'current_status' => AssetStatus::Ready,
-        'size' => '0.5×1 m',
+        'size' => '500 x 1000 mm',
     ]);
 });
 
@@ -149,7 +149,7 @@ test('checkout assets api returns ready assets with short name, type, and status
         ->assertJsonPath('total', 1)
         ->assertJsonPath('items.0.serial_no', 'GE-R29-000104')
         ->assertJsonPath('items.0.name', 'P2.9')
-        ->assertJsonPath('items.0.size', '0.5×1 m')
+        ->assertJsonPath('items.0.size', '500 x 1000 mm')
         ->assertJsonPath('items.0.type', 'Sự kiện')
         ->assertJsonPath('items.0.status', 'ready')
         ->assertJsonPath('items.0.status_label', 'Sẵn sàng trong kho');
@@ -176,7 +176,7 @@ test('checkout assets api filters by warehouse and product line', function () {
         'product_line_id' => $otherProductLine->id,
         'current_warehouse_id' => $otherWarehouse->id,
         'current_status' => AssetStatus::Ready,
-        'size' => '0.5×0.5 m',
+        'size' => '500 x 500 mm',
     ]);
 
     // Query with first warehouse and first product line -> only original asset

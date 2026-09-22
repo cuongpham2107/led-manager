@@ -127,17 +127,19 @@ export const CheckinDetailScreen: React.FC<CheckinDetailScreenProps> = ({
   const executeCompleteCheckin = async () => {
     setIsCompleting(true);
     try {
-      const response = await apiClient.post(`/checkin-batches/${batchId}/complete`);
+      const response = await apiClient.post(`/checkin-batches/${batchId}/complete`, {
+        auto_receive_remaining: false,
+      });
       if (response.data?.success) {
         if (Platform.OS === 'web') {
-          window.alert(response.data.message || 'Đã hoàn tất nhập kho!');
+          window.alert(response.data.message || 'Đã kết thúc đợt nhập kho!');
         } else {
           Alert.alert('Thành công', response.data.message);
         }
         await fetchBatchDetail();
       }
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Không thể hoàn tất nhập kho.';
+      const msg = err?.response?.data?.message || 'Không thể kết thúc đợt nhập kho.';
       if (Platform.OS === 'web') {
         window.alert(msg);
       } else {
@@ -149,8 +151,19 @@ export const CheckinDetailScreen: React.FC<CheckinDetailScreenProps> = ({
   };
 
   const handleCompleteCheckin = () => {
-    const title = 'Xác nhận hoàn tất nhập kho';
-    const message = `Bạn có chắc chắn muốn hoàn tất đợt nhập ${batch?.code}? Toàn bộ thiết bị đã quét sẽ chuyển sang trạng thái "Sẵn sàng" (Ready).`;
+    const targetCount = batch?.target_items_count ?? (batch?.items?.length || 0);
+    const scannedCount = batch?.scanned_count ?? 0;
+    const diff = targetCount - scannedCount;
+
+    let title = 'Xác nhận kết thúc nhập';
+    let message = `Bạn có chắc chắn muốn kết thúc đợt nhập ${batch?.code}?`;
+
+    if (diff > 0) {
+      title = 'Xác nhận kết thúc nhập (Nhập thiếu)';
+      message = `Kế hoạch có ${targetCount} thiết bị, thực tế đã nhận ${scannedCount} thiết bị (thiếu ${diff} thiết bị).\n\nBạn có chắc chắn muốn kết thúc đợt nhập này không? Các thiết bị chưa quét sẽ KHÔNG được tính vào kho.`;
+    } else {
+      message = `Đã nhận đủ ${scannedCount} thiết bị theo kế hoạch. Bạn có chắc chắn muốn kết thúc đợt nhập này không?`;
+    }
 
     if (Platform.OS === 'web') {
       if (window.confirm(`${title}\n\n${message}`)) {
@@ -163,7 +176,8 @@ export const CheckinDetailScreen: React.FC<CheckinDetailScreenProps> = ({
         [
           { text: 'Kiểm tra lại', style: 'cancel' },
           {
-            text: 'Xác nhận hoàn tất',
+            text: 'Xác nhận kết thúc',
+            style: diff > 0 ? 'destructive' : 'default',
             onPress: executeCompleteCheckin,
           },
         ]
@@ -183,7 +197,7 @@ export const CheckinDetailScreen: React.FC<CheckinDetailScreenProps> = ({
   }
 
   const isCompleted = batch.status.value === 'completed' || batch.status.value === 'cancelled';
-  const canComplete = !isCompleted && batch.scanned_count > 0;
+  const canComplete = !isCompleted;
 
   const sortedItems = [...(batch.items || [])].sort(
     (a, b) => Number(a.is_received) - Number(b.is_received)
@@ -355,7 +369,7 @@ export const CheckinDetailScreen: React.FC<CheckinDetailScreenProps> = ({
               <>
                 <PackageCheck color="#fff" size={20} style={{ marginRight: 8 }} />
                 <Text style={styles.completeBtnText}>
-                  Xác nhận hoàn tất ({batch.scanned_count} thiết bị)
+                  Xác nhận kết thúc nhập ({batch.scanned_count}/{batch.target_items_count} thiết bị)
                 </Text>
               </>
             )}

@@ -93,7 +93,8 @@ class RepairLogsTable
             ], layout: FiltersLayout::AboveContent)
             ->deferFilters(false)
             ->recordActions([
-                CompleteRepairAction::make(),
+                CompleteRepairAction::make()
+                    ->tooltip('Hoàn thành sửa chữa'),
                 EditAction::make()
                     ->modalHeading('Cập nhật phiếu sửa chữa')
                     ->modalDescription('Cập nhật tình trạng khắc phục, kỹ thuật viên phụ trách và chi phí thực tế.')

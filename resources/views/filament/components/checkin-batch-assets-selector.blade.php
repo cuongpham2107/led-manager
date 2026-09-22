@@ -155,10 +155,10 @@
             for (const a of assets) {
                 const id = Number(a.id);
                 if (!this.allAssets.some(x => Number(x.id) === id)) {
-                    this.allAssets.push(a);
+                    this.allAssets.unshift(a);
                 }
                 if (!this.assets.some(x => Number(x.id) === id)) {
-                    this.assets.push(a);
+                    this.assets.unshift(a);
                 }
                 if (!ids.includes(id)) {
                     ids.push(id);
@@ -166,7 +166,7 @@
             }
             this.state = ids;
             this.total = this.allAssets.length;
-            this.showToast('Đã thêm ' + assets.length + ' thiết bị vào đợt', 'success');
+            this.showToast('Đã tích chọn ' + assets.length + ' thiết bị vào đợt nhập!', 'success');
         },
 
         toggleAllVisible() {
@@ -341,7 +341,9 @@
         },
 
         triggerImportFile() {
-            this.$refs.importFileInput.click();
+            if (this.$refs.importFileInput) {
+                this.$refs.importFileInput.click();
+            }
         },
 
         async handleImportFile(event) {
@@ -367,9 +369,9 @@
 
                 if (data.success && Array.isArray(data.assets) && data.assets.length > 0) {
                     this.onAssetsImported(data.assets);
-                    this.showToast(data.message || 'Import thành công!');
+                    this.showToast(data.message || 'Đã tích chọn thiết bị từ file Excel!');
                 } else {
-                    this.showToast(data.message || 'Không có thiết bị nào được import.', 'error');
+                    this.showToast(data.message || 'Không có thiết bị nào được tích chọn.', 'error');
                 }
             } catch (err) {
                 console.error('Lỗi import:', err);
@@ -397,32 +399,49 @@
         </div>
 
         <div class="flex items-center gap-2">
-            <template x-if="!isEdit">
-                <div class="flex items-center gap-2">
+            <template x-if="!isEdit || addMoreMode">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <!-- File input ẩn để chọn file Excel -->
                     <input
                         type="file"
                         x-ref="importFileInput"
-                        accept=".xlsx,.xls,.csv"
                         @change="handleImportFile($event)"
+                        accept=".xlsx,.xls,.csv"
                         class="hidden"
                     />
-                    <a href="{{ route('filament.checkin-batch-template') }}" target="_blank" class="text-xs text-gray-400 hover:text-primary-600 dark:text-gray-500 dark:hover:text-primary-400 underline transition-colors">Tải file mẫu</a>
+
+                    <!-- Nút 1: Import file Excel tích chọn -->
                     <button
                         type="button"
                         @click="triggerImportFile()"
                         :disabled="importing"
-                        class="px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-950/60 rounded-lg transition-colors inline-flex items-center gap-1.5 border border-emerald-200 dark:border-emerald-800 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        class="px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-950/60 rounded-lg transition-colors inline-flex items-center gap-1.5 border border-emerald-200 dark:border-emerald-800 cursor-pointer disabled:opacity-50"
+                        title="Upload file Excel (1 cột Số serial) để tích chọn nhanh"
                     >
                         <svg x-show="!importing" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4m13.5-6.5-11 11"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
                         </svg>
-                        <svg x-show="importing" class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
+                        <svg x-show="importing" class="animate-spin w-3.5 h-3.5 text-emerald-600" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
                         </svg>
-                        <span x-text="importing ? 'Đang import...' : 'Import Excel'"></span>
+                        <span x-text="importing ? 'Đang đọc file...' : 'Import Excel tích chọn'"></span>
                     </button>
+
+                    <!-- Link tải file mẫu 1 cột -->
+                    <a
+                        href="{{ route('filament.checkin-batch-template') }}"
+                        target="_blank"
+                        class="text-xs text-gray-400 hover:text-primary-600 dark:text-gray-500 dark:hover:text-primary-400 underline transition-colors"
+                        title="Tải file mẫu Excel chỉ có 1 cột Số serial"
+                    >
+                        Tải file mẫu (1 cột)
+                    </a>
                 </div>
+            </template>
+
+            <template x-if="!isEdit">
+                <span style="display:none;" @click="$wire.mountAction('import_checkin_batch_items')">Import &amp; tạo nhanh thiết bị</span>
             </template>
 
             <!-- Mode switch for Edit Mode -->
@@ -859,8 +878,6 @@
             </div>
         </div>
     </template>
-
-
 
     <!-- Floating Toast Feedback -->
     <template x-teleport="body">

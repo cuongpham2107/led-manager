@@ -4,12 +4,14 @@ namespace App\Filament\Resources\Assets\Pages;
 
 use App\Enums\AssetStatus;
 use App\Filament\Resources\Assets\AssetResource;
+use App\Imports\CheckinBatchImport;
 use App\Models\Asset;
 use App\Models\ProductLine;
 use Carbon\Carbon;
 use DateTimeInterface;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
@@ -17,7 +19,9 @@ use Filament\Resources\Pages\ListRecords;
 use Filament\Schemas\Components\Grid;
 use Filament\Support\Enums\Width;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
+use Maatwebsite\Excel\Facades\Excel;
 use OpenSpout\Common\Entity\Row;
 use OpenSpout\Common\Entity\Style\Style;
 use OpenSpout\Writer\XLSX\Writer;
@@ -68,7 +72,7 @@ class ListAssets extends ListRecords
                                 ->searchable()
                                 ->preload()
                                 ->placeholder('Chọn dòng sản phẩm...')
-                                ->helperText('Áp dụng tự động nếu ô "Dòng sản phẩm" để trống'),
+                                ->helperText('Áp dụng tự động nếu ô "Mã dòng SP" để trống'),
 
                             Toggle::make('update_existing')
                                 ->label('Cập nhật nếu số Seri đã tồn tại trong hệ thống')
@@ -76,8 +80,15 @@ class ListAssets extends ListRecords
                                 ->helperText('Nếu bật, thiết bị trùng số Seri sẽ được cập nhật thông tin mới. Nếu tắt, dòng đó sẽ được bỏ qua.'),
                         ]),
 
+                    FileUpload::make('excel_file')
+                        ->label('Hoặc tải lên file Excel (.xlsx, .xls, .csv)')
+                        ->acceptedFileTypes(['application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/csv'])
+                        ->downloadable()
+                        ->previewable(false)
+                        ->helperText(new HtmlString('Nếu có file Excel sẵn, hãy tải lên tại đây — <a href="'.route('filament.asset-template').'" target="_blank" class="text-primary-600 underline font-semibold">Tải file mẫu Excel</a> (Cột: Số Seri, Mã dòng SP, Ngày sản xuất, Kích thước). Hoặc nhập/dán trực tiếp vào bảng tính bên dưới.')),
+
                     SpreadsheetField::make('sheet_data')
-                        ->label('Bảng tính nhập liệu')
+                        ->label('Bảng tính nhập liệu (Nhập hoặc Dán trực tiếp)')
                         ->default(fn () => $this->getDefaultSheetData())
                         ->height('55vh')
                         ->minHeight('400px')
@@ -114,14 +125,16 @@ class ListAssets extends ListRecords
     {
         $headers = [
             'Số Seri',
-            'Dòng sản phẩm',
+            'Mã dòng SP',
+            'Ngày sản xuất',
             'Kích thước',
         ];
 
         $sampleRow = [
             'P26-HN-SAMPLE01',
-            'P2.6 Sự kiện',
-            '500×500 mm',
+            'P2.6',
+            '22/09/2026',
+            '500 x 500 mm',
         ];
 
         $cellData = [];
@@ -149,8 +162,8 @@ class ListAssets extends ListRecords
         $productLines = ProductLine::where('is_active', true)->get();
 
         $refHeaders = [
-            0 => ['v' => 'Dòng sản phẩm (Tên)', 's' => ['bl' => 1, 'bg' => ['rgb' => '#DBEAFE'], 'fs' => 11]],
-            1 => ['v' => 'Mã dòng SP', 's' => ['bl' => 1, 'bg' => ['rgb' => '#DBEAFE'], 'fs' => 11]],
+            0 => ['v' => 'Mã dòng SP', 's' => ['bl' => 1, 'bg' => ['rgb' => '#DBEAFE'], 'fs' => 11]],
+            1 => ['v' => 'Tên dòng sản phẩm', 's' => ['bl' => 1, 'bg' => ['rgb' => '#DBEAFE'], 'fs' => 11]],
         ];
 
         $refCellData = [0 => $refHeaders];
@@ -161,8 +174,8 @@ class ListAssets extends ListRecords
             $pl = $productLines->get($r);
 
             if ($pl) {
-                $refCellData[$rowIdx][0] = ['v' => $pl->name, 's' => ['fs' => 11]];
-                $refCellData[$rowIdx][1] = ['v' => $pl->code ?? '', 's' => ['fs' => 11]];
+                $refCellData[$rowIdx][0] = ['v' => $pl->code ?? '', 's' => ['fs' => 11]];
+                $refCellData[$rowIdx][1] = ['v' => $pl->name, 's' => ['fs' => 11]];
             }
         }
 
@@ -176,12 +189,13 @@ class ListAssets extends ListRecords
                     'id' => 'sheet-led-01',
                     'name' => 'Nhập tài sản LED',
                     'rowCount' => 100,
-                    'columnCount' => 3,
+                    'columnCount' => 4,
                     'cellData' => $cellData,
                     'columnData' => [
                         0 => ['w' => 180],
-                        1 => ['w' => 200],
-                        2 => ['w' => 160],
+                        1 => ['w' => 140],
+                        2 => ['w' => 140],
+                        3 => ['w' => 160],
                     ],
                 ],
                 'sheet-ref-01' => [
@@ -191,8 +205,8 @@ class ListAssets extends ListRecords
                     'columnCount' => 2,
                     'cellData' => $refCellData,
                     'columnData' => [
-                        0 => ['w' => 220],
-                        1 => ['w' => 140],
+                        0 => ['w' => 140],
+                        1 => ['w' => 220],
                     ],
                 ],
             ],
@@ -271,7 +285,36 @@ class ListAssets extends ListRecords
         $rows = [];
         $headers = [];
 
-        if (is_array($sheetData) && isset($sheetData['sheets'])) {
+        // 1. Kiểm tra nếu có upload file Excel (.xlsx, .xls, .csv)
+        if (! empty($data['excel_file'])) {
+            $import = new CheckinBatchImport;
+            Excel::import($import, $data['excel_file']);
+            $excelRows = $import->rows;
+
+            if (! empty($excelRows)) {
+                $headerRow = array_values($excelRows[0] ?? []);
+                foreach ($headerRow as $c => $val) {
+                    $headers[$c] = trim((string) $val);
+                }
+
+                for ($r = 1; $r < count($excelRows); $r++) {
+                    $rawRow = array_values($excelRows[$r] ?? []);
+                    $row = [];
+                    $hasVal = false;
+                    foreach ($rawRow as $c => $val) {
+                        $strVal = trim((string) $val);
+                        if ($strVal !== '') {
+                            $hasVal = true;
+                        }
+                        $row[$c] = $strVal;
+                    }
+                    if ($hasVal) {
+                        $rows[] = $row;
+                    }
+                }
+            }
+        } elseif (is_array($sheetData) && isset($sheetData['sheets'])) {
+            // 2. Đọc từ UniverSheet bảng tính trực tiếp
             $targetSheet = null;
             foreach ($sheetData['sheets'] as $sheet) {
                 if (! empty($sheet['cellData'][0])) {
@@ -337,7 +380,7 @@ class ListAssets extends ListRecords
         if (empty($rows)) {
             Notification::make()
                 ->title('Chưa có dữ liệu để nhập')
-                ->body('Vui lòng nhập hoặc dán ít nhất 1 dòng dữ liệu vào bảng tính.')
+                ->body('Vui lòng chọn file Excel hoặc nhập/dán ít nhất 1 dòng dữ liệu vào bảng tính.')
                 ->warning()
                 ->send();
 
@@ -348,9 +391,9 @@ class ListAssets extends ListRecords
         $columnMap = [];
         foreach ($headers as $index => $header) {
             $slug = Str::slug(trim((string) $header), '_');
-            if (in_array($slug, ['so_seri', 'seri', 'serial', 'serial_no', 'ma_tai_san', 'ma_so_seri'])) {
+            if (in_array($slug, ['so_seri', 'seri', 'serial', 'serial_no', 'ma_tai_san', 'ma_so_seri', 'ma_thiet_bi'])) {
                 $columnMap['serial_no'] = $index;
-            } elseif (in_array($slug, ['dong_san_pham', 'product_line', 'model', 'loai_led', 'dong_led'])) {
+            } elseif (in_array($slug, ['ma_dong_sp', 'dong_san_pham', 'product_line', 'model', 'loai_led', 'dong_led', 'ma_sp', 'san_pham'])) {
                 $columnMap['product_line'] = $index;
             } elseif (in_array($slug, ['kho', 'kho_hang', 'kho_luu_tru', 'kho_hien_tai', 'warehouse'])) {
                 $columnMap['warehouse'] = $index;
@@ -360,7 +403,7 @@ class ListAssets extends ListRecords
                 $columnMap['size'] = $index;
             } elseif (in_array($slug, ['trang_thai', 'status', 'tinh_trang'])) {
                 $columnMap['status'] = $index;
-            } elseif (in_array($slug, ['ngay_san_xuat', 'manufactured_date', 'nsx'])) {
+            } elseif (in_array($slug, ['ngay_san_xuat', 'manufactured_date', 'nsx', 'ngay_sx'])) {
                 $columnMap['manufactured_date'] = $index;
             } elseif (in_array($slug, ['ngay_mua', 'purchase_date'])) {
                 $columnMap['purchase_date'] = $index;
@@ -401,13 +444,13 @@ class ListAssets extends ListRecords
                     continue;
                 }
 
-                // Match product line
+                // Match product line (ưu tiên so khớp mã code trước, sau đó mới đến tên)
                 $productLineId = $defaultProductLineId;
                 if (isset($columnMap['product_line']) && ! empty(trim((string) ($row[$columnMap['product_line']] ?? '')))) {
                     $val = trim((string) $row[$columnMap['product_line']]);
                     $matchedPl = $productLines->first(function ($pl) use ($val) {
-                        return mb_strtolower($pl->name, 'UTF-8') === mb_strtolower($val, 'UTF-8')
-                            || mb_strtolower($pl->code ?? '', 'UTF-8') === mb_strtolower($val, 'UTF-8');
+                        return mb_strtolower($pl->code ?? '', 'UTF-8') === mb_strtolower($val, 'UTF-8')
+                            || mb_strtolower($pl->name, 'UTF-8') === mb_strtolower($val, 'UTF-8');
                     });
                     if ($matchedPl) {
                         $productLineId = $matchedPl->id;
@@ -422,8 +465,8 @@ class ListAssets extends ListRecords
                 if ($size === '') {
                     $pl = $productLines->firstWhere('id', $productLineId);
                     $size = ($pl && $pl->module_width_mm && $pl->module_height_mm)
-                        ? "{$pl->module_width_mm}×{$pl->module_height_mm} mm"
-                        : '500×500 mm';
+                        ? ((int) $pl->module_width_mm).' x '.((int) $pl->module_height_mm).' mm'
+                        : '500 x 500 mm';
                 }
 
                 $mfgDate = isset($columnMap['manufactured_date'])

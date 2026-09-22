@@ -45,7 +45,7 @@ class AssetForm
                                 ->placeholder('Hệ thống tự động sinh (LED-{Số Seri})')
                                 ->helperText('Mã QR tự động sinh theo Serial No, không cần nhập thủ công.'),
                         ]),
-                        Grid::make(2)->schema([
+                        Grid::make(3)->schema([
                             Select::make('product_line_id')
                                 ->label('Dòng sản phẩm LED')
                                 ->relationship('productLine', 'name')
@@ -53,7 +53,13 @@ class AssetForm
                                 ->preload(),
                             TextInput::make('size')
                                 ->label('Kích thước / Quy cách')
-                                ->placeholder('VD: 500×500 mm / 2U Rack / 6in1 Case'),
+                                ->placeholder('VD: 500 x 500 mm / 500 x 1000 mm / 2U Rack'),
+                            DatePicker::make('manufactured_date')
+                                ->label('Ngày sản xuất')
+                                ->placeholder('dd/mm/yyyy')
+                                ->displayFormat('d/m/Y')
+                                ->native(true)
+                                ->default(now()->toDateString()),
                         ]),
                     ]),
 
@@ -104,16 +110,9 @@ class AssetForm
                                     ->placeholder('0')
                                     ->helperText('Tổng số lượt thiết bị được điều động đi sự kiện.'),
                             ]),
-                        Grid::make(3)
+                        Grid::make(2)
                             ->dehydratedWhenHidden()
                             ->schema([
-                                DatePicker::make('manufactured_date')
-                                    ->label('Ngày sản xuất')
-                                    ->placeholder('dd/mm/yyyy')
-                                    ->displayFormat('d/m/Y')
-                                    ->native(true)
-                                    ->default(now()->toDateString())
-                                    ->dehydratedWhenHidden(),
                                 DatePicker::make('purchase_date')
                                     ->label('Ngày mua về kho')
                                     ->placeholder('dd/mm/yyyy')

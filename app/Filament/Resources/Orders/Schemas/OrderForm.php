@@ -213,6 +213,7 @@ class OrderForm
 
                                 Section::make('Thông tin thanh toán')
                                     ->description('Số tiền cọc đã thu, tổng tiền đã thu và ngày thu gần nhất')
+                                    ->hiddenOn('create')
                                     ->collapsible()
                                     ->schema([
                                         Grid::make(2)->schema([
@@ -256,7 +257,7 @@ class OrderForm
                                                 ->numeric()
                                                 ->suffix(' đ')
                                                 ->default(0)
-                                                ->readOnly(fn () => self::isCurrentUserAgencyScoped())
+                                                ->readOnly()
                                                 ->dehydrated()
                                                 ->columnSpan(1),
                                             TextInput::make('area_m2')
@@ -396,7 +397,7 @@ class OrderForm
                                                     ->numeric()
                                                     ->suffix(' đ')
                                                     ->default(0)
-                                                    ->readOnly(fn () => self::isCurrentUserAgencyScoped())
+                                                    ->readOnly()
                                                     ->dehydrated()
                                                     ->live(onBlur: true)
                                                     ->afterStateUpdated(function (Get $get, Set $set) {
@@ -411,6 +412,7 @@ class OrderForm
                                     ]),
 
                                 Section::make('Phân công Đội ngũ Kỹ thuật & Nhân sự (Event Crew)')
+                                    ->hiddenOn('create')
                                     ->description(function (Get $get, ?Order $record) {
                                         $quoId = $get('quotation_id');
                                         $quotation = $quoId ? Quotation::find($quoId) : ($record?->quotation ?? null);
@@ -492,6 +494,7 @@ class OrderForm
                                     ]),
 
                                 Section::make('Lịch trình Thi công & Mốc thời gian (Event Timeline)')
+                                    ->hiddenOn('create')
                                     ->description('Theo dõi tiến độ giao hàng, lắp đặt, chạy thử và tháo dỡ màn hình')
                                     ->collapsible()
                                     ->schema([

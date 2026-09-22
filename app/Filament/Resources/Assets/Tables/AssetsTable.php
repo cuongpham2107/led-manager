@@ -53,10 +53,10 @@ class AssetsTable
                     ->color('gray')
                     ->sortable(),
 
-                TextColumn::make('batch_no')
-                    ->label('LÔ SẢN XUẤT')
-                    ->placeholder('—')
-                    ->sortable(),
+                // TextColumn::make('batch_no')
+                //     ->label('LÔ SẢN XUẤT')
+                //     ->placeholder('—')
+                //     ->sortable(),
 
                 TextColumn::make('current_status')
                     ->label('TRẠNG THÁI')

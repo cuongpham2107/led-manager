@@ -118,51 +118,53 @@ class CheckinBatch extends Model
      *
      * @throws ValidationException when completing would exceed agency warehouse quota
      */
-    public function complete(?User $user = null): void
+    public function complete(?User $user = null, bool $autoReceiveRemaining = true): void
     {
         // Validate agency quota before completing
-        $this->validateAgencyQuota();
+        $this->validateAgencyQuota($autoReceiveRemaining);
 
         $now = now();
         $userId = $user?->id ?? auth()->id();
 
-        DB::transaction(function () use ($now, $userId) {
+        DB::transaction(function () use ($now, $userId, $autoReceiveRemaining) {
             $this->loadMissing(['items.asset']);
 
-            foreach ($this->items as $item) {
-                if (! $item->is_received) {
-                    $item->update([
-                        'is_received' => true,
-                        'condition' => $item->condition ?: 'ok',
-                        'received_at' => $now,
-                        'received_by' => $userId,
-                    ]);
-
-                    if ($item->asset) {
-                        $targetStatus = in_array($item->condition, ['fault', 'damaged'], true)
-                            ? AssetStatus::Repairing
-                            : AssetStatus::Ready;
-
-                        $oldStatus = $item->asset->current_status;
-                        $oldWhId = $item->asset->current_warehouse_id;
-
-                        $item->asset->update([
-                            'current_status' => $targetStatus,
-                            'current_warehouse_id' => $this->warehouse_id,
+            if ($autoReceiveRemaining) {
+                foreach ($this->items as $item) {
+                    if (! $item->is_received) {
+                        $item->update([
+                            'is_received' => true,
+                            'condition' => $item->condition ?: 'ok',
+                            'received_at' => $now,
+                            'received_by' => $userId,
                         ]);
 
-                        AssetStatusLog::create([
-                            'asset_id' => $item->asset->id,
-                            'from_status' => $oldStatus,
-                            'to_status' => $targetStatus,
-                            'from_warehouse_id' => $oldWhId,
-                            'to_warehouse_id' => $this->warehouse_id,
-                            'source_type' => self::class,
-                            'source_id' => $this->id,
-                            'changed_by' => $userId,
-                            'note' => 'Kết thúc nhận hàng: '.$this->code,
-                            'created_at' => $now,
-                        ]);
+                        if ($item->asset) {
+                            $targetStatus = in_array($item->condition, ['fault', 'damaged'], true)
+                                ? AssetStatus::Repairing
+                                : AssetStatus::Ready;
+
+                            $oldStatus = $item->asset->current_status;
+                            $oldWhId = $item->asset->current_warehouse_id;
+
+                            $item->asset->update([
+                                'current_status' => $targetStatus,
+                                'current_warehouse_id' => $this->warehouse_id,
+                            ]);
+
+                            AssetStatusLog::create([
+                                'asset_id' => $item->asset->id,
+                                'from_status' => $oldStatus,
+                                'to_status' => $targetStatus,
+                                'from_warehouse_id' => $oldWhId,
+                                'to_warehouse_id' => $this->warehouse_id,
+                                'source_type' => self::class,
+                                'source_id' => $this->id,
+                                'changed_by' => $userId,
+                                'note' => 'Kết thúc nhận hàng: '.$this->code,
+                                'created_at' => $now,
+                            ]);
+                        }
                     }
                 }
             }
@@ -179,9 +181,9 @@ class CheckinBatch extends Model
      *
      * @throws ValidationException
      */
-    protected function validateAgencyQuota(): void
+    protected function validateAgencyQuota(bool $autoReceiveRemaining = true): void
     {
-        if (! $this->warehouse_id) {
+        if (! $this->warehouse_id || ! $autoReceiveRemaining) {
             return;
         }
 

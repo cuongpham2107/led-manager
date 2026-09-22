@@ -41,6 +41,9 @@ class Asset extends Model
             if (empty($asset->qr_code) && ! empty($asset->serial_no)) {
                 $asset->qr_code = "LED-{$asset->serial_no}";
             }
+            if (! empty($asset->size)) {
+                $asset->size = static::normalizeSize($asset->size);
+            }
         });
     }
 
@@ -115,6 +118,45 @@ class Asset extends Model
     }
 
     /**
+     * Normalize size string to standard format (e.g. 500 x 500 mm, 500 x 1000 mm).
+     */
+    public static function normalizeSize(?string $size): ?string
+    {
+        if ($size === null || trim($size) === '') {
+            return null;
+        }
+
+        $clean = strtolower(trim($size));
+        $normalized = str_replace(['×', 'x', 'm', ' '], '', $clean);
+
+        if (str_contains($clean, '0.5x1') || str_contains($clean, '0.5×1') || str_contains($normalized, '5001000') || str_contains($normalized, '1000500')) {
+            return '500 x 1000 mm';
+        }
+
+        if (str_contains($clean, '0.5x0.5') || str_contains($clean, '0.5×0.5') || str_contains($normalized, '500500')) {
+            return '500 x 500 mm';
+        }
+
+        return $size;
+    }
+
+    /**
+     * Accessor for size attribute.
+     */
+    public function getSizeAttribute(?string $value): ?string
+    {
+        return static::normalizeSize($value);
+    }
+
+    /**
+     * Mutator for size attribute.
+     */
+    public function setSizeAttribute(?string $value): void
+    {
+        $this->attributes['size'] = static::normalizeSize($value);
+    }
+
+    /**
      * Calculate cabinet area in m2
      */
     public function getAreaM2Attribute(): float
@@ -125,10 +167,11 @@ class Asset extends Model
         }
 
         if (! empty($this->size)) {
-            if (str_contains($this->size, '0.5×1') || str_contains($this->size, '0.5x1')) {
+            $norm = static::normalizeSize($this->size);
+            if ($norm === '500 x 1000 mm') {
                 return 0.5;
             }
-            if (str_contains($this->size, '0.5×0.5') || str_contains($this->size, '0.5x0.5')) {
+            if ($norm === '500 x 500 mm') {
                 return 0.25;
             }
         }

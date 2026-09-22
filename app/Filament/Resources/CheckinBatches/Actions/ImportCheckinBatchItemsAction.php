@@ -13,6 +13,7 @@ use App\Models\Warehouse;
 use App\Models\WarehouseLocation;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
@@ -105,8 +106,10 @@ class ImportCheckinBatchItemsAction extends Action
                         ->acceptedFileTypes(['application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/csv'])
                         ->downloadable()
                         ->previewable(false)
-                        ->required()
+                        ->nullable()
                         ->helperText(new HtmlString('Hỗ trợ file .xlsx, .xls, .csv — <a href="'.route('filament.checkin-batch-template').'" target="_blank" class="text-primary-600 underline">Tải file mẫu</a>')),
+
+                    Hidden::make('sheet_data'),
                 ]);
             })
             ->action(function ($livewire, array $data): void {
@@ -114,26 +117,48 @@ class ImportCheckinBatchItemsAction extends Action
                 $record = method_exists($livewire, 'getRecord') ? $livewire->getRecord() : null;
                 $isExisting = $record instanceof CheckinBatch && $record->exists;
 
-                $import = new CheckinBatchImport;
-                Excel::import($import, $data['excel_file']);
+                $rows = [];
+                $columnMap = [];
 
-                $rows = $import->rows;
+                if (! empty($data['excel_file'])) {
+                    $import = new CheckinBatchImport;
+                    Excel::import($import, $data['excel_file']);
+                    $allRows = $import->rows;
+
+                    if (empty($allRows)) {
+                        Notification::make()
+                            ->title('File không có dữ liệu')
+                            ->body('Vui lòng upload file Excel chứa ít nhất 1 dòng dữ liệu thiết bị.')
+                            ->warning()
+                            ->send();
+
+                        return;
+                    }
+
+                    $headers = $allRows[0] ?? [];
+                    $columnMap = static::mapColumns($headers);
+                    $rows = array_slice($allRows, 1);
+                } elseif (! empty($data['sheet_data'])) {
+                    $parsed = static::parseSheetData($data['sheet_data']);
+                    $headers = $parsed['headers'];
+                    $columnMap = static::mapColumns($headers);
+                    $rows = $parsed['rows'];
+                }
 
                 if (empty($rows)) {
                     Notification::make()
-                        ->title('File không có dữ liệu')
-                        ->body('Vui lòng upload file Excel chứa ít nhất 1 dòng dữ liệu thiết bị.')
+                        ->title('Không có dữ liệu')
+                        ->body('Vui lòng cung cấp dữ liệu import.')
                         ->warning()
                         ->send();
 
                     return;
                 }
 
-                $columnMap = static::mapColumns($rows[0] ?? []);
                 if (! isset($columnMap['serial_no'])) {
                     Notification::make()
                         ->title('Không tìm thấy cột Số Seri')
-                        ->body('File Excel cần có cột "Số Seri" hoặc "serial_no".')
+                        ->body('File Excel hoặc dữ liệu cần có cột "Số Seri" hoặc "serial_no".')
                         ->danger()
                         ->send();
 
@@ -142,9 +167,10 @@ class ImportCheckinBatchItemsAction extends Action
 
                 $validRows = [];
                 foreach ($rows as $row) {
-                    $serialNo = trim((string) ($row[array_keys($row)[$columnMap['serial_no']] ?? ''] ?? ''));
+                    $values = array_values($row);
+                    $serialNo = trim((string) ($values[$columnMap['serial_no']] ?? ''));
                     if ($serialNo !== '') {
-                        $validRows[] = $row;
+                        $validRows[] = $values;
                     }
                 }
 
@@ -160,6 +186,7 @@ class ImportCheckinBatchItemsAction extends Action
 
                 $createIfNotExists = (bool) ($data['create_if_not_exists'] ?? true);
                 $defaultProductLineId = $data['default_product_line_id'] ?? null;
+                $defaultLocationId = $data['default_location_id'] ?? null;
                 $user = Auth::user();
                 $scopedWhId = $user instanceof User ? $user->getScopedWarehouseId() : null;
                 $warehouseId = $isExisting
@@ -230,7 +257,7 @@ class ImportCheckinBatchItemsAction extends Action
 
                             $size = isset($columnMap['size']) && ! empty($values[$columnMap['size']])
                                 ? trim((string) $values[$columnMap['size']])
-                                : '500×500 mm';
+                                : '500 x 500 mm';
 
                             $locationId = $defaultLocationId;
                             if (isset($columnMap['location']) && ! empty($values[$columnMap['location']])) {
@@ -350,7 +377,7 @@ class ImportCheckinBatchItemsAction extends Action
 
                     $size = isset($columnMap['size']) && ! empty($values[$columnMap['size']])
                         ? trim((string) $values[$columnMap['size']])
-                        : '500×500 mm';
+                        : '500 x 500 mm';
 
                     $locationId = $defaultLocationId;
                     if ($warehouseId && isset($columnMap['location']) && ! empty($values[$columnMap['location']])) {
@@ -367,8 +394,8 @@ class ImportCheckinBatchItemsAction extends Action
                     $asset = Asset::create([
                         'serial_no' => $serialNo,
                         'product_line_id' => $productLine?->id,
-                        'current_warehouse_id' => null,
-                        'warehouse_location_id' => null,
+                        'current_warehouse_id' => $warehouseId,
+                        'warehouse_location_id' => $locationId,
                         'size' => $size,
                         'current_status' => AssetStatus::NewlyAdded,
                         'note' => isset($columnMap['note']) ? trim((string) ($values[$columnMap['note']] ?? '')) : null,
@@ -390,7 +417,7 @@ class ImportCheckinBatchItemsAction extends Action
                     'serial_no' => (string) $asset->serial_no,
                     'product_line_id' => (int) $asset->product_line_id,
                     'name' => (string) ($asset->productLine?->name ?? 'LED'),
-                    'size' => (string) ($asset->size ?? '0.5×0.5 m'),
+                    'size' => (string) ($asset->size ?? '500 x 500 mm'),
                     'status' => (string) $statusLabel,
                     'status_raw' => (string) ($asset->current_status instanceof AssetStatus ? $asset->current_status->value : $asset->current_status),
                     'status_color' => (string) $statusColor,
@@ -426,7 +453,7 @@ class ImportCheckinBatchItemsAction extends Action
 
         foreach ($headers as $index => $header) {
             $slug = Str::slug(trim((string) $header), '_');
-            if (in_array($slug, ['so_seri', 'seri', 'serial', 'serial_no', 'ma_tai_san', 'ma_so_seri', 'ma_thiet_bi'])) {
+            if (in_array($slug, ['so_seri', 'seri', 'serial', 'serial_no', 'so_serial', 'ma_tai_san', 'ma_so_seri', 'ma_thiet_bi'])) {
                 $columnMap['serial_no'] = $index;
             } elseif (in_array($slug, ['dong_san_pham', 'product_line', 'model', 'loai_led', 'dong_led', 'san_pham'])) {
                 $columnMap['product_line'] = $index;
@@ -440,5 +467,144 @@ class ImportCheckinBatchItemsAction extends Action
         }
 
         return $columnMap;
+    }
+
+    public static function parseSheetData(mixed $sheetData): array
+    {
+        if (is_string($sheetData)) {
+            $trimmed = trim($sheetData);
+            $decoded = json_decode($trimmed, true);
+
+            if (is_array($decoded)) {
+                $sheetData = $decoded;
+            } elseif ($trimmed !== '') {
+                return static::parseDelimitedText($trimmed);
+            } else {
+                $sheetData = null;
+            }
+        }
+
+        $rows = [];
+        $headers = [];
+
+        if (is_array($sheetData) && isset($sheetData['sheets'])) {
+            $targetSheet = null;
+            foreach ($sheetData['sheets'] as $sheet) {
+                if (! empty($sheet['cellData'][0])) {
+                    foreach ($sheet['cellData'][0] as $cell) {
+                        $val = is_array($cell) ? ($cell['v'] ?? '') : ($cell ?? '');
+                        $slug = Str::slug(trim((string) $val), '_');
+                        if (in_array($slug, ['so_seri', 'seri', 'serial', 'serial_no', 'so_serial', 'ma_tai_san', 'ma_so_seri', 'ma_thiet_bi'])) {
+                            $targetSheet = $sheet;
+                            break 2;
+                        }
+                    }
+                }
+            }
+
+            $firstSheet = $targetSheet ?? (isset($sheetData['sheetOrder'][0]) ? ($sheetData['sheets'][$sheetData['sheetOrder'][0]] ?? null) : null) ?? collect($sheetData['sheets'])->first();
+            if (isset($firstSheet['cellData']) && is_array($firstSheet['cellData'])) {
+                $rawCells = $firstSheet['cellData'];
+                ksort($rawCells, SORT_NUMERIC);
+
+                $headerCells = $rawCells[0] ?? [];
+                $maxCol = 0;
+                foreach ($rawCells as $r => $rCells) {
+                    if (is_array($rCells)) {
+                        foreach (array_keys($rCells) as $c) {
+                            if ((int) $c > $maxCol) {
+                                $maxCol = (int) $c;
+                            }
+                        }
+                    }
+                }
+
+                for ($c = 0; $c <= $maxCol; $c++) {
+                    $cell = $headerCells[$c] ?? null;
+                    $val = is_array($cell) ? ($cell['v'] ?? '') : ($cell ?? '');
+                    $headers[$c] = trim((string) $val);
+                }
+
+                foreach ($rawCells as $r => $rCells) {
+                    if ((int) $r === 0 || ! is_array($rCells)) {
+                        continue;
+                    }
+
+                    $row = [];
+                    $hasValue = false;
+                    for ($c = 0; $c <= $maxCol; $c++) {
+                        $cell = $rCells[$c] ?? null;
+                        $val = is_array($cell) ? ($cell['v'] ?? '') : ($cell ?? '');
+                        $strVal = trim((string) $val);
+                        if ($strVal !== '') {
+                            $hasValue = true;
+                        }
+                        $row[$c] = $strVal;
+                    }
+
+                    if ($hasValue) {
+                        $rows[] = $row;
+                    }
+                }
+            }
+        }
+
+        return ['headers' => $headers, 'rows' => $rows];
+    }
+
+    protected static function parseDelimitedText(string $text): array
+    {
+        $lines = preg_split('/\r\n|\r|\n/', $text) ?: [];
+        $lines = array_values(array_filter($lines, fn ($line) => trim((string) $line) !== ''));
+
+        if (empty($lines)) {
+            return ['headers' => [], 'rows' => []];
+        }
+
+        $delimiter = str_contains($lines[0], "\t") ? "\t" : (str_contains($lines[0], ',') ? ',' : "\t");
+        $split = fn (string $line): array => array_map(fn ($cell) => trim((string) $cell), explode($delimiter, $line));
+
+        $serialSlugs = ['so_seri', 'seri', 'serial', 'serial_no', 'so_serial', 'ma_tai_san', 'ma_so_seri', 'ma_thiet_bi'];
+        $firstCells = $split($lines[0]);
+        $firstSlug = Str::slug($firstCells[0] ?? '', '_');
+        $hasHeaderRow = in_array($firstSlug, $serialSlugs, true);
+
+        if ($hasHeaderRow) {
+            $headers = $firstCells;
+            array_shift($lines);
+        } else {
+            $headers = ['Số Seri', 'Dòng sản phẩm', 'Kích thước', 'Ghi chú'];
+        }
+
+        $maxCol = count($headers) - 1;
+        $rows = [];
+
+        foreach ($lines as $line) {
+            $cells = $split($line);
+            $maxCol = max($maxCol, count($cells) - 1);
+
+            $row = [];
+            $hasValue = false;
+            for ($c = 0; $c <= $maxCol; $c++) {
+                $val = trim((string) ($cells[$c] ?? ''));
+                if ($val !== '') {
+                    $hasValue = true;
+                }
+                $row[$c] = $val;
+            }
+
+            if ($hasValue) {
+                $rows[] = $row;
+            }
+        }
+
+        for ($c = 0; $c <= $maxCol; $c++) {
+            if (! isset($headers[$c])) {
+                $headers[$c] = '';
+            }
+        }
+        ksort($headers);
+
+        return ['headers' => $headers, 'rows' => $rows];
     }
 }
