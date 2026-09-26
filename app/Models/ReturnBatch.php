@@ -166,8 +166,10 @@ class ReturnBatch extends Model
                         'current_warehouse_id' => $targetWarehouseId ?? $oldWarehouseId,
                     ]);
 
-                    RepairLog::create([
+                    RepairLog::firstOrCreate([
                         'asset_id' => $asset->id,
+                        'end_date' => null,
+                    ], [
                         'start_date' => $now->toDateString(),
                         'repair_note' => $order
                             ? "Hỏng hóc sau sự kiện '{$order->event}' (Đơn hàng {$order->order_no}): ".($item->grade_note ?: 'Cần kiểm tra kỹ thuật')

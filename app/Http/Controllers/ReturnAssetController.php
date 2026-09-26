@@ -63,8 +63,10 @@ class ReturnAssetController extends Controller
             ]);
 
             if ($isDamaged) {
-                RepairLog::create([
+                RepairLog::firstOrCreate([
                     'asset_id' => $asset->id,
+                    'end_date' => null,
+                ], [
                     'start_date' => $now->toDateString(),
                     'repair_note' => 'Hỏng hóc khi thu hồi đợt trả ['.$batch->code.']: '.($item->grade_note ?: 'Cần kiểm tra kỹ thuật'),
                     'result_status' => RepairResultStatus::Pending,

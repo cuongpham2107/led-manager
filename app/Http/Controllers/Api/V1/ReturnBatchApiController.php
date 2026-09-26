@@ -202,8 +202,10 @@ class ReturnBatchApiController extends Controller
             if ($grade === ReturnGrade::Damaged) {
                 $asset->update(['current_status' => AssetStatus::Repairing]);
 
-                RepairLog::create([
+                RepairLog::firstOrCreate([
                     'asset_id' => $asset->id,
+                    'end_date' => null,
+                ], [
                     'start_date' => now()->toDateString(),
                     'repair_note' => "Hỏng hóc sau sự kiện ghi nhận qua Mobile App (Đợt trả {$batch->code}): ".($gradeNote ?: 'Cần kiểm tra kỹ thuật & thay thế linh kiện'),
                     'result_status' => RepairResultStatus::Pending,

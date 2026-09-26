@@ -192,3 +192,28 @@ test('complete method handles unreceived items as missing and completes return a
     $this->asset2->refresh();
     expect($this->asset2->current_status)->toBe(AssetStatus::Missing);
 });
+
+test('completing batch after receiving a damaged item keeps a single open repair log', function () {
+    $this->actingAs($this->user)->postJson(route('filament.return-receive-item'), [
+        'batch_id' => $this->returnBatch->id,
+        'asset_id' => $this->asset2->id,
+        'condition' => 'damaged',
+        'note' => 'Vỡ góc module LED',
+    ])->assertOk();
+
+    $this->returnBatch->complete($this->user);
+
+    expect(RepairLog::where('asset_id', $this->asset2->id)->count())->toBe(1);
+});
+
+test('re-grading a damaged item does not create another repair log', function () {
+    foreach (['damaged', 'damaged'] as $condition) {
+        $this->actingAs($this->user)->postJson(route('filament.return-receive-item'), [
+            'batch_id' => $this->returnBatch->id,
+            'asset_id' => $this->asset2->id,
+            'condition' => $condition,
+        ])->assertOk();
+    }
+
+    expect(RepairLog::where('asset_id', $this->asset2->id)->count())->toBe(1);
+});

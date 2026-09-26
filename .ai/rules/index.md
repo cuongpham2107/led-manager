@@ -16,6 +16,7 @@
 | `e2e.md` | `scripts/e2e/**` | browser-use E2E: DeepSeek thinking mode vs tool_choice, server prerequisites |
 | `tests.md` | `tests/**` | Pest pitfalls — e.g. bare `actingAs()` must be imported |
 | `services.md` | `database/seeders/**`, `tests/**`, `app/Services/**` | Availability/stock traps caused by seed data |
+| `app.md` | `app/**/*Return*` | Return flows must reuse an open RepairLog (no duplicate repair tickets) |
 
 ## How to use
 

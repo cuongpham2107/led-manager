@@ -127,6 +127,7 @@ test('scanning damaged asset creates repair log and transitions to repairing', f
     $completeResponse->assertOk();
     expect($this->returnBatch->fresh()->status)->toBe(ReturnBatchStatus::Completed);
     expect($this->order->fresh()->status)->toBe(OrderStatus::Returned);
+    expect($this->damagedAsset->repairLogs()->count())->toBe(1);
 });
 
 test('index and show endpoints handle ungraded return items without error', function () {
