@@ -13,6 +13,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('order_id')->constrained()->cascadeOnDelete();
             $table->foreignId('product_line_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('led_configuration_id')->nullable()->constrained()->nullOnDelete();
             $table->unsignedInteger('quantity_required')->default(1);
             $table->decimal('unit_price', 14, 2)->default(0);
             $table->text('note')->nullable();

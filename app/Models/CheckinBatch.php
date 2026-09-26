@@ -26,6 +26,7 @@ class CheckinBatch extends Model
         'expected_date',
         'batch_type',
         'product_line_id',
+        'led_configuration_id',
         'quantity',
         'production_note',
         'status',
@@ -77,6 +78,14 @@ class CheckinBatch extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * @return BelongsTo<LedConfiguration, $this>
+     */
+    public function ledConfiguration(): BelongsTo
+    {
+        return $this->belongsTo(LedConfiguration::class);
     }
 
     /**

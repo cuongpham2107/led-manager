@@ -13,6 +13,7 @@ class OrderItem extends Model
     protected $fillable = [
         'order_id',
         'product_line_id',
+        'led_configuration_id',
         'quantity_required',
         'unit_price',
         'note',
@@ -43,5 +44,13 @@ class OrderItem extends Model
     public function productLine(): BelongsTo
     {
         return $this->belongsTo(ProductLine::class);
+    }
+
+    /**
+     * @return BelongsTo<LedConfiguration, $this>
+     */
+    public function ledConfiguration(): BelongsTo
+    {
+        return $this->belongsTo(LedConfiguration::class);
     }
 }

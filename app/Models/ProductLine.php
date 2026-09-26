@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ProductEnvironment;
+use App\Enums\ProductLineType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -14,6 +15,7 @@ class ProductLine extends Model
     protected $fillable = [
         'name',
         'code',
+        'type',
         'pixel_pitch_unit',
         'pixel_pitch',
         'environment',
@@ -34,12 +36,26 @@ class ProductLine extends Model
         return [
             'pixel_pitch' => 'decimal:2',
             'environment' => ProductEnvironment::class,
+            'type' => ProductLineType::class,
             'module_width_mm' => 'decimal:2',
             'module_height_mm' => 'decimal:2',
             'weight_kg' => 'decimal:2',
             'power_watt' => 'decimal:2',
             'is_active' => 'boolean',
         ];
+    }
+
+    /**
+     * @return HasMany<LedConfiguration, $this>
+     */
+    public function ledConfigurations(): HasMany
+    {
+        return $this->hasMany(LedConfiguration::class);
+    }
+
+    public function isController(): bool
+    {
+        return $this->type === ProductLineType::Controller;
     }
 
     /**

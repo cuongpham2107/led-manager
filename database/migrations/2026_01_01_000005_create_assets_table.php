@@ -14,6 +14,7 @@ return new class extends Migration
             $table->string('qr_code')->nullable()->unique();
 
             $table->foreignId('product_line_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('led_configuration_id')->nullable()->constrained()->nullOnDelete();
 
             $table->string('size')->nullable();       // 500x500mm
             $table->date('manufactured_date')->nullable();

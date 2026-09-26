@@ -12,6 +12,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');                 // P2.5 Indoor, P3.91 Outdoor...
             $table->string('code')->unique();        // P25-IN, P391-OUT
+            $table->string('type')->default('panel'); // panel (tấm LED) | controller (đầu phát)
             $table->enum('pixel_pitch_unit', ['mm'])->default('mm');
             $table->decimal('pixel_pitch', 5, 2)->nullable(); // 2.5, 3.91, 4.81
             $table->enum('environment', ['indoor', 'outdoor', 'both'])->default('indoor');

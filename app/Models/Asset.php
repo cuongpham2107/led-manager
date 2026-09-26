@@ -16,6 +16,7 @@ class Asset extends Model
         'serial_no',
         'qr_code',
         'product_line_id',
+        'led_configuration_id',
         'size',
         'operating_hours',
         'rental_count',
@@ -177,6 +178,14 @@ class Asset extends Model
         }
 
         return 0.25;
+    }
+
+    /**
+     * @return BelongsTo<LedConfiguration, $this>
+     */
+    public function ledConfiguration(): BelongsTo
+    {
+        return $this->belongsTo(LedConfiguration::class);
     }
 
     /**
