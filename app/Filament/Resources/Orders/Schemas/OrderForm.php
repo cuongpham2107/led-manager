@@ -312,7 +312,7 @@ class OrderForm
                                             ->label('Danh sách thiết bị định mức xuất kho')
                                             ->table([
                                                 TableColumn::make('Thiết bị / Vật tư kho'),
-                                                TableColumn::make('Cấu hình LED'),
+                                                TableColumn::make('Cấu hình LED')->width('220px'),
                                                 TableColumn::make('SL Cần Xuất')->alignCenter(),
                                                 TableColumn::make('Đơn giá (VND)'),
                                                 TableColumn::make('Ghi chú / Quy cách'),
@@ -391,7 +391,7 @@ class OrderForm
                                                         ->where('product_line_id', $get('product_line_id'))
                                                         ->where('is_active', true)
                                                         ->get()
-                                                        ->mapWithKeys(fn (LedConfiguration $config) => [$config->id => $config->label]))
+                                                        ->mapWithKeys(fn (LedConfiguration $config) => [$config->id => "{$config->name} · {$config->scan_mode?->getLabel()}"]))
                                                     ->searchable()
                                                     ->nullable(),
                                                 TextInput::make('quantity_required')

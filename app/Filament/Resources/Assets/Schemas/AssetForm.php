@@ -48,7 +48,7 @@ class AssetForm
                                 ->placeholder('Hệ thống tự động sinh (LED-{Số Seri})')
                                 ->helperText('Mã QR tự động sinh theo Serial No, không cần nhập thủ công.'),
                         ]),
-                        Grid::make(4)->schema([
+                        Grid::make(3)->schema([
                             Select::make('product_line_id')
                                 ->label('Dòng sản phẩm LED')
                                 ->relationship('productLine', 'name')
@@ -56,16 +56,6 @@ class AssetForm
                                 ->preload()
                                 ->live()
                                 ->afterStateUpdated(fn (Set $set) => $set('led_configuration_id', null)),
-                            Select::make('led_configuration_id')
-                                ->label('Cấu hình LED')
-                                ->options(fn (Get $get) => LedConfiguration::query()
-                                    ->where('product_line_id', $get('product_line_id'))
-                                    ->where('is_active', true)
-                                    ->get()
-                                    ->mapWithKeys(fn (LedConfiguration $config) => [$config->id => $config->label]))
-                                ->searchable()
-                                ->placeholder('Card nhận · kiểu quét · đầu phát')
-                                ->helperText('Tấm cùng dòng phải cùng cấu hình mới ghép chung một màn.'),
                             TextInput::make('size')
                                 ->label('Kích thước / Quy cách')
                                 ->placeholder('VD: 500 x 500 mm / 500 x 1000 mm / 2U Rack'),
@@ -76,6 +66,16 @@ class AssetForm
                                 ->native(true)
                                 ->default(now()->toDateString()),
                         ]),
+                        Select::make('led_configuration_id')
+                            ->label('Cấu hình LED')
+                            ->options(fn (Get $get) => LedConfiguration::query()
+                                ->where('product_line_id', $get('product_line_id'))
+                                ->where('is_active', true)
+                                ->get()
+                                ->mapWithKeys(fn (LedConfiguration $config) => [$config->id => $config->label]))
+                            ->searchable()
+                            ->placeholder('Card nhận · kiểu quét · đầu phát')
+                            ->helperText('Tấm cùng dòng phải cùng cấu hình mới ghép chung một màn.'),
                     ]),
 
                 Section::make('Trạng thái & Kho lưu trữ')

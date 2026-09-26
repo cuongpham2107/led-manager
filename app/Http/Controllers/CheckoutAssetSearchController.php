@@ -54,6 +54,16 @@ class CheckoutAssetSearchController extends Controller
             $query->where('led_configuration_id', (int) $configurationId);
         }
 
+        // Chỉ gợi ý tấm cùng cấu hình với các tấm đã có trong phiếu (đúng bộ)
+        if ($batchId) {
+            $batchAssets = Asset::whereIn('id', CheckoutBatchItem::where('checkout_batch_id', (int) $batchId)->select('asset_id'))->get();
+            foreach (LedSetGuard::referenceConfigurations($batchAssets) as $lineId => $configurationId) {
+                $query->where(fn ($q) => $q->where('product_line_id', '!=', $lineId)
+                    ->orWhereNull('led_configuration_id')
+                    ->orWhere('led_configuration_id', $configurationId));
+            }
+        }
+
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
                 $q->where('serial_no', 'like', "%{$search}%")

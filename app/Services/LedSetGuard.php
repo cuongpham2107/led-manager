@@ -13,29 +13,42 @@ use Illuminate\Database\Eloquent\Collection;
 class LedSetGuard
 {
     /**
+     * Cấu hình chuẩn của từng dòng = cấu hình chiếm đa số (hoà thì lấy cấu hình gặp trước).
+     *
+     * @param  iterable<Asset>  $assets
+     * @return array<int, int> product_line_id => led_configuration_id
+     */
+    public static function referenceConfigurations(iterable $assets): array
+    {
+        return collect($assets)
+            ->filter(fn (Asset $asset) => $asset->led_configuration_id && $asset->product_line_id)
+            ->groupBy('product_line_id')
+            ->map(fn ($group) => (int) $group->countBy('led_configuration_id')->sortDesc()->keys()->first())
+            ->all();
+    }
+
+    /**
      * @param  iterable<Asset>  $assets
      * @return string|null Thông báo lỗi, hoặc null nếu hợp lệ.
      */
     public static function conflict(iterable $assets): ?string
     {
-        /** @var array<int, Asset> $firstByLine */
-        $firstByLine = [];
+        $assets = (new Collection(collect($assets)->all()))->loadMissing(['ledConfiguration', 'productLine']);
+        $reference = static::referenceConfigurations($assets);
 
-        foreach ((new Collection(collect($assets)->all()))->loadMissing(['ledConfiguration', 'productLine']) as $asset) {
-            if (! $asset->led_configuration_id || ! $asset->product_line_id) {
-                continue;
-            }
+        $odd = $assets->first(fn (Asset $asset) => isset($reference[$asset->product_line_id])
+            && $asset->led_configuration_id
+            && $asset->led_configuration_id !== $reference[$asset->product_line_id]);
 
-            $first = $firstByLine[$asset->product_line_id] ??= $asset;
-
-            if ($first->led_configuration_id !== $asset->led_configuration_id) {
-                return "Thiết bị {$asset->serial_no} thuộc cấu hình \"{$asset->ledConfiguration->label}\", "
-                    ."khác cấu hình \"{$first->ledConfiguration->label}\" của dòng {$asset->productLine?->name} trong phiếu. "
-                    .'Các tấm cùng dòng phải cùng cấu hình để lắp đúng bộ.';
-            }
+        if (! $odd) {
+            return null;
         }
 
-        return null;
+        $expected = $assets->firstWhere('led_configuration_id', $reference[$odd->product_line_id])->ledConfiguration;
+
+        return "Thiết bị {$odd->serial_no} thuộc cấu hình \"{$odd->ledConfiguration->label}\", "
+            ."khác cấu hình \"{$expected->label}\" của dòng {$odd->productLine?->name} trong phiếu. "
+            .'Các tấm cùng dòng phải cùng cấu hình để lắp đúng bộ.';
     }
 
     public static function conflictForBatch(CheckoutBatch $batch, Asset $candidate): ?string

@@ -83,3 +83,25 @@ test('web dispatch-item rejects a panel from another configuration of the same p
 
     expect($this->batch->items()->where('asset_id', $wrong->id)->exists())->toBeFalse();
 });
+
+test('conflict blames the odd panel, not the majority configuration', function () {
+    $majority = collect(range(1, 3))->map(fn () => ($this->panel)($this->configA));
+    $odd = ($this->panel)($this->configB, serial: 'G-LE-LOI');
+
+    $message = LedSetGuard::conflict($odd->newCollection([$odd])->merge($majority));
+
+    expect($message)->toStartWith('Thiết bị G-LE-LOI thuộc cấu hình "'.$this->configB->label.'"');
+});
+
+test('warehouse picker hides panels whose configuration differs from the batch', function () {
+    $wrong = ($this->panel)($this->configB);
+    $right = ($this->panel)($this->configA);
+    $otherLine = ($this->panel)($this->configOther);
+
+    $ids = $this->actingAs($this->user)
+        ->getJson(route('filament.checkout-assets', ['batch_id' => $this->batch->id, 'per_page' => 200]))
+        ->assertOk()
+        ->json('items.*.id');
+
+    expect($ids)->toContain($right->id, $otherLine->id)->not->toContain($wrong->id);
+});

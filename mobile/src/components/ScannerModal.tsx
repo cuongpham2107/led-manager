@@ -261,10 +261,11 @@ export const ScannerModal: React.FC<ScannerModalProps> = ({
       setStatusMessage(msg);
       await triggerHaptic('error');
 
+      // Lỗi (VD quét lệch cấu hình) giữ lâu hơn để thợ kho kịp đọc lý do
       setTimeout(() => {
         setIsProcessing(false);
         setScanStatus('idle');
-      }, 2000);
+      }, 4000);
     }
   };
 
@@ -398,7 +399,7 @@ export const ScannerModal: React.FC<ScannerModalProps> = ({
               {scanStatus === 'success' ? (
                 <Check color="#fff" size={20} style={{ marginRight: 8 }} />
               ) : null}
-              <Text style={styles.statusText} numberOfLines={2}>
+              <Text style={styles.statusText} numberOfLines={scanStatus === 'error' ? 4 : 2}>
                 {statusMessage}
               </Text>
             </View>
