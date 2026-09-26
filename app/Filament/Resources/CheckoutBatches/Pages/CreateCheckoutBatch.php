@@ -4,14 +4,17 @@ namespace App\Filament\Resources\CheckoutBatches\Pages;
 
 use App\Enums\BatchStatus;
 use App\Filament\Resources\CheckoutBatches\CheckoutBatchResource;
+use App\Models\Asset;
 use App\Models\CheckoutBatch;
 use App\Models\CheckoutBatchItem;
 use App\Services\CodeGeneratorService;
+use App\Services\LedSetGuard;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Support\Enums\Width;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class CreateCheckoutBatch extends CreateRecord
 {
@@ -33,6 +36,11 @@ class CreateCheckoutBatch extends CreateRecord
             $selectedAssets = $data['selected_assets'] ?? [];
             unset($data['selected_assets']);
             unset($data['product_line_id']);
+
+            $selectedIds = collect($selectedAssets)->map(fn ($id) => (int) $id)->filter();
+            if ($setError = LedSetGuard::conflict(Asset::whereIn('id', $selectedIds)->get())) {
+                throw ValidationException::withMessages(['selected_assets' => $setError]);
+            }
 
             $code = trim(explode('·', $data['code'] ?? '')[0]);
             if (empty($code)) {

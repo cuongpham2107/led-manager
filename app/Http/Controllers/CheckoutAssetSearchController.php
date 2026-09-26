@@ -9,6 +9,7 @@ use App\Models\AssetStatusLog;
 use App\Models\CheckoutBatch;
 use App\Models\CheckoutBatchItem;
 use App\Models\User;
+use App\Services\LedSetGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -47,6 +48,10 @@ class CheckoutAssetSearchController extends Controller
 
         if (! empty($productLineId)) {
             $query->where('product_line_id', $productLineId);
+        }
+
+        if ($configurationId = $request->query('led_configuration_id')) {
+            $query->where('led_configuration_id', (int) $configurationId);
         }
 
         if ($search !== '') {
@@ -126,6 +131,13 @@ class CheckoutAssetSearchController extends Controller
         }
 
         $asset = Asset::with('productLine')->findOrFail($request->input('asset_id'));
+
+        if ($setError = LedSetGuard::conflictForBatch($batch, $asset)) {
+            return response()->json([
+                'success' => false,
+                'message' => $setError,
+            ], 422);
+        }
 
         $now = now();
         $user = Auth::user();

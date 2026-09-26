@@ -12,6 +12,7 @@ use App\Models\Asset;
 use App\Models\AssetStatusLog;
 use App\Models\CheckoutBatch;
 use App\Models\CheckoutBatchItem;
+use App\Services\LedSetGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -170,6 +171,13 @@ class CheckoutBatchApiController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => "Thiết bị {$asset->serial_no} đang ở trạng thái '{$asset->current_status->getLabel()}', không thể xuất kho đi sự kiện.",
+            ], 422);
+        }
+
+        if ($setError = LedSetGuard::conflictForBatch($batch, $asset)) {
+            return response()->json([
+                'success' => false,
+                'message' => $setError,
             ], 422);
         }
 

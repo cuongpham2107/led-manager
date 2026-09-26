@@ -7,6 +7,7 @@ use App\Filament\Resources\CheckoutBatches\Pages\ListCheckoutBatches;
 use App\Models\Asset;
 use App\Models\CheckoutBatch;
 use App\Models\Customer;
+use App\Models\LedConfiguration;
 use App\Models\ProductLine;
 use App\Models\User;
 use App\Models\Warehouse;
@@ -262,4 +263,32 @@ test('can create checkout batch through CreateCheckoutBatch page', function () {
     expect($batch)->not->toBeNull()
         ->and($batch->items)->toHaveCount(1)
         ->and($batch->items->first()->asset_id)->toBe($this->asset->id);
+});
+
+test('cannot create checkout batch mixing LED configurations of the same product line', function () {
+    actingAs($this->user);
+
+    $configA = LedConfiguration::factory()->for($this->productLine)->create();
+    $configB = LedConfiguration::factory()->for($this->productLine)->create();
+    $this->asset->update(['led_configuration_id' => $configA->id]);
+    $other = Asset::create([
+        'serial_no' => 'GE-R29-LECH',
+        'product_line_id' => $this->productLine->id,
+        'led_configuration_id' => $configB->id,
+        'current_warehouse_id' => $this->warehouse->id,
+        'current_status' => AssetStatus::Ready,
+        'size' => '500 x 1000 mm',
+    ]);
+
+    Livewire::test(ListCheckoutBatches::class)
+        ->callAction('create', [
+            'code' => 'OUT-MIXED · Hệ thống tự sinh',
+            'warehouse_id' => $this->warehouse->id,
+            'customer_id' => $this->customer->id,
+            'purpose' => 'Sự kiện',
+            'selected_assets' => [$this->asset->id, $other->id],
+        ])
+        ->assertNotified('Thiết bị không cùng bộ');
+
+    expect(CheckoutBatch::where('code', 'OUT-MIXED')->exists())->toBeFalse();
 });

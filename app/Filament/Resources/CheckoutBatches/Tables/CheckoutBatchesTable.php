@@ -12,6 +12,7 @@ use App\Models\AssetStatusLog;
 use App\Models\CheckoutBatch;
 use App\Models\CheckoutBatchItem;
 use App\Models\User;
+use App\Services\LedSetGuard;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
@@ -136,6 +137,15 @@ class CheckoutBatchesTable
                             Notification::make()
                                 ->title('Không đủ điều kiện để xuất kho')
                                 ->body('Vui lòng chọn ít nhất một thiết bị xuất kho.')
+                                ->danger()
+                                ->send();
+                            $action->halt();
+                        }
+
+                        if ($setError = LedSetGuard::conflict(Asset::whereIn('id', $assetIds)->get())) {
+                            Notification::make()
+                                ->title('Thiết bị không cùng bộ')
+                                ->body($setError)
                                 ->danger()
                                 ->send();
                             $action->halt();
