@@ -50,6 +50,14 @@ export interface Asset {
     pitch?: number;
     environment?: string;
   } | null;
+  led_configuration?: {
+    id: number;
+    name: string;
+    label: string;
+    receiving_card: string;
+    scan_mode: string | null;
+    controller_model: string;
+  } | null;
   device_type?: {
     id: number;
     name: string;

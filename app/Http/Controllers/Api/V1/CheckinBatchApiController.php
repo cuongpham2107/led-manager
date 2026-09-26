@@ -83,6 +83,7 @@ class CheckinBatchApiController extends Controller
             'productLine',
             'creator',
             'items.asset.productLine',
+            'items.asset.ledConfiguration',
             'items.receivedByUser',
         ])->find($id);
 
@@ -173,7 +174,7 @@ class CheckinBatchApiController extends Controller
                 'success' => false,
                 'message' => "Thiết bị {$asset->serial_no} đã được nhập trong đợt này rồi.",
                 'data' => [
-                    'item' => new CheckinBatchItemResource($existingItem->load('asset.productLine', 'receivedByUser')),
+                    'item' => new CheckinBatchItemResource($existingItem->load('asset.productLine', 'asset.ledConfiguration', 'receivedByUser')),
                 ],
             ], 422);
         }
@@ -246,7 +247,7 @@ class CheckinBatchApiController extends Controller
                 'success' => true,
                 'message' => "Đã quét nhập kho thành công thiết bị: {$asset->serial_no}",
                 'data' => [
-                    'item' => new CheckinBatchItemResource($item->load('asset.productLine', 'receivedByUser')),
+                    'item' => new CheckinBatchItemResource($item->load('asset.productLine', 'asset.ledConfiguration', 'receivedByUser')),
                     'scanned_count' => $scannedCount,
                     'target_items_count' => $targetCount,
                     'progress_percent' => $targetCount > 0 ? min(100, (int) round(($scannedCount / $targetCount) * 100)) : 0,

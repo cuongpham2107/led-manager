@@ -2,10 +2,12 @@
 
 use App\Enums\AssetStatus;
 use App\Enums\BatchStatus;
+use App\Enums\LedScanMode;
 use App\Enums\OrderStatus;
 use App\Models\Asset;
 use App\Models\CheckoutBatch;
 use App\Models\Customer;
+use App\Models\LedConfiguration;
 use App\Models\Order;
 use App\Models\ProductLine;
 use App\Models\User;
@@ -118,4 +120,23 @@ test('can scan asset QR code to dispatch and update status', function () {
     expect($this->batch->fresh()->status)->toBe(BatchStatus::Dispatched);
     expect($this->order->fresh()->status)->toBe(OrderStatus::Dispatched);
     expect($this->asset->fresh()->current_status)->toBe(AssetStatus::InEvent);
+});
+
+test('checkout batch detail exposes the LED configuration of each asset', function () {
+    $config = LedConfiguration::factory()->for($this->productLine)->create([
+        'name' => 'Bộ Novastar',
+        'receiving_card' => 'Novastar A5s Plus',
+        'scan_mode' => LedScanMode::Sixteenth,
+        'controller_model' => 'Novastar VX600',
+    ]);
+    $this->asset->update(['led_configuration_id' => $config->id]);
+    $this->batch->items()->create(['asset_id' => $this->asset->id, 'is_dispatched' => false]);
+    $token = $this->user->createToken('test')->plainTextToken;
+
+    $this->withHeader('Authorization', "Bearer {$token}")
+        ->getJson("/api/v1/checkout-batches/{$this->batch->id}")
+        ->assertOk()
+        ->assertJsonPath('data.items.0.asset.led_configuration.receiving_card', 'Novastar A5s Plus')
+        ->assertJsonPath('data.items.0.asset.led_configuration.scan_mode', '1/16')
+        ->assertJsonPath('data.items.0.asset.led_configuration.label', $config->label);
 });

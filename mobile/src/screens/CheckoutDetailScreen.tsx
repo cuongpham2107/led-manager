@@ -143,6 +143,11 @@ export const CheckoutDetailScreen: React.FC<CheckoutDetailScreenProps> = ({
           <Text style={styles.itemLine}>
             {item.asset?.product_line?.name || 'Cabinet LED'} {item.asset?.size ? `(${item.asset.size}m)` : ''}
           </Text>
+          {item.asset?.led_configuration ? (
+            <Text style={styles.itemLine}>
+              {item.asset.led_configuration.receiving_card} · {item.asset.led_configuration.scan_mode} scan · {item.asset.led_configuration.controller_model}
+            </Text>
+          ) : null}
         </View>
         <View style={styles.itemTimeWrap}>
           {isDispatched ? (

@@ -25,7 +25,7 @@ class CheckoutBatchApiController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = CheckoutBatch::with(['order', 'customer', 'warehouse', 'creator', 'items.asset.productLine'])
+        $query = CheckoutBatch::with(['order', 'customer', 'warehouse', 'creator', 'items.asset.productLine', 'items.asset.ledConfiguration'])
             ->latest();
 
         if ($request->user()->isAgencyScoped()) {
@@ -91,6 +91,7 @@ class CheckoutBatchApiController extends Controller
             'warehouse',
             'creator',
             'items.asset.productLine',
+            'items.asset.ledConfiguration',
             'items.dispatchedBy',
         ])->find($id);
 
@@ -188,7 +189,7 @@ class CheckoutBatchApiController extends Controller
                 'success' => false,
                 'message' => "Thiết bị {$asset->serial_no} đã được quét trong đợt xuất kho này rồi.",
                 'data' => [
-                    'item' => new CheckoutBatchItemResource($existingItem->load('asset.productLine')),
+                    'item' => new CheckoutBatchItemResource($existingItem->load('asset.productLine', 'asset.ledConfiguration')),
                 ],
             ], 422);
         }
@@ -243,7 +244,7 @@ class CheckoutBatchApiController extends Controller
                 'success' => true,
                 'message' => "Đã quét thành công thiết bị: {$asset->serial_no}",
                 'data' => [
-                    'item' => new CheckoutBatchItemResource($item->load('asset.productLine')),
+                    'item' => new CheckoutBatchItemResource($item->load('asset.productLine', 'asset.ledConfiguration')),
                     'scanned_count' => $scannedCount,
                     'target_cabinets_count' => $targetCount,
                     'progress_percent' => $targetCount > 0 ? min(100, (int) round(($scannedCount / $targetCount) * 100)) : 100,

@@ -33,6 +33,7 @@ class ReturnBatchApiController extends Controller
             'checkoutBatch.customer',
             'creator',
             'items.asset.productLine',
+            'items.asset.ledConfiguration',
         ])->latest();
 
         if ($request->user()->isAgencyScoped()) {
@@ -96,6 +97,7 @@ class ReturnBatchApiController extends Controller
             'checkoutBatch.customer',
             'creator',
             'items.asset.productLine',
+            'items.asset.ledConfiguration',
             'items.receivedBy',
         ])->find($id);
 
@@ -250,7 +252,7 @@ class ReturnBatchApiController extends Controller
                 'success' => true,
                 'message' => "Đã tiếp nhận kiểm đếm thiết bị: {$asset->serial_no} (".($grade === ReturnGrade::Normal ? 'Đạt chuẩn' : 'Ghi nhận lỗi: '.$grade->getLabel()).')',
                 'data' => [
-                    'item' => new ReturnBatchItemResource($item->load('asset.productLine')),
+                    'item' => new ReturnBatchItemResource($item->load('asset.productLine', 'asset.ledConfiguration')),
                     'grade' => $grade->value,
                     'total_scanned_count' => $batch->items()->where('is_received', true)->count(),
                 ],

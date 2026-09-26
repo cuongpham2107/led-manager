@@ -134,6 +134,12 @@ export const AssetLookupScreen: React.FC<AssetLookupScreenProps> = ({ onBack }) 
                   <Text style={styles.gridLabel}>Pixel Pitch:</Text>
                   <Text style={styles.gridVal}>{assetData.asset.product_line?.pitch || '2.6'} mm</Text>
                 </View>
+                {assetData.asset.led_configuration ? (
+                  <View style={styles.gridItem}>
+                    <Text style={styles.gridLabel}>Cấu hình LED:</Text>
+                    <Text style={styles.gridVal}>{assetData.asset.led_configuration.label}</Text>
+                  </View>
+                ) : null}
                 <View style={styles.gridItem}>
                   <Text style={styles.gridLabel}>Kho hiện tại:</Text>
                   <Text style={styles.gridVal}>
