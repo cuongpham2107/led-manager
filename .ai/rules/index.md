@@ -17,6 +17,7 @@
 | `tests.md` | `tests/**` | Pest pitfalls — e.g. bare `actingAs()` must be imported |
 | `services.md` | `database/seeders/**`, `tests/**`, `app/Services/**` | Availability/stock traps caused by seed data |
 | `app.md` | `app/**/*Return*` | Return flows must reuse an open RepairLog (no duplicate repair tickets) |
+| `led-configuration.md` | `app/Services/**`, Orders/CheckoutBatches/CheckinBatches resources, `app/Http/Controllers/**` | LED configuration "đúng bộ" rules: guard every checkout add path, no top-up |
 
 ## How to use
 
