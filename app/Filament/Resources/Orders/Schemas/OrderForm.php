@@ -10,6 +10,7 @@ use App\Enums\OrderStatus;
 use App\Filament\Resources\Customers\Schemas\CustomerForm;
 use App\Models\Agency;
 use App\Models\Asset;
+use App\Models\LedConfiguration;
 use App\Models\Order;
 use App\Models\ProductLine;
 use App\Models\Quotation;
@@ -311,6 +312,7 @@ class OrderForm
                                             ->label('Danh sách thiết bị định mức xuất kho')
                                             ->table([
                                                 TableColumn::make('Thiết bị / Vật tư kho'),
+                                                TableColumn::make('Cấu hình LED'),
                                                 TableColumn::make('SL Cần Xuất')->alignCenter(),
                                                 TableColumn::make('Đơn giá (VND)'),
                                                 TableColumn::make('Ghi chú / Quy cách'),
@@ -324,6 +326,7 @@ class OrderForm
                                                     ->live()
                                                     ->nullable()
                                                     ->afterStateUpdated(function ($state, Set $set, Get $get) {
+                                                        $set('led_configuration_id', null);
                                                         if (! $state) {
                                                             return;
                                                         }
@@ -381,6 +384,16 @@ class OrderForm
 
                                                         return "Tồn sẵn sàng: {$readyCount} | Khả dụng lịch ({$dateLabel}): 0 thiết bị (Đã kín lịch thuê)";
                                                     }),
+                                                Select::make('led_configuration_id')
+                                                    ->label('Cấu hình LED')
+                                                    ->placeholder('Chọn khi xuất kho')
+                                                    ->options(fn (Get $get) => LedConfiguration::query()
+                                                        ->where('product_line_id', $get('product_line_id'))
+                                                        ->where('is_active', true)
+                                                        ->get()
+                                                        ->mapWithKeys(fn (LedConfiguration $config) => [$config->id => $config->label]))
+                                                    ->searchable()
+                                                    ->nullable(),
                                                 TextInput::make('quantity_required')
                                                     ->label('SL Cần')
                                                     ->numeric()

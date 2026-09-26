@@ -8,8 +8,11 @@ use App\Filament\Resources\CheckinBatches\Actions\ImportCheckinBatchItemsAction;
 use App\Filament\Resources\CheckinBatches\CheckinBatchResource;
 use App\Models\CheckinBatch;
 use App\Models\CheckinBatchItem;
+use App\Services\LedSetGuard;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Support\Enums\Width;
+use Filament\Support\Exceptions\Halt;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -50,6 +53,12 @@ class CreateCheckinBatch extends CreateRecord
                 ->map(fn ($id) => (int) $id)
                 ->filter()
                 ->values();
+
+            if ($configError = LedSetGuard::applyBatchConfiguration(isset($data['led_configuration_id']) ? (int) $data['led_configuration_id'] : null, $assetIds->all())) {
+                Notification::make()->title('Thiết bị khác cấu hình lô')->body($configError)->danger()->send();
+
+                throw new Halt;
+            }
 
             $data['status'] = BatchStatus::Pending;
             $data['batch_type'] = CheckinBatchType::Transfer;

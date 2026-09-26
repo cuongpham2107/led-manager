@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Assets\Schemas;
 
 use App\Enums\AssetStatus;
+use App\Models\LedConfiguration;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -10,6 +11,8 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\ViewField;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Support\RawJs;
 
@@ -45,12 +48,24 @@ class AssetForm
                                 ->placeholder('Hệ thống tự động sinh (LED-{Số Seri})')
                                 ->helperText('Mã QR tự động sinh theo Serial No, không cần nhập thủ công.'),
                         ]),
-                        Grid::make(3)->schema([
+                        Grid::make(4)->schema([
                             Select::make('product_line_id')
                                 ->label('Dòng sản phẩm LED')
                                 ->relationship('productLine', 'name')
                                 ->searchable()
-                                ->preload(),
+                                ->preload()
+                                ->live()
+                                ->afterStateUpdated(fn (Set $set) => $set('led_configuration_id', null)),
+                            Select::make('led_configuration_id')
+                                ->label('Cấu hình LED')
+                                ->options(fn (Get $get) => LedConfiguration::query()
+                                    ->where('product_line_id', $get('product_line_id'))
+                                    ->where('is_active', true)
+                                    ->get()
+                                    ->mapWithKeys(fn (LedConfiguration $config) => [$config->id => $config->label]))
+                                ->searchable()
+                                ->placeholder('Card nhận · kiểu quét · đầu phát')
+                                ->helperText('Tấm cùng dòng phải cùng cấu hình mới ghép chung một màn.'),
                             TextInput::make('size')
                                 ->label('Kích thước / Quy cách')
                                 ->placeholder('VD: 500 x 500 mm / 500 x 1000 mm / 2U Rack'),

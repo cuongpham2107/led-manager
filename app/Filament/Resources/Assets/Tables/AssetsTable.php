@@ -9,6 +9,8 @@ use App\Filament\Resources\Assets\Actions\SendToMaintenanceAction;
 use App\Filament\Resources\Assets\Actions\SendToMaintenanceBulkAction;
 use App\Filament\Resources\Assets\Actions\ViewQrCodeAction;
 use App\Models\Agency;
+use App\Models\Asset;
+use App\Models\LedConfiguration;
 use App\Models\ProductLine;
 use App\Models\User;
 use App\Models\Warehouse;
@@ -52,6 +54,14 @@ class AssetsTable
                     ->badge()
                     ->color('gray')
                     ->sortable(),
+
+                TextColumn::make('ledConfiguration.name')
+                    ->label('CẤU HÌNH LED')
+                    ->description(fn (Asset $record): ?string => $record->ledConfiguration
+                        ? "{$record->ledConfiguration->receiving_card} · {$record->ledConfiguration->scan_mode?->getLabel()} · {$record->ledConfiguration->controller_model}"
+                        : null)
+                    ->placeholder('—')
+                    ->toggleable(),
 
                 // TextColumn::make('batch_no')
                 //     ->label('LÔ SẢN XUẤT')
@@ -122,6 +132,12 @@ class AssetsTable
                 SelectFilter::make('product_line_id')
                     ->label('Tất cả dòng sản phẩm')
                     ->options(fn (): array => ProductLine::query()->pluck('name', 'id')->toArray()),
+
+                SelectFilter::make('led_configuration_id')
+                    ->label('Tất cả cấu hình LED')
+                    ->options(fn (): array => LedConfiguration::query()->with('productLine')->get()
+                        ->mapWithKeys(fn (LedConfiguration $config): array => [$config->id => "{$config->productLine?->name} — {$config->label}"])
+                        ->toArray()),
             ], layout: FiltersLayout::AboveContent)
             ->deferFilters(false)
             ->recordActions([

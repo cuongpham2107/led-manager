@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\ProductLines\Schemas;
 
+use App\Enums\ProductLineType;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -32,7 +33,13 @@ class ProductLineForm
                                 ->label('Thương hiệu')
                                 ->placeholder('VD: Gloshine / Unilumin / Absen'),
                         ]),
-                        Grid::make(2)->schema([
+                        Grid::make(3)->schema([
+                            Select::make('type')
+                                ->label('Loại thiết bị')
+                                ->options(ProductLineType::class)
+                                ->default(ProductLineType::Panel->value)
+                                ->required()
+                                ->helperText('Đầu phát được xuất kèm màn, không cần cấu hình LED.'),
                             Select::make('environment')
                                 ->label('Môi trường sử dụng')
                                 ->options([

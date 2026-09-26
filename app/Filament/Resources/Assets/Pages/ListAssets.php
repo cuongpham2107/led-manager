@@ -6,6 +6,7 @@ use App\Enums\AssetStatus;
 use App\Filament\Resources\Assets\AssetResource;
 use App\Imports\CheckinBatchImport;
 use App\Models\Asset;
+use App\Models\LedConfiguration;
 use App\Models\ProductLine;
 use Carbon\Carbon;
 use DateTimeInterface;
@@ -411,6 +412,8 @@ class ListAssets extends ListRecords
                 $columnMap['purchase_cost'] = $index;
             } elseif (in_array($slug, ['ghi_chu', 'note', 'mo_ta'])) {
                 $columnMap['note'] = $index;
+            } elseif (in_array($slug, ['cau_hinh_led', 'cau_hinh', 'led_configuration'])) {
+                $columnMap['led_configuration'] = $index;
             } elseif (in_array($slug, ['ma_qr', 'qr_code', 'qr'])) {
                 $columnMap['qr_code'] = $index;
             }
@@ -427,6 +430,7 @@ class ListAssets extends ListRecords
         }
 
         $productLines = ProductLine::all();
+        $ledConfigurations = LedConfiguration::all();
         $defaultProductLineId = $data['default_product_line_id'] ?? null;
         $updateExisting = (bool) ($data['update_existing'] ?? true);
 
@@ -483,6 +487,12 @@ class ListAssets extends ListRecords
 
                 $note = isset($columnMap['note']) ? trim((string) ($row[$columnMap['note']] ?? '')) : null;
 
+                // Khớp cấu hình LED theo tên trong cùng dòng sản phẩm
+                $configName = isset($columnMap['led_configuration']) ? mb_strtolower(trim((string) ($row[$columnMap['led_configuration']] ?? '')), 'UTF-8') : '';
+                $ledConfigurationId = $configName === '' ? null : $ledConfigurations->first(
+                    fn (LedConfiguration $config) => $config->product_line_id === $productLineId && mb_strtolower($config->name, 'UTF-8') === $configName
+                )?->id;
+
                 $existingAsset = Asset::where('serial_no', $serialNo)->first();
 
                 // QR Code is strictly auto-generated: "LED-{$serialNo}"
@@ -492,6 +502,7 @@ class ListAssets extends ListRecords
                     if ($updateExisting) {
                         $existingAsset->update(array_filter([
                             'product_line_id' => $productLineId,
+                            'led_configuration_id' => $ledConfigurationId,
                             'size' => $size,
                             'manufactured_date' => $mfgDate ?: $existingAsset->manufactured_date,
                             'purchase_date' => $purDate ?: $existingAsset->purchase_date,
@@ -508,6 +519,7 @@ class ListAssets extends ListRecords
                         'serial_no' => $serialNo,
                         'qr_code' => $qrCode,
                         'product_line_id' => $productLineId,
+                        'led_configuration_id' => $ledConfigurationId,
                         'size' => $size,
                         'manufactured_date' => $mfgDate,
                         'purchase_date' => $purDate,

@@ -9,6 +9,7 @@ use App\Models\CheckinBatch;
 use App\Models\CheckinBatchItem;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Services\LedSetGuard;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -16,6 +17,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Notifications\Notification;
 use Filament\Support\Enums\Width;
+use Filament\Support\Exceptions\Halt;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Enums\RecordActionsPosition;
@@ -235,9 +237,16 @@ class CheckinBatchesTable
                                 'note' => $data['note'] ?? null,
                                 'warehouse_id' => $data['warehouse_id'],
                                 'expected_date' => $data['expected_date'] ?? null,
+                                'led_configuration_id' => $data['led_configuration_id'] ?? null,
                             ]);
 
                             $selectedIds = collect($selectedAssets)->map(fn ($id) => (int) $id)->filter()->values();
+                            if ($configError = LedSetGuard::applyBatchConfiguration(isset($data['led_configuration_id']) ? (int) $data['led_configuration_id'] : null, $selectedIds->all())) {
+                                Notification::make()->title('Thiết bị khác cấu hình lô')->body($configError)->danger()->send();
+
+                                throw new Halt;
+                            }
+
                             $currentIds = $record->items()->pluck('asset_id')->map(fn ($id) => (int) $id);
 
                             $toDelete = $currentIds->diff($selectedIds);

@@ -7,6 +7,7 @@ use App\Enums\BatchStatus;
 use App\Models\Agency;
 use App\Models\Asset;
 use App\Models\CheckinBatch;
+use App\Models\LedConfiguration;
 use App\Models\ProductLine;
 use App\Models\User;
 use App\Models\Warehouse;
@@ -137,6 +138,15 @@ class CheckinBatchForm
                             ->placeholder('DD/MM/YYYY'),
                     ])
                     ->extraAttributes(['class' => 'relative z-30', 'style' => 'position: relative; z-index: 30;'])
+                    ->columnSpanFull(),
+
+                Select::make('led_configuration_id')
+                    ->label('Cấu hình LED cho cả lô')
+                    ->placeholder('— Không áp cấu hình (giữ cấu hình sẵn có của từng thiết bị) —')
+                    ->options(fn () => LedConfiguration::query()->where('is_active', true)->with('productLine')->get()
+                        ->mapWithKeys(fn (LedConfiguration $config) => [$config->id => "{$config->productLine?->name} — {$config->label}"]))
+                    ->searchable()
+                    ->helperText('Thiết bị trong lô chưa có cấu hình sẽ nhận cấu hình này. Thiết bị đã mang cấu hình khác sẽ bị chặn để tránh lệch bộ.')
                     ->columnSpanFull(),
 
                 ViewField::make('selected_assets')

@@ -8,9 +8,12 @@ use App\Filament\Resources\CheckinBatches\CheckinBatchResource;
 use App\Filament\Resources\CheckinBatches\Widgets\CheckinBatchStatsWidget;
 use App\Models\CheckinBatch;
 use App\Models\CheckinBatchItem;
+use App\Services\LedSetGuard;
 use Filament\Actions\CreateAction;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Support\Enums\Width;
+use Filament\Support\Exceptions\Halt;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -43,6 +46,12 @@ class ListCheckinBatches extends ListRecords
                             ->map(fn ($id) => (int) $id)
                             ->filter()
                             ->values();
+
+                        if ($configError = LedSetGuard::applyBatchConfiguration(isset($data['led_configuration_id']) ? (int) $data['led_configuration_id'] : null, $assetIds->all())) {
+                            Notification::make()->title('Thiết bị khác cấu hình lô')->body($configError)->danger()->send();
+
+                            throw new Halt;
+                        }
 
                         $data['status'] = BatchStatus::Pending;
                         $data['batch_type'] = $data['batch_type'] ?? CheckinBatchType::Purchase;

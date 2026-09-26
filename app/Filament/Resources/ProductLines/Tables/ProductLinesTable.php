@@ -36,6 +36,10 @@ class ProductLinesTable
                     ->searchable()
                     ->color('primary')
                     ->sortable(),
+                TextColumn::make('type')
+                    ->label('Loại')
+                    ->badge()
+                    ->sortable(),
                 TextColumn::make('pixel_pitch')
                     ->label('Pixel Pitch')
                     ->formatStateUsing(fn ($state) => "P{$state} mm")

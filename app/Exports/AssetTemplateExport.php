@@ -14,15 +14,15 @@ class AssetTemplateExport implements FromCollection, WithHeadings, WithMapping, 
     public function collection(): Collection
     {
         return collect([
-            ['P26-HN-001', 'P2.6', '22/09/2026', '500 x 500 mm'],
-            ['P15-HP-001', 'P1.5', '22/09/2026', '500 x 500 mm'],
-            ['P39-HN-001', 'P3.9', '22/09/2026', '500 x 1000 mm'],
+            ['P26-HN-001', 'P2.6', '22/09/2026', '500 x 500 mm', 'Novastar 1/16'],
+            ['P15-HP-001', 'P1.5', '22/09/2026', '500 x 500 mm', ''],
+            ['P39-HN-001', 'P3.9', '22/09/2026', '500 x 1000 mm', ''],
         ]);
     }
 
     public function headings(): array
     {
-        return ['Số Seri', 'Mã dòng SP', 'Ngày sản xuất', 'Kích thước'];
+        return ['Số Seri', 'Mã dòng SP', 'Ngày sản xuất', 'Kích thước', 'Cấu hình LED'];
     }
 
     /**
